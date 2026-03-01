@@ -1,0 +1,8 @@
+gnews
+python-docx
+trafilatura
+newspaper3k
+requests
+python-dateutil
+pytz
+googlenewsdecoder
