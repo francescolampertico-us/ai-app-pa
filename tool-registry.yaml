@@ -1,0 +1,26 @@
+tools:
+  - id: media_clips
+    name: Media Clips
+    version: 0.1.0
+    risk_level: yellow
+    path: tools/media_clips
+    description: "Daily monitoring: Google News Boolean queries → filtered/deduped clips → .docx + optional Mail.app draft."
+    inputs:
+      required: [topic, queries]
+      optional: [period, since, target_date, suffix, output_dir, email_sender, email_recipient]
+    outputs:
+      format: docx + mail_draft
+      artifacts: [docx_report, email_draft]
+
+  - id: media_clip_cleaner
+    name: Media Clip Cleaner
+    version: 0.1.0
+    risk_level: green
+    path: tools/media_clip_cleaner
+    description: "Cleans pasted article text for clips: removes headline/metadata/clutter, keeps italic subtitle + clean body."
+    inputs:
+      required: [raw_text]
+      optional: []
+    outputs:
+      format: markdown
+      artifacts: [cleaned_text]

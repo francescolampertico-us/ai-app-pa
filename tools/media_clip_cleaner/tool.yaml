@@ -1,0 +1,39 @@
+id: media_clip_cleaner
+name: Media Clip Cleaner
+version: 0.1.0
+risk_level: green
+tags: [media_monitoring, text_cleanup, paywall, paste]
+
+description: >
+  Cleans raw text copied from news websites for media monitoring clips. Removes headlines, ads,
+  metadata, and UI clutter while preserving the subtitle/lede (italic) and the full article body.
+
+execution:
+  type: llm_manual
+  notes:
+    - "Implemented as a Gemini Gem (or any LLM chat) used manually."
+    - "Does not bypass paywalls; requires user-provided text."
+
+inputs:
+  required:
+    - raw_text: "Pasted article text copied from a web page (may include clutter)."
+  optional: []
+
+outputs:
+  format: markdown
+  output_contract:
+    must_start_with: "Italicized subtitle/lede paragraph (no main headline)."
+    body: "Clean paragraphs of the article body, non-italic."
+    forbidden:
+      - "Main headline/title"
+      - "Ads / recommended blocks / newsletter prompts"
+      - "Timestamps / publication dates / photographer credits"
+      - "Prefaces like 'Here is the cleaned text'"
+
+governance:
+  review:
+    required_for_external_use: false
+    checklist:
+      - "Confirm subtitle/lede is preserved and italicized."
+      - "Confirm no headline or metadata remains."
+      - "Spot-check that the article body is complete and readable."
