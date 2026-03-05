@@ -1,6 +1,6 @@
 id: media_clip_cleaner
 name: Media Clip Cleaner
-version: 0.1.0
+version: 0.3.0
 risk_level: green
 tags: [media_monitoring, text_cleanup, paywall, paste]
 
@@ -9,18 +9,31 @@ description: >
   metadata, and UI clutter while preserving the subtitle/lede (italic) and the full article body.
 
 execution:
-  type: llm_manual
+  entrypoint: tools/media_clip_cleaner/execution/clean_clip.py
+  runtime: python
   notes:
-    - "Implemented as a Gemini Gem (or any LLM chat) used manually."
+    - "Can run locally via CLI with --raw-text, --input-file, stdin, or --paste."
+    - "Supports --mode local (rule-based) and --mode llm (OpenAI API)."
+    - "LLM mode uses OPENAI_API_KEY and validates output contract."
     - "Does not bypass paywalls; requires user-provided text."
 
 inputs:
   required:
     - raw_text: "Pasted article text copied from a web page (may include clutter)."
-  optional: []
+  optional:
+    - input_file: "Path to a text file containing raw pasted content."
+    - output_file: "Path to save cleaned markdown output."
+    - mode: "'local' (default) or 'llm'."
+    - llm_model: "OpenAI model for llm mode (default: gpt-5-mini)."
+    - fallback_local: "If llm mode fails, fallback to local mode."
 
 outputs:
   format: markdown
+  artifacts:
+    - cleaned_text:
+        format: markdown
+        description: "Cleaned clip text suitable for insertion into report placeholders."
+        path_pattern: "<output_file> (if specified)"
   output_contract:
     must_start_with: "Italicized subtitle/lede paragraph (no main headline)."
     body: "Clean paragraphs of the article body, non-italic."
@@ -29,6 +42,7 @@ outputs:
       - "Ads / recommended blocks / newsletter prompts"
       - "Timestamps / publication dates / photographer credits"
       - "Prefaces like 'Here is the cleaned text'"
+      - "Page chrome (e.g., skip links, nav labels, footer/legal blocks)"
 
 governance:
   review:

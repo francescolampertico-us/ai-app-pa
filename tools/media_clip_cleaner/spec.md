@@ -11,6 +11,43 @@ This tool is designed for the “paywall/manual extraction” step: when full-te
 
 ## Input
 - Raw pasted text from the article page.
+- Optional: file-based input/output for repeatable runs.
+
+## Execution
+From repository root:
+
+```bash
+python3 tools/media_clip_cleaner/execution/clean_clip.py \
+  --input-file /path/to/raw_article.txt \
+  --output-file /path/to/cleaned_clip.md
+```
+
+Alternative modes:
+- `--raw-text "..."` for short snippets
+- stdin piping (no flags), e.g. `cat raw.txt | python3 tools/media_clip_cleaner/execution/clean_clip.py`
+- interactive paste mode: `--paste`
+
+### LLM mode (recommended for cross-outlet reliability)
+Set your API key:
+
+```bash
+export OPENAI_API_KEY="<your_key>"
+```
+
+Run:
+
+```bash
+python3 tools/media_clip_cleaner/execution/clean_clip.py \
+  --mode llm \
+  --llm-model gpt-5-mini \
+  --input-file /path/to/raw_article.txt \
+  --output-file /path/to/cleaned_clip.md \
+  --fallback-local
+```
+
+Notes:
+- `--mode llm` calls OpenAI API and then validates output against the contract.
+- `--fallback-local` keeps the run resilient if API/validation fails.
 
 ## Output contract (what you should get)
 1) **Start directly with the subtitle/lede in italics**  
@@ -28,3 +65,5 @@ This tool is designed for the “paywall/manual extraction” step: when full-te
 ## Known limitations
 - If the pasted input is incomplete (e.g., only part of the article), the output will also be incomplete.
 - Some sites interleave unrelated “cards” mid-article; those must be removed manually if they slip through.
+- Subtitle detection is conservative: the script italicizes only explicit subtitle/lede/deck markers.
+- Local mode may under-clean or over-clean on some outlet-specific templates; prefer LLM mode for highest reliability.

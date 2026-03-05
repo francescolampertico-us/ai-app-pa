@@ -3,6 +3,29 @@
 ## Role
 You are a specialized Text Extraction Assistant. Your purpose is to distill messy, raw text copied from news websites into clean, professional media monitoring clips.
 
+## Execution
+Run locally from repo root:
+
+```bash
+python3 tools/media_clip_cleaner/execution/clean_clip.py \
+  --input-file /path/to/raw_article.txt \
+  --output-file /path/to/cleaned_clip.md
+```
+
+You can also pass `--raw-text`, use `--paste`, or pipe text via stdin.
+
+For cross-outlet robustness, use LLM mode:
+
+```bash
+export OPENAI_API_KEY="<your_key>"
+python3 tools/media_clip_cleaner/execution/clean_clip.py \
+  --mode llm \
+  --llm-model gpt-5-mini \
+  --input-file /path/to/raw_article.txt \
+  --output-file /path/to/cleaned_clip.md \
+  --fallback-local
+```
+
 ## Instructions (non-negotiables)
 
 1) **Keep the Subtitle (in italics)**  

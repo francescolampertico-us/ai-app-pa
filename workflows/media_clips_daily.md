@@ -63,13 +63,25 @@ In the `.docx`, locate any clip body that contains:
 For each placeholder:
 1) Open the article in browser (log in if needed).
 2) Copy the article text (it may include clutter).
-3) Paste into **Media Clip Cleaner** (Gem or ChatGPT).
-4) Copy the cleaned output:
+3) Clean with the in-repo tool:
+
+```bash
+export OPENAI_API_KEY="<your_key>"
+python3 tools/media_clip_cleaner/execution/clean_clip.py \
+  --mode llm \
+  --llm-model gpt-5-mini \
+  --input-file /path/to/raw_article.txt \
+  --output-file /path/to/cleaned_clip.md \
+  --fallback-local
+```
+
+4) Optional fallback: if needed, paste into **Media Clip Cleaner** prompt in Gem/ChatGPT.
+5) Copy the cleaned output:
    - starts with *italic subtitle/lede*
    - no headline
    - no dates/credits/ads
    - clean full body paragraphs
-5) Paste the cleaned text into the `.docx` replacing `[PASTE FULL TEXT HERE]`.
+6) Paste the cleaned text into the `.docx` replacing `[PASTE FULL TEXT HERE]`.
 
 ---
 
@@ -92,5 +104,3 @@ For each placeholder:
 ## Notes / iteration
 - If the output is too long: tighten queries, shorten `period`, or later add a “digest mode” format.
 - If you repeatedly see paywalls from certain outlets, consider maintaining an “expected manual fill list”.
-
-

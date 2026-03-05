@@ -14,7 +14,7 @@ tools:
 
   - id: media_clip_cleaner
     name: Media Clip Cleaner
-    version: 0.1.0
+    version: 0.3.0
     risk_level: green
     path: tools/media_clip_cleaner
     description: "Cleans pasted article text for clips: removes headline/metadata/clutter, keeps italic subtitle + clean body."
