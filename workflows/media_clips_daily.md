@@ -8,7 +8,7 @@ with a manual process to fill paywalled articles using **Media Clip Cleaner**.
 
 ## Tools used
 - **media_clips** (`tools/media_clips/`) — automated discovery + extraction + `.docx` generation (+ optional Mail.app draft)
-- **media_clip_cleaner** (`tools/media_clip_cleaner/`) — manual LLM cleaner for paywalled / messy pasted text
+- **media_clip_cleaner** (`tools/media_clip_cleaner/`) — in-repo cleaner with `llm` mode (OpenAI) and `local` fallback
 
 ---
 
@@ -63,17 +63,18 @@ In the `.docx`, locate any clip body that contains:
 For each placeholder:
 1) Open the article in browser (log in if needed).
 2) Copy the article text (it may include clutter).
-3) Clean with the in-repo tool:
+3) Clean with the in-repo tool (clipboard one-command):
 
 ```bash
 export OPENAI_API_KEY="<your_key>"
 python3 tools/media_clip_cleaner/execution/clean_clip.py \
   --mode llm \
-  --llm-model gpt-5-mini \
-  --input-file /path/to/raw_article.txt \
+  --clipboard \
   --output-file /path/to/cleaned_clip.md \
   --fallback-local
 ```
+
+Alternative (direct terminal paste, no clipboard): use `--paste`, paste text, then type `::end`.
 
 4) Optional fallback: if needed, paste into **Media Clip Cleaner** prompt in Gem/ChatGPT.
 5) Copy the cleaned output:
