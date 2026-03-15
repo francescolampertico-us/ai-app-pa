@@ -1,0 +1,68 @@
+id: influence_disclosure_tracker
+name: Influence Disclosure Tracker
+version: 0.1.0
+risk_level: yellow
+tags: [influence, lobbying, disclosure, lda, fara, public_affairs]
+
+description: >
+  Retrieves and normalizes lobbying and foreign principal disclosure records from
+  the LDA and FARA APIs, producing CSV tables and a markdown summary report.
+
+execution:
+  entrypoint: tools/influence_disclosure_tracker/execution/run.py
+  runtime: python
+  notes:
+    - "FARA searches require a local index; run once with --build-fara-index."
+    - "Set LDA_API_KEY for higher LDA rate limits."
+
+inputs:
+  required:
+    - entities: "Comma-separated list of entities to search."
+    - from: "Start date (YYYY-MM-DD)."
+    - to: "End date (YYYY-MM-DD)."
+  optional:
+    - sources: "Comma-separated data sources (default: lda,fara)."
+    - out: "Base output directory (default: ./output)."
+    - max_results: "Maximum results per source (default: 500)."
+    - cache_dir: "Cache directory (default: .cache/influence_disclosure_tracker)."
+
+outputs:
+  artifacts:
+    - master_results.csv:
+        format: csv
+        description: "Unified match-level results across LDA and FARA."
+        path_pattern: "<out>/<entity_or_multiple>/master_results.csv"
+    - lda_*.csv:
+        format: csv
+        description: "LDA detail tables (filings, issues, lobbyists)."
+        path_pattern: "<out>/<entity_or_multiple>/lda_*.csv"
+    - fara_*.csv:
+        format: csv
+        description: "FARA detail tables (registrants, foreign principals, documents, short forms)."
+        path_pattern: "<out>/<entity_or_multiple>/fara_*.csv"
+    - report.md:
+        format: markdown
+        description: "Narrative summary with match confidence notes."
+        path_pattern: "<out>/<entity_or_multiple>/report.md"
+
+governance:
+  review:
+    required_for_external_use: true
+    checklist:
+      - "Verify entity name matches for any fuzzy/contains matches."
+      - "Confirm dates fall within the intended timeframe."
+      - "Spot-check filing URLs and document dates."
+      - "Manual verification required before external distribution."
+
+dependencies:
+  python_packages:
+    - requests
+    - pandas
+    - rapidfuzz
+    - python-dateutil
+    - urllib3<2
+  system:
+    - "Internet access for LDA/FARA APIs"
+
+notes:
+  - "FARA index build can take ~20 minutes and must be completed before FARA searches."

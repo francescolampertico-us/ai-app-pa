@@ -24,3 +24,16 @@ tools:
     outputs:
       format: markdown
       artifacts: [cleaned_text]
+
+  - id: influence_disclosure_tracker
+    name: Influence Disclosure Tracker
+    version: 0.1.0
+    risk_level: yellow
+    path: tools/influence_disclosure_tracker
+    description: "Collects LDA and FARA disclosure records, normalizes results into CSV tables, and generates a summary report."
+    inputs:
+      required: [entities, from, to]
+      optional: [sources, out, max_results, cache_dir]
+    outputs:
+      format: csv + markdown
+      artifacts: [master_results.csv, lda_*.csv, fara_*.csv, report.md]
