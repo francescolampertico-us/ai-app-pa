@@ -7,3 +7,10 @@ output/
 .cache/
 tools/hearing_memo_tool_package/eval/runs/
 tools/hearing_memo_tool_package/baseline/*.zip
+tools/hearing_memo_tool_package/ANTIGRAVITY_*.md
+tools/hearing_memo_tool_package/baseline/
+tools/hearing_memo_tool_package/examples/final_outputs/
+tools/hearing_memo_tool_package/eval/inputs/*
+!tools/hearing_memo_tool_package/eval/inputs/README.md
+tools/hearing_memo_tool_package/eval/reference_memos/*.docx
+tools/hearing_memo_tool_package/transcripts/*.pdf

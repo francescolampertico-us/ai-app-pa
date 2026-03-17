@@ -1,9 +1,7 @@
 # Baseline Assessment (2026-03-16)
 
 ## Snapshot reviewed
-- `tools/hearing_memo_tool_package/output/test_memo.txt`
-- `tools/hearing_memo_tool_package/output/test_memo_llm.txt`
-- `tools/hearing_memo_tool_package/output/test_memo_objective.txt`
+- Local eval runs in `eval/runs/` (not committed to git)
 
 ## Observed strengths
 - Memo structure largely matches the approved heading family.

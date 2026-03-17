@@ -1,7 +1,4 @@
-# Reference Memos (Gold Standard)
+# Reference Memos (Local Only)
 
-These memos are the human-edited style targets used for evaluation.
-
-- `aging_committee_china_dependence_2026-03-11.docx`
-- `south_asia_hearing_2026-02-11.docx`
-- `uscc_indo_china_2026-02-17.docx`
+Store private reference memos here if needed for side-by-side evaluation.
+This directory only tracks this README; .docx files are ignored by git.

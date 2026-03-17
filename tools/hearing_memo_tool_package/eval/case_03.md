@@ -1,6 +1,8 @@
 # Eval Case 03 - Opening + witness excerpt
 
 ## Input
+Note: input files live in eval/inputs and are not committed to git.
+
 ```bash
 python3 tools/hearing_memo_tool_package/execution/run.py \
   --input tools/hearing_memo_tool_package/eval/inputs/case_03_transcript_excerpt.txt \

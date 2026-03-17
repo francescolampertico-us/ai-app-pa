@@ -1,6 +1,8 @@
 # Eval Case 01 - Standard hearing (full transcript)
 
 ## Input
+Note: input files live in eval/inputs and are not committed to git.
+
 ```bash
 python3 tools/hearing_memo_tool_package/execution/run.py \
   --input tools/hearing_memo_tool_package/eval/inputs/case_01_transcript_full.txt \

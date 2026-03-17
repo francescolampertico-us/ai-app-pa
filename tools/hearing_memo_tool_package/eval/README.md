@@ -1,5 +1,7 @@
 # Eval Harness (V1)
 
+Note: `eval/inputs/` and `eval/reference_memos/` are local-only and ignored by git.
+
 ## Environment
 ```bash
 python3 -m venv .venv

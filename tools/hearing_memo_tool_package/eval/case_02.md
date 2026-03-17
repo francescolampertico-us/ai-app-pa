@@ -1,6 +1,8 @@
 # Eval Case 02 - Noisy transcript cleanup
 
 ## Input
+Note: input files live in eval/inputs and are not committed to git.
+
 ```bash
 python3 tools/hearing_memo_tool_package/execution/run.py \
   --input tools/hearing_memo_tool_package/eval/inputs/case_02_transcript_noisy.txt \
