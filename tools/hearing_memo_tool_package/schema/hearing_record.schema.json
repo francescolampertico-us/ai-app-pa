@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HearingRecord",
+  "type": "object",
+  "required": [
+    "metadata",
+    "structure",
+    "participants",
+    "overview_points",
+    "opening_statements",
+    "witnesses",
+    "qa_clusters",
+    "uncertainties"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": [
+        "hearing_title",
+        "hearing_date"
+      ],
+      "properties": {
+        "hearing_title": {
+          "type": "string"
+        },
+        "hearing_date": {
+          "type": "string"
+        },
+        "hearing_time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "memo_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "committee_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "subcommittee_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "subject_line": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_quality": {
+          "type": "string",
+          "enum": [
+            "clean",
+            "mostly_clean",
+            "noisy",
+            "incomplete"
+          ]
+        }
+      }
+    },
+    "structure": {
+      "type": "object",
+      "required": [
+        "opening_heading",
+        "witness_heading",
+        "has_qa_section"
+      ],
+      "properties": {
+        "opening_heading": {
+          "type": "string"
+        },
+        "witness_heading": {
+          "type": "string"
+        },
+        "hearing_format": {
+          "type": "string",
+          "enum": [
+            "single_panel",
+            "multi_panel",
+            "commission_hearing",
+            "committee_hearing",
+            "other"
+          ]
+        },
+        "leadership_model": {
+          "type": "string",
+          "enum": [
+            "co_chairs",
+            "chair_ranking_member",
+            "chair_only",
+            "other"
+          ]
+        },
+        "panel_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "has_qa_section": {
+          "type": "boolean"
+        }
+      }
+    },
+    "participants": {
+      "type": "object",
+      "required": [
+        "members",
+        "leadership"
+      ],
+      "properties": {
+        "leadership": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "role_display"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "role_display": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "role_display"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "role_display": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "overview_points": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "opening_statements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "speaker",
+          "summary_points"
+        ],
+        "properties": {
+          "speaker": {
+            "type": "string"
+          },
+          "summary_points": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "witnesses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "affiliation",
+          "summary_points"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "affiliation": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "panel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "summary_points": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "qa_clusters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "member",
+          "topic",
+          "summary"
+        ],
+        "properties": {
+          "member": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "commitments_or_requests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

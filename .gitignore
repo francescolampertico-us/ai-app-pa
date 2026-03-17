@@ -5,3 +5,5 @@ __pycache__/
 .env
 output/
 .cache/
+tools/hearing_memo_tool_package/eval/runs/
+tools/hearing_memo_tool_package/baseline/*.zip

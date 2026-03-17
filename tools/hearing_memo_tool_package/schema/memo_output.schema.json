@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MemoOutput",
+  "type": "object",
+  "required": [
+    "metadata_block",
+    "display_title",
+    "sections",
+    "footer",
+    "verification_flags"
+  ],
+  "properties": {
+    "metadata_block": {
+      "type": "object",
+      "required": [
+        "from",
+        "date",
+        "subject"
+      ],
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        }
+      }
+    },
+    "display_title": {
+      "type": "string"
+    },
+    "sections": {
+      "type": "array",
+      "description": "Ordered top-level sections of the memo.",
+      "items": {
+        "type": "object",
+        "required": [
+          "heading",
+          "body",
+          "subsections"
+        ],
+        "properties": {
+          "heading": {
+            "type": "string",
+            "enum": [
+              "Hearing Overview",
+              "Committee Leadership Opening Statements",
+              "Co-Chairs Opening Remarks",
+              "Witnesses Introductions and Testimonies",
+              "Q&A"
+            ]
+          },
+          "body": {
+            "type": "string",
+            "description": "Usually empty for sections that rely on subsections; overview contains one high-level paragraph."
+          },
+          "subsections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "heading",
+                "body"
+              ],
+              "properties": {
+                "heading": {
+                  "type": "string"
+                },
+                "body": {
+                  "type": "string"
+                },
+                "speaker_type": {
+                  "type": "string",
+                  "enum": [
+                    "leadership_member",
+                    "witness",
+                    "qa_member",
+                    "other"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "footer": {
+      "type": "object",
+      "required": [
+        "text",
+        "placement"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "default": "Confidential - Not for Public Consumption or Distribution"
+        },
+        "placement": {
+          "type": "string",
+          "enum": [
+            "inline_once",
+            "page_footer_rendered_by_app"
+          ]
+        }
+      }
+    },
+    "verification_flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reviewer_notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

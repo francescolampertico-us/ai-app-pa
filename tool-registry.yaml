@@ -37,3 +37,15 @@ tools:
     outputs:
       format: csv + markdown
       artifacts: [master_results.csv, lda_*.csv, fara_*.csv, report.md]
+  - id: hearing_memo_generator
+    name: Congressional Hearing Memo Generator
+    version: 1.0.0
+    risk_level: yellow
+    path: tools/hearing_memo_tool_package
+    description: "Drafts Mercury-style congressional hearing memos from transcripts with verification and DOCX export."
+    inputs:
+      required: [input]
+      optional: [output, memo_from, memo_date, subject, confidentiality_footer, hearing_title, hearing_date, hearing_time, committee, json_output, text_output, verbose]
+    outputs:
+      format: docx + markdown + json
+      artifacts: [memo_docx, memo_text, verification_json, memo_bundle_json]
