@@ -41,7 +41,7 @@ tools:
     name: Congressional Hearing Memo Generator
     version: 1.0.0
     risk_level: yellow
-    path: tools/hearing_memo_tool_package
+    path: tools/hearing_memo_generator
     description: "Drafts Mercury-style congressional hearing memos from transcripts with verification and DOCX export."
     inputs:
       required: [input]
