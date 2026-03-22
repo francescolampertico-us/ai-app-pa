@@ -2,6 +2,7 @@
 Media Clips — Streamlit Page
 ==============================
 Search Google News with Boolean queries, generate filtered clips report.
+Includes embedded Clip Cleaner utility for paywalled articles.
 """
 
 import streamlit as st
@@ -13,7 +14,9 @@ from pathlib import Path
 
 TOOLKIT_ROOT = Path(__file__).resolve().parent.parent.parent
 TOOL_ROOT = TOOLKIT_ROOT / "tools" / "media_clips"
+CLEANER_ROOT = TOOLKIT_ROOT / "tools" / "media_clip_cleaner"
 sys.path.insert(0, str(TOOL_ROOT / "execution"))
+sys.path.insert(0, str(CLEANER_ROOT / "execution"))
 
 st.set_page_config(page_title="Media Clips", page_icon="📰", layout="wide")
 
@@ -40,9 +43,24 @@ with col1:
 with col2:
     target_date = st.date_input("Target date", value=datetime.date.today())
 with col3:
-    since_date = st.text_input("Filter since (optional)", placeholder="YYYY-MM-DD HH:MM")
+    source_filter = st.selectbox(
+        "Source filter",
+        ["Mainstream media only", "All sources", "Custom"],
+        index=0,
+    )
 
-with st.expander("Email options (macOS only)"):
+# Custom sources input
+custom_sources = None
+if source_filter == "Custom":
+    custom_sources = st.text_area(
+        "Custom trusted domains (one per line)",
+        placeholder="nytimes.com\npolitico.com\nyourcustomsource.com",
+        height=80,
+    )
+
+since_date = st.text_input("Filter since (optional)", placeholder="YYYY-MM-DD HH:MM")
+
+with st.expander("Email options (optional — macOS Mail.app)"):
     email_sender = st.text_input("Sender email", placeholder="you@domain.com")
     email_recipient = st.text_input("Recipient email", placeholder="team@domain.com")
 
@@ -50,42 +68,34 @@ with st.expander("Email options (macOS only)"):
 if topic and queries and st.button("Generate Clips Report", type="primary"):
     with st.spinner("Searching and generating clips..."):
         try:
-            # We need to call generate_clips.py's main logic
-            # Import the key functions from generate_clips
-            import generate_clips as gc
-
-            query_list = [q.strip() for q in queries.strip().split("\n") if q.strip()]
+            import subprocess
 
             with tempfile.TemporaryDirectory() as tmpdir:
-                # Build argparse-style args
-                class Args:
-                    pass
-
-                args = Args()
-                args.topic = topic
-                args.queries = ",".join(query_list)
-                args.period = period
-                args.suffix = ""
-                args.since = since_date or None
-                args.target_date = str(target_date)
-                args.output_dir = tmpdir
-                args.email_sender = email_sender or None
-                args.email_recipient = email_recipient or None
-
-                # Call as subprocess since the script has tightly coupled argparse
-                import subprocess
-
                 cmd = [
                     sys.executable,
                     str(TOOL_ROOT / "execution" / "generate_clips.py"),
                     "--topic", topic,
-                    "--queries", ",".join(query_list),
+                    "--queries", ",".join(q.strip() for q in queries.strip().split("\n") if q.strip()),
                     "--period", period,
                     "--target-date", str(target_date),
                     "--output-dir", tmpdir,
                 ]
                 if since_date:
                     cmd.extend(["--since", since_date])
+
+                # Source filter: pass --all-sources or --custom-sources
+                if source_filter == "All sources":
+                    cmd.append("--all-sources")
+                elif source_filter == "Custom" and custom_sources:
+                    domains = ",".join(d.strip() for d in custom_sources.strip().split("\n") if d.strip())
+                    cmd.extend(["--custom-sources", domains])
+
+                # Email args (only if both provided)
+                if email_sender and email_recipient:
+                    cmd.extend(["--email-sender", email_sender])
+                    cmd.extend(["--email-recipient", email_recipient])
+                elif not email_sender and not email_recipient:
+                    cmd.append("--no-email")
 
                 result = subprocess.run(
                     cmd,
@@ -131,3 +141,72 @@ if topic and queries and st.button("Generate Clips Report", type="primary"):
 
 elif not topic or not queries:
     st.info("Enter a topic and search queries to generate a media clips report.")
+
+# --- Clip Cleaner Utility ---
+st.divider()
+st.subheader("🧹 Clip Cleaner")
+st.markdown(
+    "For paywalled or problematic articles: paste the raw article text below "
+    "to clean it into clip-ready format."
+)
+
+raw_paste = st.text_area(
+    "Paste raw article text",
+    placeholder="Copy the full article text from the webpage and paste it here...",
+    height=200,
+    key="clip_cleaner_input",
+)
+
+cleaner_mode = st.radio(
+    "Cleaning mode",
+    ["LLM (recommended)", "Local (rule-based)"],
+    index=0,
+    horizontal=True,
+    key="cleaner_mode",
+)
+
+if raw_paste and st.button("Clean Article", key="clean_btn"):
+    try:
+        # Load directly from file to avoid caching issues
+        import importlib.util
+        _spec = importlib.util.spec_from_file_location(
+            "clean_clip",
+            str(CLEANER_ROOT / "execution" / "clean_clip.py"),
+        )
+        _cc = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_cc)
+
+        if cleaner_mode.startswith("LLM"):
+            with st.spinner("Cleaning with LLM..."):
+                try:
+                    # Ensure API key is available
+                    if not os.environ.get("OPENAI_API_KEY"):
+                        st.error("OPENAI_API_KEY not set. Using local cleaner.")
+                        raise RuntimeError("No API key")
+                    cleaned = _cc.clean_clip_llm_openai(raw_paste, "gpt-4o-mini")
+                    st.success("Cleaned with LLM.")
+                except Exception as llm_err:
+                    st.warning(f"LLM failed ({llm_err}), falling back to local cleaner.")
+                    cleaned = _cc.clean_clip(raw_paste)
+        else:
+            cleaned = _cc.clean_clip(raw_paste)
+
+        ok, issues = _cc.validate_output(cleaned)
+
+        if not ok:
+            st.warning("Cleaned text has minor issues:")
+            for issue in issues:
+                st.markdown(f"- {issue}")
+
+        st.text_area("Cleaned output", value=cleaned, height=300, key="clip_cleaner_output")
+
+        st.download_button(
+            "Download cleaned text",
+            data=cleaned,
+            file_name="cleaned_clip.txt",
+            mime="text/plain",
+        )
+    except Exception as e:
+        st.error(f"Cleaning error: {e}")
+        import traceback
+        st.code(traceback.format_exc())

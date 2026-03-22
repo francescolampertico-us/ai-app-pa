@@ -1,7 +1,7 @@
 """
 Hearing Memo Generator — Streamlit Page
 ========================================
-Upload a congressional hearing transcript, get a Mercury-style memo.
+Upload a congressional hearing transcript, get a professional hearing memo.
 """
 
 import streamlit as st
@@ -21,7 +21,7 @@ st.set_page_config(page_title="Hearing Memo Generator", page_icon="📝", layout
 st.title("📝 Congressional Hearing Memo Generator")
 st.caption("v1.0.0  |  Risk: 🟡 Yellow  |  DiGiacomo: #3 Briefing Creation")
 st.markdown(
-    "Converts congressional hearing transcripts into Mercury-style professional memos "
+    "Converts congressional hearing transcripts into professional hearing memos "
     "with structured extraction, house-style composition, and automated verification."
 )
 
@@ -38,7 +38,7 @@ with col1:
     )
 
 with col2:
-    memo_from = st.text_input("FROM field", value="Mercury")
+    memo_from = st.text_input("FROM field", placeholder="e.g., Your Organization")
     memo_date = st.text_input("Memo date", placeholder="e.g., Thursday, March 13, 2026")
     subject_override = st.text_input("Subject line override", placeholder="Auto-detected if blank")
 
@@ -52,7 +52,7 @@ with st.expander("Advanced options"):
         hearing_time = st.text_input("Override hearing time", placeholder="Auto-detected")
     confidentiality = st.text_input(
         "Confidentiality footer",
-        placeholder="Default: Mercury standard footer",
+        placeholder="Default: Confidential - Not for Public Consumption or Distribution",
     )
 
 # --- Run pipeline ---
@@ -106,10 +106,10 @@ if uploaded_file and st.button("Generate Memo", type="primary"):
             )
 
             # Stage 3: Compose
-            status.write("**[3/4]** Composing Mercury-style memo...")
+            status.write("**[3/4]** Composing house-style memo...")
             memo_output = compose(
                 record_dict,
-                memo_from=memo_from or "Mercury",
+                memo_from=memo_from or "",
                 memo_date=memo_date or None,
                 subject_line=subject_override or None,
                 confidentiality_footer=confidentiality or None,
