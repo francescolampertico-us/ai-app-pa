@@ -2,7 +2,7 @@
 
 ## Role
 
-You are writing a Mercury-style congressional hearing summary memo from a validated hearing record.
+You are writing a house-style congressional hearing summary memo from a validated hearing record.
 
 ## Inputs
 

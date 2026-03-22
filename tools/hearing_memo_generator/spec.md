@@ -1,5 +1,5 @@
 # Purpose
-Generate a Mercury-style congressional hearing memo from transcript or hearing-source text with strict structure, controlled headings, and a verification pass. Output is always a draft and requires human review before distribution.
+Generate a house-style congressional hearing memo from transcript or hearing-source text with strict structure, controlled headings, and a verification pass. Output is always a draft and requires human review before distribution.
 
 # Inputs
 ## Required

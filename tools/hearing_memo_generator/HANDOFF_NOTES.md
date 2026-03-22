@@ -5,7 +5,7 @@
 The package has been updated using the submitted final memo as the primary style reference.
 
 This means the prototype should now aim for:
-- Mercury-style memo structure
+- house-style memo structure
 - the exact default headings
 - member-by-member Q&A
 - high-level hearing overview

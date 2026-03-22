@@ -5,8 +5,8 @@ risk_level: yellow
 tags: [hearing, memo, public_affairs, transcript, docx]
 
 description: >
-  Converts congressional hearing transcripts or source text into a Mercury-style
-  professional memo using a controlled structure, house-style rules, and a
+  Converts congressional hearing transcripts or source text into a professional
+  hearing memo using a controlled structure, house-style rules, and a
   verification pass. Output is always a draft pending human review.
 
 execution:
@@ -20,7 +20,7 @@ inputs:
     - input: "Path to hearing transcript (PDF or text)."
   optional:
     - output: "Output DOCX path (default: output/memo.docx)."
-    - memo_from: "FROM line value (default: Mercury)."
+    - memo_from: "FROM line value."
     - memo_date: "Memo date (e.g., 'Thursday, March 12, 2026')."
     - subject: "Override SUBJECT line."
     - confidentiality_footer: "Override default confidentiality footer text."

@@ -2,7 +2,7 @@
 
 ## Objective
 
-Transform hearing source material into a Mercury-style congressional hearing memo that matches the approved structure, naming conventions, and paragraph rhythm reflected in the submitted reference memo.
+Transform hearing source material into a house-style congressional hearing memo that matches the approved structure, naming conventions, and paragraph rhythm reflected in the submitted reference memo.
 
 ## Tool posture
 

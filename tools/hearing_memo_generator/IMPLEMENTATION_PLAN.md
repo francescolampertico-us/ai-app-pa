@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-Build a reliable workflow that converts congressional hearing materials into Mercury-style professional summary memos.
+Build a reliable workflow that converts congressional hearing materials into house-style professional summary memos.
 
 The submitted memo is now the primary style reference. The tool should target that memo family's:
 - section order
@@ -152,7 +152,7 @@ Use the submitted memo as the canonical style reference and create test cases fo
 V1 should build:
 - transcript ingestion
 - structured extraction
-- Mercury-style memo composition
+- house-style memo composition
 - verification output
 - docx export with page footer support
 

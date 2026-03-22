@@ -1,4 +1,4 @@
-FROM:		Mercury
+FROM:
 DATE:		Wednesday, March 11, 2026
 SUBJECT:	U.S. Senate Special Committee on Aging Hearing, "Senate Aging on Drug Supply Dependence on"
 

@@ -2,7 +2,7 @@
 
 ## Role
 
-You are the quality-control pass for a Mercury-style congressional hearing memo.
+You are the quality-control pass for a house-style congressional hearing memo.
 Check the memo against the hearing record and the house style.
 
 ## Tasks

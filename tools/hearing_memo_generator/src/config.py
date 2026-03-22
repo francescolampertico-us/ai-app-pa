@@ -46,10 +46,10 @@ DEFAULT_CONFIDENTIALITY_FOOTER = (
 
 # ---------- Word-count targets (STYLE_GUIDE §16) ----------
 WORD_TARGETS = {
-    "hearing_overview": (110, 170),
-    "opening_speaker": (90, 180),
-    "witness": (90, 180),
-    "qa_member": (70, 180),
+    "hearing_overview": (110, 200),
+    "opening_speaker": (150, 300),
+    "witness": (150, 350),
+    "qa_member": (150, 400),
 }
 
 # ---------- Speaker-label patterns (STYLE_GUIDE §§10-12, skill.md) ----------

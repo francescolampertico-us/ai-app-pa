@@ -4,7 +4,7 @@ This update uses the submitted final memo as the primary style reference.
 
 ## Main changes
 
-- locked the default memo family to the Mercury-style structure
+- locked the default memo family to the house-style structure
 - made the overview explicitly high level and non-speaker-specific
 - made Q&A organization member-by-member rather than issue-cluster-first
 - made chair closing remarks part of the chair subsection by default

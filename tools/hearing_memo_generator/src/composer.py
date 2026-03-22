@@ -1,5 +1,5 @@
 """
-composer.py — Stage 3: Compose Mercury-style memo from a structured HearingRecord.
+composer.py — Stage 3: Compose house-style memo from a structured HearingRecord.
 
 Follows STYLE_GUIDE.md and prompts/compose_memo.md exactly.
 Output conforms to schema/memo_output.schema.json.
@@ -83,14 +83,10 @@ def _format_heading(full_label: str) -> str:
     # Capitalize the state abbreviations and remove periods (e.g., "(R-Fla.)" to "(R-FL)")
     def state_fix(match):
         party = match.group(1)
-        state_abbr = match.group(2).replace('.', '').upper()
-        # Map common shortened states to 2 letters if needed, but just upper() + take first 2 usually works for Florida (FL), Alabama (AL), NY (NY)
-        if state_abbr == "FLA": state_abbr = "FL"
-        if state_abbr == "ALA": state_abbr = "AL"
-        if state_abbr == "GA": state_abbr = "GA"
-        # Most states match first 2 letters if we strip to 2, but let's just do a basic map for the most common weird ones
-        state_map = {"FLA": "FL", "ALA": "AL", "MICH": "MI", "TENN": "TN", "WASH": "WA", "WIS": "WI", "PENN": "PA"}
-        state_abbr = state_map.get(state_abbr, state_abbr[:2])
+        raw_state = match.group(2).replace('.', '').strip()
+        # Use the extractor's comprehensive state map
+        from .extractor import _normalize_state
+        state_abbr = _normalize_state(raw_state)
         return f"({party}-{state_abbr})"
 
     heading = re.sub(r"\(([RD])-([A-Za-z.]+)\)", state_fix, heading)
@@ -139,55 +135,88 @@ def _compose_overview(record: dict) -> dict:
 
     Rules (STYLE_GUIDE §9):
     - One paragraph only
-    - 4 to 5 sentences, 110–170 words
-    - Name committee, hearing title, date, time
+    - 5 to 8 sentences, 150–200 words
+    - ALWAYS name committee, hearing title, date, time
     - Summarize issues at high level
     - Do NOT mention individual speakers
     """
     meta = record["metadata"]
-    overview_points = record.get("overview_points", [])
-
-    # Build the overview paragraph
-    parts = []
-
-    # Opening sentence: committee + hearing context
     committee = meta.get("committee_name", "The committee")
     title = meta.get("hearing_title", "the hearing")
     date = meta.get("hearing_date", "")
     time = meta.get("hearing_time", "")
 
+    # Always build the metadata opening sentence
     opening = f'The {committee} held a hearing titled "{title}"'
     if date:
         opening += f" on {date}"
     if time:
         opening += f" at {time}"
     opening += "."
-    parts.append(opening)
 
-    # Add thematic points from the overview_points
-    for pt in overview_points[1:]:  # Skip first (already covered by opening)
-        pt = pt.strip()
-        if not pt.endswith("."):
-            pt += "."
-        parts.append(pt)
+    # Collect speaker last names to filter from overview (no individuals allowed)
+    speaker_names = set()
+    for stmt in record.get("opening_statements", []):
+        name = stmt.get("speaker", "")
+        name_clean = re.sub(r"\s*\([RD]-[A-Za-z.]+\)\s*$", "", name).strip()
+        parts = name_clean.split()
+        if len(parts) >= 2:
+            speaker_names.add(parts[-1].lower())
+    for w in record.get("witnesses", []):
+        name = re.sub(r"\s*\([RD]-[A-Za-z.]+\)\s*$", "", w.get("name", "")).strip()
+        parts = name.split()
+        if len(parts) >= 2:
+            speaker_names.add(parts[-1].lower())
+    for qa in record.get("qa_clusters", []):
+        name_clean = re.sub(r"\s*\([RD]-[A-Za-z.]+\)\s*(\(Round \d+\))?$", "", qa.get("member", "")).strip()
+        parts = name_clean.split()
+        if len(parts) >= 2:
+            speaker_names.add(parts[-1].lower())
 
-    # Add generic thematic sentences if needed
-    witnesses = record.get("witnesses", [])
-    if witnesses:
-        witness_count = len(witnesses)
-        parts.append(
-            f"The committee heard testimony from {witness_count} witness{'es' if witness_count > 1 else ''} "
-            f"offering perspectives on the issues under examination."
-        )
+    def _mentions_speaker(sentence: str) -> bool:
+        s_lower = sentence.lower()
+        for name in speaker_names:
+            if name in s_lower:
+                return True
+        if re.search(r"(chairman|chairwoman|ranking member|sen\.|senator|rep\.)\s+[A-Z]", sentence):
+            return True
+        return False
 
-    qa = record.get("qa_clusters", [])
-    if qa:
-        parts.append(
-            "Members engaged witnesses on policy implications, legislative responses, "
-            "and areas requiring further oversight."
-        )
+    # Build thematic content from LLM overview
+    overview_points = record.get("overview_points", [])
+    if overview_points and len(overview_points[0]) > 50:
+        llm_overview = " ".join(pt.strip() for pt in overview_points if pt.strip())
 
-    paragraph = " ".join(parts)
+        # Split into sentences, filter out metadata duplication and speaker mentions
+        sentences = re.split(r'(?<=[.!?])\s+', llm_overview)
+        clean_sentences = []
+        for s in sentences:
+            s = s.strip()
+            if not s:
+                continue
+            # Skip metadata duplication (we build our own)
+            if "held a hearing" in s.lower() or "convened" in s.lower():
+                continue
+            # Skip "Key themes included..." literal lists
+            if s.lower().startswith("key themes"):
+                continue
+            # Skip sentences mentioning specific speakers
+            if _mentions_speaker(s):
+                continue
+            # Remove leading "also" or "The hearing also" that become orphaned
+            s = re.sub(r'^The hearing also\b', 'The hearing', s)
+            s = re.sub(r'^Also,?\s*', '', s)
+            clean_sentences.append(s)
+
+        if clean_sentences:
+            thematic_text = " ".join(clean_sentences)
+            if not thematic_text.endswith("."):
+                thematic_text += "."
+            paragraph = f"{opening} {thematic_text}"
+        else:
+            paragraph = opening
+    else:
+        paragraph = opening
 
     return {
         "heading": HEADING_HEARING_OVERVIEW,
@@ -203,7 +232,7 @@ def _compose_opening_statements(record: dict) -> dict:
     - One subheading per leadership speaker
     - Full role/title style in headings
     - Short forms in body text
-    - 90–180 words per speaker
+    - 150–300 words per speaker
     """
     opening_heading = record["structure"]["opening_heading"]
     statements = record.get("opening_statements", [])
@@ -211,18 +240,10 @@ def _compose_opening_statements(record: dict) -> dict:
     subsections = []
     for stmt in statements:
         speaker_heading = stmt["speaker"]
-        speaker_short = _short_form(speaker_heading)
         points = stmt["summary_points"]
 
-        # Build 1-2 paragraphs
-        if len(points) <= 3:
-            body = _compose_prose_paragraph(points, speaker_short)
-        else:
-            # Split into two paragraphs for readability
-            mid = len(points) // 2
-            para1 = _compose_prose_paragraph(points[:mid], speaker_short)
-            para2 = _compose_prose_paragraph(points[mid:], speaker_short)
-            body = f"{para1}\n\n{para2}"
+        # Each point from the LLM is already a full paragraph — join with double newline
+        body = "\n\n".join(pt.strip() for pt in points if pt.strip())
 
         subsections.append({
             "heading": _format_heading(speaker_heading),
@@ -243,7 +264,7 @@ def _compose_witnesses(record: dict) -> dict:
     Rules (STYLE_GUIDE §11):
     - One subsection per witness
     - Heading: Honorific + Name, Affiliation
-    - 90–180 words per witness
+    - 150–350 words per witness
     """
     witnesses = record.get("witnesses", [])
 
@@ -256,15 +277,8 @@ def _compose_witnesses(record: dict) -> dict:
 
         points = w["summary_points"]
 
-        # Build 1-2 paragraphs
-        speaker_short = _short_form(w["name"])
-        if len(points) <= 3:
-            body = _compose_prose_paragraph(points, speaker_short)
-        else:
-            mid = len(points) // 2
-            para1 = _compose_prose_paragraph(points[:mid], speaker_short)
-            para2 = _compose_prose_paragraph(points[mid:], speaker_short)
-            body = f"{para1}\n\n{para2}"
+        # Each point from the LLM is already a full paragraph — join with double newline
+        body = "\n\n".join(pt.strip() for pt in points if pt.strip())
 
         subsections.append({
             "heading": heading,
@@ -341,7 +355,7 @@ def _compose_metadata_block(record: dict, overrides: dict) -> dict:
     """
     meta = record["metadata"]
 
-    memo_from = overrides.get("memo_from") or "Mercury"
+    memo_from = overrides.get("memo_from") or ""
     memo_date = overrides.get("memo_date") or meta.get("memo_date")
     if not memo_date:
         # Default to today
@@ -376,11 +390,11 @@ def _compose_display_title(record: dict) -> str:
 # ---------------------------------------------------------------------------
 
 def compose(record_dict: dict,
-            memo_from: str = "Mercury",
+            memo_from: str = "",
             memo_date: str = None,
             subject_line: str = None,
             confidentiality_footer: str = None) -> dict:
-    """Compose a Mercury-style memo from a structured hearing record.
+    """Compose a house-style memo from a structured hearing record.
 
     Args:
         record_dict: HearingRecord as a dict (from extractor)

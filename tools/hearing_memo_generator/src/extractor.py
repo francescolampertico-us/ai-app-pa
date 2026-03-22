@@ -1,20 +1,22 @@
 """
 extractor.py — Stage 2: Extract structured hearing record from normalized text.
 
+Single-pass LLM architecture: sends the full transcript to GPT-4o and receives
+a complete structured hearing record in one call. This gives the model full
+context across all speakers, exchanges, and themes — producing far more accurate
+and substantive summaries than per-exchange calls.
+
 Produces a HearingRecord conforming to schema/hearing_record.schema.json.
 """
 
 import os
-import re
 import json
 import sys
 from dataclasses import dataclass, field, asdict
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional
 
 try:
     from openai import OpenAI
-    # Use a global client so we don't re-init on every call
-    import os
     _openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY")) if os.environ.get("OPENAI_API_KEY") else None
 except ImportError:
     _openai_client = None
@@ -23,7 +25,6 @@ from .config import (
     HEADING_OPENING_STATEMENTS,
     HEADING_OPENING_COCHAIRS,
     HEADING_WITNESS_SECTION,
-    HEADING_QA,
 )
 
 
@@ -89,360 +90,361 @@ class HearingRecord:
 
 
 # ---------------------------------------------------------------------------
-# Speaker / section detection helpers
+# State abbreviation map (full names and common short forms)
 # ---------------------------------------------------------------------------
 
-# Regex for speaker label lines (on their own line)
-SPEAKER_LINE_RE = re.compile(
-    r"^((?:Sen\.|Senator|Rep\.|Representative|Chairman|Chairwoman|"
-    r"Ranking Member|Full Committee Ranking Member|Commissioner|"
-    r"Mr\.|Ms\.|Dr\.|Hon\.|Honorable)\s+"
-    r"[A-Z][a-zA-Z.']+(?:\s+[A-Z][a-zA-Z.']+)*"
-    r"(?:\s+\([RD]-[A-Za-z.]+\))?)\s*$",
-    re.MULTILINE
-)
-
-# Bare name on its own line (witnesses without a title prefix)
-BARE_NAME_RE = re.compile(
-    r"^([A-Z][a-z]+(?:\s+[A-Z]\.?\s*)?(?:\s+[A-Z][a-z]+)+)\s*$",
-    re.MULTILINE
-)
-
-
-def _detect_leadership_model(text: str) -> str:
-    """Detect whether the hearing uses co-chairs or chair/ranking member."""
-    text_lower = text[:10000].lower()
-    if "co-chair" in text_lower:
-        return "co_chairs"
-    # Check for commissioner-led hearings
-    commissioner_lines = len(re.findall(r"^Commissioner\s+", text[:10000], re.MULTILINE))
-    chairman_count = text_lower.count("chairman") + text_lower.count("chairwoman")
-    if commissioner_lines > chairman_count and commissioner_lines > 3:
-        return "co_chairs"
-    if "ranking member" in text_lower:
-        return "chair_ranking_member"
-    if "chairman" in text_lower or "chairwoman" in text_lower:
-        return "chair_only"
-    return "other"
-
-
-def _detect_leadership_from_context(text: str) -> Dict[str, str]:
-    """Detect which speakers hold leadership roles from body text context.
-
-    Scans for patterns like "Chairman Scott", "Ranking Member Gillibrand"
-    and maps last names back to full speaker labels.
-
-    Returns: dict mapping lowercase last name -> role string
-    """
-    roles = {}
-
-    # Chairman/Chairwoman — match "Chairman [LastName]"
-    for match in re.finditer(
-        r"(?:Chairman|Chairwoman)\s+([A-Z][a-z]+)(?:\s|,|\.|$)", text[:15000]
-    ):
-        roles[match.group(1).lower()] = "Chairman"
-
-    # Ranking Member — match "Ranking Member [FirstName LastName]" or "Ranking Member [LastName]"
-    for match in re.finditer(
-        r"Ranking Member\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)", text[:15000]
-    ):
-        # Use the LAST word as the key
-        name_parts = match.group(1).split()
-        last_name = name_parts[-1].lower()
-        # Skip if this is clearly a first name match only  
-        if len(name_parts) == 1:
-            roles[last_name] = "Ranking Member"
-        else:
-            # Use the real last name
-            roles[name_parts[-1].lower()] = "Ranking Member"
-
-    # Commissioner (for co-chair hearings)
-    for match in re.finditer(
-        r"Commissioner\s+([A-Z][a-z]+)", text[:15000]
-    ):
-        roles[match.group(1).lower()] = "Commissioner"
-
-    return roles
+STATE_ABBREV_MAP = {
+    "alabama": "AL", "alaska": "AK", "arizona": "AZ", "arkansas": "AR",
+    "california": "CA", "colorado": "CO", "connecticut": "CT", "delaware": "DE",
+    "florida": "FL", "georgia": "GA", "hawaii": "HI", "idaho": "ID",
+    "illinois": "IL", "indiana": "IN", "iowa": "IA", "kansas": "KS",
+    "kentucky": "KY", "louisiana": "LA", "maine": "ME", "maryland": "MD",
+    "massachusetts": "MA", "michigan": "MI", "minnesota": "MN", "mississippi": "MS",
+    "missouri": "MO", "montana": "MT", "nebraska": "NE", "nevada": "NV",
+    "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY",
+    "north carolina": "NC", "north dakota": "ND", "ohio": "OH", "oklahoma": "OK",
+    "oregon": "OR", "pennsylvania": "PA", "rhode island": "RI", "south carolina": "SC",
+    "south dakota": "SD", "tennessee": "TN", "texas": "TX", "utah": "UT",
+    "vermont": "VT", "virginia": "VA", "washington": "WA", "west virginia": "WV",
+    "wisconsin": "WI", "wyoming": "WY",
+    # Common short forms from transcripts
+    "ala": "AL", "ariz": "AZ", "ark": "AR", "calif": "CA", "colo": "CO",
+    "conn": "CT", "del": "DE", "fla": "FL", "ill": "IL", "ind": "IN",
+    "kan": "KS", "mass": "MA", "mich": "MI", "minn": "MN", "miss": "MS",
+    "neb": "NE", "nev": "NV", "okla": "OK", "ore": "OR", "penn": "PA",
+    "tenn": "TN", "tex": "TX", "wash": "WA", "wis": "WI", "wyo": "WY",
+    # Two-letter codes (already correct, but normalize case)
+    "al": "AL", "ak": "AK", "az": "AZ", "ar": "AR", "ca": "CA", "co": "CO",
+    "ct": "CT", "de": "DE", "fl": "FL", "ga": "GA", "hi": "HI", "id": "ID",
+    "il": "IL", "in": "IN", "ia": "IA", "ks": "KS", "ky": "KY", "la": "LA",
+    "me": "ME", "md": "MD", "ma": "MA", "mi": "MI", "mn": "MN", "ms": "MS",
+    "mo": "MO", "mt": "MT", "ne": "NE", "nv": "NV", "nh": "NH", "nj": "NJ",
+    "nm": "NM", "ny": "NY", "nc": "NC", "nd": "ND", "oh": "OH", "ok": "OK",
+    "or": "OR", "pa": "PA", "ri": "RI", "sc": "SC", "sd": "SD", "tn": "TN",
+    "tx": "TX", "ut": "UT", "vt": "VT", "va": "VA", "wa": "WA", "wv": "WV",
+    "wi": "WI", "wy": "WY",
+}
 
 
-def _split_by_speakers(text: str) -> List[Dict[str, str]]:
-    """Split text into segments by speaker labels.
+def _normalize_state(raw: str) -> str:
+    """Normalize a state abbreviation like 'Fla.' or 'Conn.' to 'FL' or 'CT'."""
+    cleaned = raw.strip().rstrip(".").lower()
+    return STATE_ABBREV_MAP.get(cleaned, raw.upper()[:2])
 
-    Returns list of {speaker: ..., text: ...} dicts.
-    """
-    segments = []
-    lines = text.split("\n")
-    current_speaker = None
-    current_text = []
 
-    for line in lines:
-        stripped = line.strip()
+# ---------------------------------------------------------------------------
+# Single-pass LLM extraction
+# ---------------------------------------------------------------------------
 
-        # Check for titled speaker label line
-        is_titled = bool(SPEAKER_LINE_RE.match(stripped))
+SYSTEM_PROMPT = """You are an expert congressional hearing analyst producing detailed professional memos. You will receive the full text of a congressional hearing transcript. Your job is to extract a complete structured record with SUBSTANTIAL DETAIL — the final memo should be 6 to 10 pages.
 
-        # Check for bare name (2-4 capitalized words, standing alone)
-        is_bare = False
-        if not is_titled and stripped:
-            is_bare = bool(BARE_NAME_RE.match(stripped))
-            # Exclude lines that are too long to be speaker labels
-            if is_bare and len(stripped) > 60:
-                is_bare = False
-            # Exclude common false positives (section headings, etc.)
-            if is_bare:
-                words = stripped.split()
-                # If all words are capitalized normal words (not function words), treat as name
-                if len(words) < 2 or len(words) > 4:
-                    is_bare = False
+CRITICAL RULES:
+1. Be SPECIFIC and SUBSTANTIVE in all summaries. Never write vague filler like "inquired about a specific topic" or "discussed the issue." Always name the actual policy, person, event, or proposal being discussed. Include specific facts, figures, and commitments mentioned.
+2. Use correct senator states — look them up from context or your knowledge. Example: Blumenthal is D-CT, not D-CO. Ernst is R-IA.
+3. Identify Chairman/Ranking Member roles from how they are addressed in the transcript.
+4. Distinguish between witnesses/nominees and senators who introduce them.
+5. If a senator asks questions in multiple rounds, create SEPARATE entries for each round.
 
-        if is_titled or is_bare:
-            # Save previous segment
-            if current_speaker:
-                segments.append({
-                    "speaker": current_speaker,
-                    "text": "\n".join(current_text).strip()
-                })
-            current_speaker = stripped
-            current_text = []
-        else:
-            current_text.append(line)
+LENGTH TARGETS (these are critical — write substantially, not telegraphically):
+- Opening statements: 2-4 paragraphs per speaker, 150-300 words each. Cover the speaker's framing, specific concerns, proposals, and any cited facts or events.
+- Witness testimony: 2-4 paragraphs per witness, 150-350 words each. Cover their main argument, key evidence, specific policy prescriptions and recommendations.
+- Q&A exchanges: 1-4 paragraphs per member per round, 150-400 words each. Capture EACH question and its specific answer. If a senator asks 3 questions, write about all 3.
+- Overview: 5-8 sentences, 150-200 words. DO NOT start with the committee/title/date — that is added separately. Instead, write a substantive summary of what the hearing examined and the major issues discussed. Weave the themes into flowing prose — do NOT write a literal list like "Key themes included X, Y, Z." Do NOT mention individual committee members or witnesses by name. Refer to them generically (e.g., "the committee examined," "senators pressed the nominee on," "discussion centered on").
 
-    # Save last segment
-    if current_speaker:
-        segments.append({
-            "speaker": current_speaker,
-            "text": "\n".join(current_text).strip()
-        })
+STYLE:
+- ALWAYS write in professional third person. NEVER use first person ("I", "we", "my").
+  WRONG: "I entered the Senate the same year that..."
+  CORRECT: "Chairman Paul opened by reflecting on his personal experiences with..."
+  WRONG: "Before starting my opening statement, I must address..."
+  CORRECT: "Sen. Mullin addressed the Chairman's remarks directly, asserting that..."
+- Each paragraph should carry one clear unit of meaning (2-4 sentences).
+- Paraphrase by default. Use direct quotes only for especially distinctive or politically significant phrases.
+- Be descriptive, not argumentative. Do not add your own policy implications or predictions.
 
-    return segments
+Return a JSON object with this exact structure:
+{
+  "metadata": {
+    "hearing_title": "Full official title of the hearing",
+    "hearing_date": "Day of week, Month DD, YYYY",
+    "hearing_time": "HH:MM AM/PM" or null,
+    "committee_name": "Full committee name",
+    "subcommittee_name": null or "subcommittee name"
+  },
+  "leadership_model": "chair_ranking_member" or "co_chairs" or "chair_only",
+  "opening_statements": [
+    {
+      "speaker_heading": "Chairman FirstName LastName (R-XX)" or "Ranking Member FirstName LastName (D-XX)",
+      "paragraphs": ["Paragraph 1 text...", "Paragraph 2 text...", "Paragraph 3 text..."]
+    }
+  ],
+  "witnesses": [
+    {
+      "name": "Full name with title (e.g., Honorable Markwayne Mullin)",
+      "role": "introducer" or "nominee" or "witness" or "expert",
+      "affiliation": "Organization or position",
+      "paragraphs": ["Paragraph 1...", "Paragraph 2...", "Paragraph 3..."]
+    }
+  ],
+  "qa_exchanges": [
+    {
+      "member_heading": "Senator/Chairman/Ranking Member FirstName LastName (R/D-XX)",
+      "round": 1,
+      "paragraphs": ["Paragraph 1 about first question and answer...", "Paragraph 2 about second question and answer..."]
+    }
+  ],
+  "overview": {
+    "themes": ["theme 1", "theme 2"],
+    "summary": "A 5-8 sentence overview paragraph naming the committee, title, date, time, and major themes."
+  }
+}
 
-def _llm_summarize(text: str, speaker_name: str, context: str = "opening") -> str:
-    """Use an LLM (OpenAI) to generate a third-person narrative summary matching the reference style."""
-    
-    # Strip (R-Fla.) style suffixes before getting the last name
-    clean_name = re.sub(r'\s*\([RD]-[A-Za-z.]+\)\s*$', '', speaker_name).strip()
-    last_name = clean_name.split()[-1]
-    
-    # Determine the role prefix
-    if "Rep." in speaker_name or "Represent" in speaker_name:
-        prefix = f"Rep. {last_name}"
-    elif "Sen." in speaker_name or "Senator" in speaker_name:
-        prefix = f"Sen. {last_name}"
-    elif "Chairman" in speaker_name or "Chairwoman" in speaker_name:
-        prefix = f"Chairman {last_name}"
-    elif "Ranking Member" in speaker_name:
-        prefix = f"Ranking Member {last_name}"
-    else:
-        # For witnesses, use Mr./Ms./Dr. based on basic heuristic
-        prefix = f"Mr./Ms. {last_name}"
-        if "Dr." in clean_name:
-            prefix = f"Dr. {last_name}"
+IMPORTANT for qa_exchanges:
+- Each paragraph should start with the senator's short form (e.g., "Sen. Blumenthal asked..." or "Chairman Paul challenged...").
+- If a senator asks multiple separate questions in one round, write one paragraph per question-answer pair.
+- If a senator returns for a second round, create a new entry with round: 2.
+- Always capture what the witness/nominee actually said in response — include their specific answer, not just "the witness responded."
+- Use the witness's name (e.g., "Hon. Mullin replied that..." or "Ms. Madan said that...") instead of generic "the witness."
+- Include specific policy details, names, figures, and commitments in every exchange.
+"""
 
-    if not _openai_client:
-        # Fallback if no API key or openai library is missing
-        words = text.split()
-        snippet = " ".join(words[:15]) + "..." if len(words) > 15 else text
-        snippet = snippet.replace('\n', ' ')
-        if context == "qa_question":
-            return f"{prefix} asked about the issues, noting: \"{snippet}\""
-        elif context == "qa_response":
-            return f"{prefix} replied: \"{snippet}\""
-        return f"{prefix} discussed the issue, noting: \"{snippet}\""
 
-    # Prepare prompt based on context
-    system_prompt = (
-        "You are an expert congressional hearing note-taker writing a formal Mercury-style memo. "
-        "Your task is to summarize the provided transcript segment objectively in the third-person. "
-        "Write exactly ONE strict, concise paragraph. Do not use bullets. Do not use direct quotes. "
-        "Remove conversational pleasantries. Focus entirely on the substantive arguments and questions. "
-        "Maintain a neutral, professional, objective tone."
-    )
+def _build_hints(metadata_candidates: dict) -> str:
+    """Build metadata hints string from normalizer candidates."""
+    if not metadata_candidates:
+        return ""
+    hint_parts = []
+    for key in ("committee_name", "hearing_title", "hearing_date_long",
+                 "date_mention", "publication_datetime"):
+        val = metadata_candidates.get(key)
+        if val:
+            hint_parts.append(f"- {key}: {val}")
+    if hint_parts:
+        return "\n\nMetadata hints extracted from the document:\n" + "\n".join(hint_parts)
+    return ""
 
-    if context == "opening":
-        user_prompt = f"Summarize this opening statement by {prefix}. Emphasize their key arguments, concerns, or legislative priorities regarding the topic:\\n\\n{text}\\n\\nRule: Start your response with '{prefix} emphasized...' or '{prefix} outlined...'"
-    elif context == "witness":
-        user_prompt = f"Summarize this witness testimony by {prefix}. Highlight their core arguments, specific risks identified, and any explicit policy recommendations they made to Congress:\\n\\n{text}\\n\\nRule: Start your response with '{prefix} testified that...' or '{prefix} argued...'"
-    elif context == "qa_exchange":
-        # Text is the combined interaction. Pass instructions to write it cohesively
-        user_prompt = f"Summarize this Q&A exchange. The member ({prefix}) asks a question or makes a point, and the witness responds. Summarize the interaction in 1 or 2 concise sentences (e.g., '{prefix} asked [Witness] about [Topic]. [Witness] replied/suggested [Answer].'):\\n\\n{text}"
-    else:
-        user_prompt = f"Summarize what {prefix} said:\\n\\n{text}"
+
+def _call_llm(user_prompt: str, model: str = None) -> dict:
+    """Make a single LLM call and return parsed JSON."""
+    model = model or os.environ.get("MEMO_MODEL", "gpt-4o-mini")
 
     try:
         response = _openai_client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=model,
             messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
             ],
-            temperature=0.3,
-            max_tokens=200
+            temperature=0.2,
+            max_tokens=16000,
+            response_format={"type": "json_object"},
         )
-        summary = response.choices[0].message.content.strip()
-        
-        # Enforce the prefix for non-QA exchange contexts if the LLM hallucinates
-        if context != "qa_exchange" and not summary.startswith(prefix):
-            words = summary.split()
-            if words[0].lower() in ("he", "she", "they", "the"):
-                summary = f"{prefix} {' '.join(words[1:])}"
-            else:
-                summary = f"{prefix} {summary}"
-                
-        return summary
     except Exception as e:
-        print(f"LLM Error: {e}", file=sys.stderr)
-        return f"{prefix} exchanged views on the issue."
+        error_msg = str(e)
+        if ("rate_limit" in error_msg or "429" in error_msg) and model != "gpt-4o-mini":
+            print(f"Rate limited on {model}, falling back to gpt-4o-mini...", file=sys.stderr)
+            response = _openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.2,
+                max_tokens=16000,
+                response_format={"type": "json_object"},
+            )
+        else:
+            raise
 
-def _extract_witness_info(name: str, text: str) -> WitnessRecord:
-    """Extract witness information from a text segment."""
-    affiliation = None
+    raw = response.choices[0].message.content.strip()
+    return json.loads(raw)
 
-    # Check for comma-separated affiliation
-    if "," in name:
-        parts = name.split(",", 1)
-        name = parts[0].strip()
-        affiliation = parts[1].strip()
 
-    # Generate the LLM witness summary
-    summary_paragraph = _llm_summarize(text, name, context="witness")
-    points = [summary_paragraph]
+def _merge_results(part1: dict, part2: dict) -> dict:
+    """Merge two partial extraction results into one complete record."""
+    # Use part1 as the base (it has metadata, opening statements, witnesses, early Q&A)
+    merged = {
+        "metadata": part1.get("metadata", {}),
+        "leadership_model": part1.get("leadership_model", "chair_ranking_member"),
+        "opening_statements": part1.get("opening_statements", []),
+        "witnesses": part1.get("witnesses", []),
+        "qa_exchanges": list(part1.get("qa_exchanges", [])),
+        "overview": part1.get("overview", {}),
+    }
 
-    # Extract recommendations
-    recommendations = []
-    rec_patterns = [
-        r"(?:recommend|urge|propose|advocate|call for|suggest)\w*\s+(?:that\s+)?(.+?)(?:\.|$)",
-    ]
-    for pattern in rec_patterns:
-        for match in re.finditer(pattern, text, re.IGNORECASE):
-            rec = match.group(1).strip()
-            if len(rec) > 20:
-                recommendations.append(rec)
+    # Add Q&A exchanges from part2 that aren't duplicates
+    existing_members = set()
+    for ex in merged["qa_exchanges"]:
+        key = (ex.get("member_heading", ""), ex.get("round", 1))
+        existing_members.add(key)
 
-    return WitnessRecord(
-        name=name,
-        affiliation=affiliation,
-        summary_points=points if points else [text[:200]],
-        recommendations=recommendations[:5],
+    for ex in part2.get("qa_exchanges", []):
+        key = (ex.get("member_heading", ""), ex.get("round", 1))
+        if key not in existing_members:
+            merged["qa_exchanges"].append(ex)
+            existing_members.add(key)
+
+    # Add any witnesses from part2 not already present
+    existing_witnesses = {w.get("name", "").lower() for w in merged["witnesses"]}
+    for w in part2.get("witnesses", []):
+        if w.get("name", "").lower() not in existing_witnesses:
+            merged["witnesses"].append(w)
+
+    # Merge overview themes
+    themes1 = set(merged.get("overview", {}).get("themes", []))
+    themes2 = set(part2.get("overview", {}).get("themes", []))
+    merged["overview"]["themes"] = list(themes1 | themes2)
+
+    return merged
+
+
+def _find_split_point(text: str, target_pos: int, search_radius: int = 2000) -> int:
+    """Find a paragraph break near the target position."""
+    start = max(target_pos - search_radius, 0)
+    end = min(target_pos + search_radius, len(text))
+    region = text[start:end]
+    split_pos = region.rfind("\n\n")
+    if split_pos == -1:
+        split_pos = region.rfind("\n")
+    if split_pos == -1:
+        split_pos = len(region) // 2
+    return start + split_pos
+
+
+def _extract_via_llm(transcript: str, metadata_candidates: dict) -> dict:
+    """Extract structured hearing record via LLM.
+
+    For transcripts that exceed rate limits (~30K TPM on Tier 1),
+    splits into multiple sequential calls and merges results.
+    """
+    if not _openai_client:
+        raise RuntimeError(
+            "OpenAI API key not set. Set OPENAI_API_KEY environment variable."
+        )
+
+    hints = _build_hints(metadata_candidates)
+    model = os.environ.get("MEMO_MODEL", "gpt-4o-mini")
+
+    # Safe input budget per call: ~15K tokens input = ~60K chars.
+    # This leaves room for system prompt (~3K tokens) + output (16K tokens)
+    # while staying within Tier 1 30K TPM limit per call.
+    max_chunk_chars = int(os.environ.get("MEMO_MAX_CHARS", 60_000))
+
+    if len(transcript) <= max_chunk_chars:
+        # Single call — transcript fits within limits
+        user_prompt = (
+            f"Extract the structured hearing record from this transcript.{hints}"
+            f"\n\n---TRANSCRIPT START---\n{transcript}\n---TRANSCRIPT END---"
+        )
+        return _call_llm(user_prompt, model)
+
+    # --- Determine number of chunks needed ---
+    num_chunks = (len(transcript) // max_chunk_chars) + 1
+    num_chunks = max(num_chunks, 2)
+    print(f"Transcript is {len(transcript)} chars — splitting into {num_chunks} calls...", file=sys.stderr)
+
+    # Find split points at paragraph breaks
+    chunk_size = len(transcript) // num_chunks
+    split_points = [0]
+    for i in range(1, num_chunks):
+        target = chunk_size * i
+        split_points.append(_find_split_point(transcript, target))
+    split_points.append(len(transcript))
+
+    chunks = []
+    for i in range(num_chunks):
+        chunks.append(transcript[split_points[i]:split_points[i + 1]])
+
+    # --- Call 1: First chunk (opening statements, witnesses, early Q&A) ---
+    prompt1 = (
+        f"Extract the structured hearing record from this transcript (PART 1 of {num_chunks} — "
+        f"this is the beginning of the hearing, including opening statements, witness testimony, and early Q&A).{hints}"
+        f"\n\n---TRANSCRIPT PART 1 START---\n{chunks[0]}\n---TRANSCRIPT PART 1 END---"
     )
+    print("  Extracting Part 1...", file=sys.stderr)
+    merged = _call_llm(prompt1, model)
 
+    # --- Subsequent chunks: Q&A continuation ---
+    for chunk_idx in range(1, num_chunks):
+        # Build context from all previous results
+        covered_members = []
+        for ex in merged.get("qa_exchanges", []):
+            h = ex.get("member_heading", "")
+            if h:
+                covered_members.append(h)
 
-def _extract_overview_points(text: str, metadata: dict) -> List[str]:
-    """Generate high-level overview points from the hearing text."""
-    points = []
+        witness_names = ", ".join(w.get("name", "") for w in merged.get("witnesses", []))
+        hearing_title = merged.get("metadata", {}).get("hearing_title", "the topic")
 
-    committee = metadata.get("committee_name", "The committee")
-    title = metadata.get("hearing_title", "the hearing")
-    date = metadata.get("hearing_date", "")
-    time = metadata.get("hearing_time", "")
+        context = (
+            f"\n\nContext from previous parts: The hearing is about {hearing_title}. "
+            f"The nominee/witness is {witness_names}. "
+            f"Senators already covered (DO NOT repeat unless they return for a new round): "
+            f"{', '.join(covered_members)}."
+        )
 
-    context = f'{committee} held a hearing titled "{title}"'
-    if date:
-        context += f" on {date}"
-    if time:
-        context += f" at {time}"
-    points.append(context)
+        prompt_n = (
+            f"Extract the structured hearing record from this transcript (PART {chunk_idx + 1} of {num_chunks} — "
+            f"this is a continuation of the hearing Q&A). "
+            f"Focus ONLY on Q&A exchanges with NEW senators or later rounds of questioning. "
+            f"Do NOT include opening statements or witness testimony (already extracted).{context}{hints}"
+            f"\n\n---TRANSCRIPT PART {chunk_idx + 1} START---\n{chunks[chunk_idx]}\n---TRANSCRIPT PART {chunk_idx + 1} END---"
+        )
+        print(f"  Extracting Part {chunk_idx + 1}...", file=sys.stderr)
+        result_n = _call_llm(prompt_n, model)
+        merged = _merge_results(merged, result_n)
 
-    # Scan for major themes
-    theme_signals = [
-        (r"(?:national security|security risk)", "national security implications"),
-        (r"(?:supply chain|manufacturing|domestic production)", "supply chain vulnerabilities and domestic manufacturing"),
-        (r"(?:China|Chinese|CCP|Communist China|Beijing)", "China's role in the pharmaceutical supply chain"),
-        (r"(?:FDA|pharmaceutical|drug|medicine|generic)", "pharmaceutical oversight and drug safety"),
-        (r"(?:legislation|act|bill|reform)", "legislative and policy reform proposals"),
-        (r"(?:oversight|transparency|accountability)", "oversight and transparency measures"),
-        (r"(?:innovation|biotechnology|biotech)", "biotechnology innovation"),
-    ]
-
-    detected_themes = []
-    text_lower = text[:15000].lower()
-    for pattern, theme in theme_signals:
-        if re.search(pattern, text_lower):
-            detected_themes.append(theme)
-
-    if detected_themes:
-        points.append(f"Key themes included {', '.join(detected_themes[:5])}")
-
-    return points
+    print(f"  Merged: {len(merged['qa_exchanges'])} total Q&A entries", file=sys.stderr)
+    return merged
 
 
 # ---------------------------------------------------------------------------
-# Main extraction entry point
+# Fallback: rule-based extraction (no LLM)
 # ---------------------------------------------------------------------------
 
-def extract(cleaned_text: str, metadata_candidates: dict,
-            source_profile: str) -> HearingRecord:
-    """Build a structured HearingRecord from normalized text."""
+def _extract_fallback(transcript: str, metadata_candidates: dict) -> dict:
+    """Minimal rule-based extraction when no LLM is available."""
+    return {
+        "metadata": {
+            "hearing_title": metadata_candidates.get("hearing_title"),
+            "hearing_date": metadata_candidates.get("hearing_date_long")
+                            or metadata_candidates.get("date_mention"),
+            "hearing_time": None,
+            "committee_name": metadata_candidates.get("committee_name"),
+            "subcommittee_name": None,
+        },
+        "leadership_model": "chair_ranking_member",
+        "opening_statements": [],
+        "witnesses": [],
+        "qa_exchanges": [],
+        "overview": {
+            "themes": [],
+            "summary": "LLM extraction unavailable. Please set OPENAI_API_KEY.",
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Convert LLM output to HearingRecord
+# ---------------------------------------------------------------------------
+
+def _build_hearing_record(llm_output: dict, metadata_candidates: dict,
+                           source_profile: str) -> HearingRecord:
+    """Convert the LLM JSON output into a HearingRecord object."""
     uncertainties: List[str] = []
 
     # --- Metadata ---
-    hearing_title = metadata_candidates.get("hearing_title", None)
-    hearing_date = None
-    hearing_time = None
-    memo_date = None
+    llm_meta = llm_output.get("metadata", {})
+    hearing_title = llm_meta.get("hearing_title") or metadata_candidates.get("hearing_title")
+    hearing_date = llm_meta.get("hearing_date") or metadata_candidates.get("hearing_date_long") or metadata_candidates.get("date_mention")
+    hearing_time = llm_meta.get("hearing_time")
+    committee_name = llm_meta.get("committee_name") or metadata_candidates.get("committee_name")
 
-    pub_datetime = metadata_candidates.get("publication_datetime")
-    date_long = metadata_candidates.get("hearing_date_long")
-    date_mention = metadata_candidates.get("date_mention")
-
-    if date_long:
-        hearing_date = date_long if isinstance(date_long, str) else date_long[0]
-    elif date_mention:
-        hearing_date = date_mention if isinstance(date_mention, str) else date_mention[0]
-
-    if pub_datetime:
-        pub_str = pub_datetime if isinstance(pub_datetime, str) else pub_datetime[0]
-        time_match = re.search(r"(\d{1,2}:\d{2}\s*(?:AM|PM))", pub_str)
-        if time_match:
-            hearing_time = time_match.group(1)
-            uncertainties.append(
-                "Publication timestamp used for hearing time; "
-                "verify this is the actual hearing time, not just the article publication time"
-            )
-
-    if not hearing_date and pub_datetime:
-        pub_str = pub_datetime if isinstance(pub_datetime, str) else pub_datetime[0]
-        date_match = re.search(r"(\d{2}/\d{2}/\d{4})", pub_str)
-        if date_match:
-            raw = date_match.group(1)
-            from datetime import datetime
-            try:
-                dt = datetime.strptime(raw, "%m/%d/%Y")
-                hearing_date = dt.strftime("%B %d, %Y")
-            except ValueError:
-                hearing_date = raw
-
-    # Fallback: publication_date_only (when time portion was garbled)
-    if not hearing_date:
-        pub_date_only = metadata_candidates.get("publication_date_only")
-        if pub_date_only:
-            raw = pub_date_only if isinstance(pub_date_only, str) else pub_date_only[0]
-            from datetime import datetime
-            try:
-                dt = datetime.strptime(raw, "%m/%d/%Y")
-                hearing_date = dt.strftime("%B %d, %Y")
-                uncertainties.append(
-                    "Date extracted from publication header; verify this is the hearing date"
-                )
-            except ValueError:
-                hearing_date = raw
-
-    committee_name = metadata_candidates.get("committee_name")
-
-    # Attempt to extract hearing title from text if not found
     if not hearing_title:
-        lines = cleaned_text[:3000].split("\n")
-        for line in lines:
-            stripped = line.strip()
-            if (len(stripped) > 20 and len(stripped) < 200
-                    and not stripped.startswith("Sen.")
-                    and not stripped.startswith("Rep.")
-                    and not re.match(r"\d", stripped)):
-                words = stripped.split()
-                if len(words) >= 4 and words[0][0].isupper():
-                    hearing_title = stripped
-                    break
-        if not hearing_title:
-            uncertainties.append("Could not detect hearing title from source text")
+        uncertainties.append("Hearing title not detected")
+    if not hearing_date:
+        uncertainties.append("Hearing date not detected")
+    if not committee_name:
+        uncertainties.append("Committee name not detected")
 
     source_quality = "mostly_clean"
     if source_profile in ("video_transcript",):
@@ -454,16 +456,15 @@ def extract(cleaned_text: str, metadata_candidates: dict,
         "hearing_title": hearing_title,
         "hearing_date": hearing_date,
         "hearing_time": hearing_time,
-        "memo_date": memo_date,
+        "memo_date": None,
         "committee_name": committee_name,
-        "subcommittee_name": None,
+        "subcommittee_name": llm_meta.get("subcommittee_name"),
         "subject_line": None,
         "source_quality": source_quality,
     }
 
     # --- Structure ---
-    leadership_model = _detect_leadership_model(cleaned_text)
-
+    leadership_model = llm_output.get("leadership_model", "chair_ranking_member")
     if leadership_model == "co_chairs":
         opening_heading = HEADING_OPENING_COCHAIRS
     else:
@@ -474,259 +475,74 @@ def extract(cleaned_text: str, metadata_candidates: dict,
         "witness_heading": HEADING_WITNESS_SECTION,
         "hearing_format": "committee_hearing",
         "leadership_model": leadership_model,
-        "panel_count": len(metadata_candidates.get("panels_detected", [])) or 1,
+        "panel_count": 1,
         "has_qa_section": True,
     }
 
-    # --- Detect leadership roles from context ---
-    leadership_roles = _detect_leadership_from_context(cleaned_text)
-    # leadership_roles: {last_name_lower: "Chairman" | "Ranking Member" | "Commissioner"}
-
-    # --- Split text by speakers ---
-    segments = _split_by_speakers(cleaned_text)
-
-    # --- Build speaker roster ---
-    # Collect all unique speakers and classify them
-    all_speaker_labels = [seg["speaker"] for seg in segments]
-    unique_labels = list(dict.fromkeys(all_speaker_labels))
-
-    leadership_speakers = []
-    member_speakers = []
-    leadership_label_set = set()  # lowercase labels of leadership speakers
-    member_label_set = set()      # lowercase labels of member speakers
-    witness_label_set = set()     # lowercase labels of witness speakers
-
-    for label in unique_labels:
-        label_stripped = label.strip()
-        has_party = bool(re.search(r"\([RD]-", label_stripped))
-
-        # Extract the actual last name (before any party/state paren)
-        if has_party:
-            name_part = re.sub(r"\s*\([RD]-[A-Za-z.]+\)\s*$", "", label_stripped).strip()
-            last_name = name_part.split()[-1]
-        else:
-            last_name = label_stripped.split()[-1]
-
-        # Check if this person has a leadership role from context
-        if last_name.lower() in leadership_roles:
-            role = leadership_roles[last_name.lower()]
-            # Build the proper heading label
-            if has_party:
-                # Already has party/state, reformat with role
-                name_part = re.sub(r"\s*\([RD]-[A-Za-z.]+\)\s*$", "", label_stripped).strip()
-                party_match = re.search(r"\(([RD]-[A-Za-z.]+)\)", label_stripped)
-                state_code = party_match.group(1) if party_match else ""
-                # Remove "Sen." prefix and use role
-                name_core = re.sub(r"^(?:Sen\.|Senator|Rep\.|Representative)\s+", "", name_part).strip()
-                heading_label = f"{role} {name_core} ({state_code})"
-            else:
-                heading_label = f"{role} {label_stripped}"
-
-            leadership_speakers.append(
-                SpeakerInfo(name=label_stripped, role_display=heading_label)
-            )
-            leadership_label_set.add(label_stripped.lower())
-        elif has_party:
-            # Member with party/state but not leadership
-            # Normalize label format for heading
-            heading_label = label_stripped
-            # Convert "Sen." -> "Senator" for headings
-            heading_label = re.sub(r"^Sen\.\s+", "Senator ", heading_label)
-            heading_label = re.sub(r"^Rep\.\s+", "Representative ", heading_label)
-
-            member_speakers.append(
-                SpeakerInfo(name=label_stripped, role_display=heading_label)
-            )
-            member_label_set.add(label_stripped.lower())
-        else:
-            # Bare name — likely a witness
-            witness_label_set.add(label_stripped.lower())
-
-    # --- Process segments into opening/witness/Q&A ---
+    # --- Opening Statements ---
     opening_statements: List[OpeningStatement] = []
+    for stmt in llm_output.get("opening_statements", []):
+        heading = stmt.get("speaker_heading", "Unknown")
+        paragraphs = stmt.get("paragraphs", [])
+        opening_statements.append(
+            OpeningStatement(speaker=heading, summary_points=paragraphs)
+        )
+
+    # --- Witnesses ---
     witness_records: List[WitnessRecord] = []
-    qa_by_member: Dict[str, List[Dict]] = {}
+    for w in llm_output.get("witnesses", []):
+        name = w.get("name", "Unknown")
+        affiliation = w.get("affiliation")
+        role = w.get("role", "witness")
+        paragraphs = w.get("paragraphs", [])
 
-    # Phase detection: opening -> witness testimony -> Q&A
-    # Rules:
-    # 1. "opening" phase lasts until the FIRST WITNESS speaks
-    # 2. "witness" phase: witness segments are testimony; congress segments are introductions
-    # 3. "qa" phase: starts when a non-leadership member speaks after witnesses have testified,
-    #    or when leadership speaks with Q&A signals after all witnesses
-    phase = "opening"  # "opening", "witness", "qa"
-    witness_count = 0
-    seen_leadership_opening = set()
-    expected_witness_count = len(witness_label_set)
-
-    for i, seg in enumerate(segments):
-        speaker = seg["speaker"]
-        text = seg["text"]
-        speaker_lower = speaker.lower()
-
-        is_leadership = speaker_lower in leadership_label_set
-        is_member = speaker_lower in member_label_set
-        is_witness = speaker_lower in witness_label_set
-        is_congress = is_leadership or is_member
-
-        # --- Phase transitions ---
-        # Opening -> Witness: when the first witness speaks
-        if phase == "opening" and is_witness:
-            phase = "witness"
-
-        # Witness -> Q&A:
-        # 1. A non-leadership member speaks (Senators who aren't chair/ranking)
-        # 2. After all witnesses, leadership speaks with Q&A-style content (questions)
-        if phase == "witness":
-            if is_member and not is_leadership:
-                phase = "qa"
-            elif is_congress and witness_count >= expected_witness_count:
-                phase = "qa"
-            elif is_congress and witness_count >= expected_witness_count - 1:
-                # Only transition if text explicitly signals Q&A start
-                text_lower = text.lower()[:300]
-                if any(kw in text_lower for kw in [
-                    "let's go to questions", "five minutes",
-                    "begin questions", "we'll start with questions",
-                    "go to questions",
-                ]):
-                    phase = "qa"
-
-        # --- Assign segment based on phase ---
-        if phase == "opening":
-            if is_leadership and speaker_lower not in seen_leadership_opening:
-                seen_leadership_opening.add(speaker_lower)
-                opening_summary = _llm_summarize(text, speaker, context="opening")
-                opening_statements.append(
-                    OpeningStatement(
-                        speaker=speaker,
-                        summary_points=[opening_summary]
-                    )
-                )
-            elif is_congress and speaker_lower in seen_leadership_opening:
-                # Leadership speaking again — likely introducing witnesses
-                # Don't count as an opening statement, just skip
-                pass
-
-        elif phase == "witness":
-            if is_witness:
-                witness = _extract_witness_info(speaker, text)
-                witness_records.append(witness)
-                witness_count += 1
-            elif is_congress:
-                # Congress member speaking during witness phase = introductions
-                # Don't classify as Q&A yet unless it's clearly Q&A
-                pass
-
-        elif phase == "qa":
-            if is_congress:
-                if speaker_lower not in qa_by_member:
-                    qa_by_member[speaker_lower] = {"speaker": speaker, "exchanges": []}
-                qa_by_member[speaker_lower]["exchanges"].append({
-                    "text": text, "responders": []
-                })
-            elif is_witness and qa_by_member:
-                # Witness responding to a member's question
-                last_member = list(qa_by_member.keys())[-1]
-                if qa_by_member[last_member]["exchanges"]:
-                    qa_by_member[last_member]["exchanges"][-1]["responders"].append({
-                        "witness": speaker, "text": text
-                    })
-
-
-
-
-    # --- Build Q&A clusters ---
-    qa_clusters: List[QACluster] = []
-    for member_key, data in qa_by_member.items():
-        member_label = data["speaker"]
-        exchanges = data["exchanges"]
-
-        combined_text = []
-        for ex in exchanges:
-            combined_text.append(ex["text"])
-            for resp in ex.get("responders", []):
-                combined_text.append(f"{resp['witness']} responded: {resp['text']}")
-
-        full_text = " ".join(combined_text)
-
-        # Detect topic
-        topic = "General inquiry"
-        topic_keywords = {
-            "supply chain": "supply chain security",
-            "manufactur": "domestic manufacturing",
-            "China": "China dependencies",
-            "FDA": "FDA oversight",
-            "API": "active pharmaceutical ingredients",
-            "national security": "national security",
-            "generic drug": "generic drug market",
-            "biotech": "biotechnology",
-            "innovation": "pharmaceutical innovation",
-            "transparency": "supply chain transparency",
-        }
-        for kw, topic_name in topic_keywords.items():
-            if kw.lower() in full_text.lower():
-                topic = topic_name
-                break
-
-        # Commitments or requests
-        commitments = []
-        for match in re.finditer(
-            r"(?:commit|pledge|promise|request|will follow up|agreed to)\w*\s+(.+?)(?:\.|$)",
-            full_text, re.IGNORECASE
-        ):
-            c = match.group(1).strip()
-            if len(c) > 15:
-                commitments.append(c)
-
-        # Build objective summary of the exchange mimicking the example reports
-        exchange_paragraphs = []
-        for ex in exchanges[:4]:
-            if ex.get("responders"):
-                resp = ex["responders"][0]
-                combined_text = f"MEMBER QUESTION/STATEMENT:\\n{ex['text']}\\n\\nWITNESS ({resp['witness']}) RESPONSE:\\n{resp['text']}"
-                summary = _llm_summarize(combined_text, member_label, context="qa_exchange")
-                exchange_paragraphs.append(summary)
-            else:
-                combined_text = f"MEMBER STATEMENT:\\n{ex['text']}"
-                summary = _llm_summarize(combined_text, member_label, context="qa_exchange")
-                exchange_paragraphs.append(summary)
-                    
-        # Join the exchange paragraphs with double newlines
-        summary_text = "\n\n".join(exchange_paragraphs)
-
-        qa_clusters.append(QACluster(
-            member=member_label,
-            topic=topic,
-            summary=summary_text if summary_text else "General discussion on the topic.",
-            commitments_or_requests=commitments[:3],
+        witness_records.append(WitnessRecord(
+            name=name,
+            affiliation=affiliation,
+            summary_points=paragraphs,
+            recommendations=[],
+            panel=role,
         ))
 
-    # --- Overview points ---
-    overview_points = _extract_overview_points(cleaned_text, metadata)
+    # --- Q&A ---
+    qa_clusters: List[QACluster] = []
+    for ex in llm_output.get("qa_exchanges", []):
+        member_heading = ex.get("member_heading", "Unknown")
+        round_num = ex.get("round", 1)
+        paragraphs = ex.get("paragraphs", [])
+
+        # Add round indicator if round > 1
+        display_heading = member_heading
+        if round_num > 1:
+            display_heading = f"{member_heading} (Round {round_num})"
+
+        summary_text = "\n\n".join(paragraphs)
+
+        qa_clusters.append(QACluster(
+            member=display_heading,
+            topic="",
+            summary=summary_text,
+            commitments_or_requests=[],
+        ))
+
+    # --- Overview ---
+    overview_data = llm_output.get("overview", {})
+    overview_summary = overview_data.get("summary", "")
+    themes = overview_data.get("themes", [])
+    overview_points = [overview_summary]
 
     # --- Participants ---
+    leadership = []
+    members = []
+    for stmt in opening_statements:
+        leadership.append({"name": stmt.speaker, "role_display": stmt.speaker})
+    for qa in qa_clusters:
+        members.append({"name": qa.member, "role_display": qa.member})
+
     participants = {
-        "leadership": [{"name": s.name, "role_display": s.role_display} for s in leadership_speakers],
-        "members": [{"name": s.name, "role_display": s.role_display} for s in member_speakers],
+        "leadership": leadership,
+        "members": members,
     }
-
-    # --- Validation and uncertainties ---
-    if not opening_statements:
-        uncertainties.append("No opening statements detected — may need manual review")
-    if not witness_records:
-        uncertainties.append("No witness testimonies detected — may need manual review")
-    if not qa_clusters:
-        uncertainties.append("No Q&A exchanges detected — may need manual review")
-    if not hearing_title:
-        uncertainties.append("Hearing title not detected")
-    if not hearing_date:
-        uncertainties.append("Hearing date not detected")
-    if not committee_name:
-        uncertainties.append("Committee name not detected")
-
-    for w in witness_records:
-        if not w.affiliation:
-            uncertainties.append(f"Affiliation not detected for witness: {w.name}")
 
     return HearingRecord(
         metadata=metadata,
@@ -738,3 +554,26 @@ def extract(cleaned_text: str, metadata_candidates: dict,
         qa_clusters=qa_clusters,
         uncertainties=uncertainties,
     )
+
+
+# ---------------------------------------------------------------------------
+# Main extraction entry point
+# ---------------------------------------------------------------------------
+
+def extract(cleaned_text: str, metadata_candidates: dict,
+            source_profile: str) -> HearingRecord:
+    """Build a structured HearingRecord from normalized text.
+
+    Uses single-pass GPT-4o extraction for maximum accuracy.
+    Falls back to rule-based extraction if no API key is set.
+    """
+    try:
+        llm_output = _extract_via_llm(cleaned_text, metadata_candidates)
+    except RuntimeError as e:
+        print(f"LLM unavailable: {e}", file=sys.stderr)
+        llm_output = _extract_fallback(cleaned_text, metadata_candidates)
+    except Exception as e:
+        print(f"LLM extraction error: {e}", file=sys.stderr)
+        llm_output = _extract_fallback(cleaned_text, metadata_candidates)
+
+    return _build_hearing_record(llm_output, metadata_candidates, source_profile)

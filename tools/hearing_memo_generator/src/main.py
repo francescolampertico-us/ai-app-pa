@@ -6,7 +6,7 @@ Runs the 4-stage pipeline:
 Then exports to DOCX.
 
 Usage:
-    python -m src.main --input transcripts/file.pdf --from "Mercury" \
+    python -m src.main --input transcripts/file.pdf \
         --memo-date "Thursday, March 12, 2026" --output output/memo.docx
 """
 
@@ -33,7 +33,7 @@ def main():
         epilog="""
 Examples:
   python -m src.main --input transcripts/Senate_Aging.pdf --output output/memo.docx
-  python -m src.main --input transcript.txt --from "Mercury" --memo-date "March 12, 2026"
+  python -m src.main --input transcript.txt --memo-date "March 12, 2026"
         """,
     )
 
@@ -49,8 +49,8 @@ Examples:
     )
     parser.add_argument(
         "--from", dest="memo_from",
-        default="Mercury",
-        help="FROM field value (default: Mercury)",
+        default="",
+        help="FROM field value",
     )
     parser.add_argument(
         "--memo-date",
@@ -170,7 +170,7 @@ Examples:
               f"{len(hearing_record.qa_clusters)} Q&A members")
 
     # ===== Stage 3: Compose =====
-    print("[3/4] Composing Mercury-style memo...")
+    print("[3/4] Composing house-style memo...")
     memo_output = compose(
         record_dict,
         memo_from=args.memo_from,

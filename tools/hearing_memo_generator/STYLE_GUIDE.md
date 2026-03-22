@@ -3,7 +3,7 @@
 ## 1. Purpose
 
 This style guide defines the target style for congressional hearing summary memos.
-The target output is the submitted Mercury-style memo, not a generic hearing summary.
+The target output is the submitted house-style memo, not a generic hearing summary.
 
 The memo should read like a polished internal policy product:
 - formal
@@ -205,12 +205,13 @@ Rules:
 ## 16. Length discipline
 
 Target ranges:
-- Hearing Overview: 110 to 170 words
-- each opening speaker: 90 to 180 words
-- each witness: 90 to 180 words, with flexibility for high-density testimony
-- each Q&A member block: 70 to 180 words
+- Hearing Overview: 110 to 200 words
+- each opening speaker: 150 to 300 words
+- each witness: 150 to 350 words, with flexibility for high-density testimony
+- each Q&A member block: 150 to 400 words (longer when multiple questions or rounds are combined)
 
-The target is readable compression, not extreme brevity.
+The target is readable compression, not extreme brevity. A typical memo should run 6 to 10 pages.
+Each Q&A entry should capture the specific substance of each question and answer exchange — name the policies, proposals, events, and commitments discussed.
 
 ## 17. Dates and factual consistency
 
