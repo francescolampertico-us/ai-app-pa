@@ -581,6 +581,42 @@ def main():
     filename = os.path.join(topic_dir, f"{safe_topic}_{target_date_obj.strftime('%B_%d')}{suffix_str}.docx")
     doc.save(filename)
     print(f"Saved to {filename}")
+
+    # Save article data as JSON for downstream editing (clip cleaner workflow)
+    import json
+    clips_data = []
+    for idx, article in enumerate(final_articles):
+        source = article.get('publisher', {}).get('title', 'Source')
+        if source.lower().endswith('.com'):
+            source = source[:-4]
+        source = source.title()
+        title_raw = article.get('title', 'No Title')
+        separator = f" - {source}"
+        if separator.lower() in title_raw.lower():
+            idx_sep = title_raw.lower().rfind(separator.lower())
+            if idx_sep != -1:
+                title_raw = title_raw[:idx_sep]
+        date_raw = article.get('published date', today_str)
+        try:
+            dt = date_parser.parse(date_raw)
+            date_clean = dt.strftime("%B %d, %Y")
+        except Exception:
+            date_clean = date_raw
+        clips_data.append({
+            "index": idx,
+            "source": source,
+            "title": title_raw,
+            "url": article.get('final_url', article.get('url', '')),
+            "date": date_clean,
+            "author": article.get('extracted_author') or "Staff",
+            "description": article.get('description', ''),
+            "extracted_text": article.get('extracted_text', ''),
+            "has_full_text": bool(article.get('extracted_text')),
+        })
+    json_path = filename.replace('.docx', '_data.json')
+    with open(json_path, 'w', encoding='utf-8') as jf:
+        json.dump(clips_data, jf, indent=2, ensure_ascii=False)
+    print(f"Saved article data to {json_path}")
     
     # 3. Create Email Draft (only if email args provided and not skipped)
     if not args.no_email and args.email_sender and args.email_recipient:

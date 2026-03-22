@@ -105,9 +105,11 @@ def _is_metadata(line: str) -> bool:
         return True
     if " • " in low and re.search(r"\bby\b", low):
         return True
-    # Standalone timestamps: "March 21, 2026, 9:03 a.m. ET"
-    if re.match(r"^\s*\w+\s+\d{1,2},?\s+\d{4}[,.]?\s+\d{1,2}:\d{2}\s*(a\.?m\.?|p\.?m\.?)", low):
-        return True
+    # Standalone timestamps: "March 21, 2026, 9:03 a.m. ET" or "March 20, 2026"
+    if re.match(r"^\s*\w+\.?\s+\d{1,2},?\s+\d{4}", low):
+        # It's a date-like line — only treat as metadata if it's short (not a real paragraph)
+        if len(stripped.split()) <= 10:
+            return True
     # Short lines that look like bylines or datelines (not full paragraphs)
     if len(stripped.split()) <= 15:
         if any(re.search(pattern, stripped, re.IGNORECASE) for pattern in METADATA_PATTERNS):
@@ -213,7 +215,13 @@ def clean_clip(raw_text: str) -> str:
         # Look ahead for image caption detection
         next_line = normalized_lines[i + 1] if i + 1 < len(normalized_lines) else ""
 
-        if _is_noise(line) or _is_metadata(line) or _is_headline(line) or _is_image_caption(line, next_line) or _is_author_bio(line):
+        if _is_noise(line) or _is_metadata(line) or _is_image_caption(line, next_line) or _is_author_bio(line):
+            continue
+
+        # Only strip headlines/titles BEFORE the first body paragraph.
+        # Once we have body content, short uppercase/title-case lines are
+        # in-article section headers and must be kept.
+        if not cleaned_lines and _is_headline(line):
             continue
 
         # Skip short nav-like fragments before the first real paragraph
@@ -271,39 +279,90 @@ def validate_output(cleaned_text: str) -> tuple[bool, list[str]]:
 
 def _llm_prompt(raw_text: str) -> str:
     return (
-        "You clean messy pasted news text into clip-ready markdown.\n\n"
-        "1) Discard the Main Title: Remove the large main article headline.\n\n"
-        "3) Filter Out the Noise: Remove all advertisements, 'Read More' links, 'Recommended for you' blocks, "
-        "newsletter sign-ups, social media buttons, related articles, trending sections, and site navigation.\n\n"
-        "4) Remove Metadata: Delete image captions, photographer credits, timestamps, publication dates, "
-        "datelines (e.g. 'NEW DELHI, March 20 (Reuters) -'), bylines, author bios, and summary bullet lists.\n\n"
-        "5) Clean the Body: Extract the full narrative body of the article following the subtitle. "
-        "Preserve the original text VERBATIM — do not paraphrase, summarize, or rewrite any sentences. "
-        "This should be in standard, non-italicized text.\n\n"
-        "6) Fix Formatting: Standardize into clean, professional paragraphs separated by blank lines. "
-        "Remove excessive line breaks and ghost characters caused by web scraping.\n\n"
-        "Constraint: Do not add any commentary like 'Here is the cleaned text.' "
-        "Start immediately with the article's italicized subtitle.\n\n"
+        "You clean messy pasted news text into clip-ready format.\n\n"
+        "REMOVE all of the following:\n"
+        "- The main article headline/title (the big title at the top)\n"
+        "- Bylines, author names, author bios\n"
+        "- Datelines (e.g. 'NEW DELHI, March 20 (Reuters) -')\n"
+        "- Timestamps, publication dates\n"
+        "- Image captions, photographer credits, photo credits\n"
+        "- Advertisements, 'Read More' links, 'Recommended for you' blocks\n"
+        "- Newsletter sign-ups, social media buttons, navigation elements\n"
+        "- Related articles, trending sections, 'What to read next'\n"
+        "- Summary bullet lists that appear before the article body\n\n"
+        "KEEP all of the following:\n"
+        "- All body paragraphs of the article\n"
+        "- In-article section headers and subheadings (e.g. 'WORRY AMONG SOME JOURNALISTS', "
+        "'THE BOTTOM LINE', 'WHAT HAPPENS NEXT', 'A New Approach'). "
+        "These break the article into sections and MUST stay as standalone lines "
+        "with blank lines around them. Do NOT remove or merge them.\n"
+        "- Subtitles or ledes that appear right after the main title — keep them as the first line\n\n"
+        "RULES:\n"
+        "- Preserve the original text VERBATIM — do not paraphrase, summarize, or rewrite.\n"
+        "- Output clean paragraphs separated by blank lines.\n"
+        "- Only remove the main headline at the very top, nothing else that looks like a header.\n"
+        "- Do NOT add any commentary like 'Here is the cleaned text.'\n\n"
         "Raw article text:\n"
         f"{raw_text}"
     )
 
 
-def _post_process_llm(text: str) -> str:
-    """Clean up common LLM output issues."""
+def _post_process_llm(text: str, title: Optional[str] = None) -> str:
+    """Clean up common LLM output issues — title removal, datelines, dedup."""
     lines = text.split("\n")
     cleaned = []
+    seen = set()
+    first_body = True
+
     for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            # Preserve blank lines for paragraph separation
+            if cleaned and cleaned[-1] != "":
+                cleaned.append("")
+            continue
+
         # Strip datelines from start of paragraphs
-        line = re.sub(
+        line_clean = re.sub(
             r"^\s*[A-Z][A-Z\s,]+,\s*\w+\s+\d{1,2}\s*\([^)]+\)\s*-\s*",
-            "", line
-        )
-        cleaned.append(line)
-    return "\n".join(cleaned)
+            "", stripped
+        ).strip()
+        if not line_clean:
+            continue
+
+        # Remove title if it appears as first line
+        if title and first_body:
+            t_norm = re.sub(r"[^\w\s]", "", title.lower()).strip()
+            l_norm = re.sub(r"[^\w\s]", "", line_clean.lower()).strip()
+            if t_norm and l_norm and (t_norm in l_norm or l_norm in t_norm):
+                continue
+
+        # Skip photo credits, author bios, first published lines
+        low = line_clean.lower()
+        if "photo credit" in low or "first published:" in low:
+            continue
+        if re.match(r"^(credit|photo)\s*[:\.]", low):
+            continue
+        # Skip standalone timestamps like "March 20, 2026, 3:55 p.m. ET"
+        if re.match(r"^\w+\.?\s+\d{1,2},?\s+\d{4}", low) and len(line_clean.split()) <= 10:
+            continue
+        # Skip "Here is the cleaned" preamble
+        if low.startswith("here is the cleaned"):
+            continue
+
+        # Paragraph dedup
+        para_norm = re.sub(r"\s+", "", low)
+        if para_norm in seen:
+            continue
+        seen.add(para_norm)
+
+        cleaned.append(line_clean)
+        first_body = False
+
+    return "\n".join(cleaned).strip()
 
 
-def clean_clip_llm_openai(raw_text: str, model: str) -> str:
+def clean_clip_llm_openai(raw_text: str, model: str, title: Optional[str] = None) -> str:
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set.")
@@ -349,7 +408,7 @@ def clean_clip_llm_openai(raw_text: str, model: str) -> str:
         text = "\n".join(parts).strip()
     if not text:
         raise RuntimeError("OpenAI API returned no text content.")
-    return _post_process_llm(text)
+    return _post_process_llm(text, title=title)
 
 
 def _read_input(raw_text: Optional[str], input_file: Optional[str]) -> str:
