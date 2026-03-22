@@ -28,19 +28,60 @@ NOISE_PATTERNS = [
     r"\bfollow us\b",
     r"\badvertisement\b",
     r"\bphoto credit\b",
+    r"\bcredit\s*[\.\:]",
+    r"credit\s+for\s+the\s+new\s+york\s+times",
     r"^\s*photo\s*:",
     r"^\s*image\s*:",
     r"^\s*share\s*$",
+    r"^\s*share\s+full\s+article",
     r"^\s*live\s+video\s*$",
     r"^\s*article\s+body\s+starts\.{0,3}\s*$",
+    r"^\s*skip\s+to\s+(content|navigation|main)",
+    r"^\s*listen\s*[·•:]\s*\d+",
+    r"^\s*\d+:\d+\s*min\b",
+    r"^\s*supported\s+by\s*$",
+    r"^\s*send\s+any\s+friend\b",
+    r"^\s*gift\s+this\s+article\b",
+    r"^\s*save\s*$",
+    r"^\s*comments\s*$",
+    r"^\s*log\s*in\b",
+    r"^\s*open\s+in\s+app\b",
+    r"^\s*get\s+the\s+app\b",
+    r"^\s*liveupdates?\s*$",
+    r"^\s*\d+[mh]\s+ago\s*$",
+    r"^\s*see\s+more\s+on\s*:",
+    r"\bterms\s+of\s+(service|sale)\b",
+    r"\bprivacy\s+policy\b",
+    r"\bcookie\s+policy\b",
+    r"\baccessibility\b",
+    r"\badvertise\b",
+    r"\bsite\s*map\b",
+    r"\byour\s+privacy\s+choices\b",
+    r"\bcontact\s+us\b",
+    r"\bwork\s+with\s+us\b",
+    r"\bt\s+brand\s+studio\b",
 ]
 
 METADATA_PATTERNS = [
-    r"^\s*by\s+[a-z].*",
-    r"\b(january|february|march|april|may|june|july|august|september|october|november|december)\b",
-    r"\b\d{4}\b",
-    r"\bupdated\b",
-    r"\bpublished\b",
+    r"^\s*by\s+[A-Z]",                          # "By Adam Rasgon..."
+    r"\breported\s+from\s+",                       # "Adam Rasgon reported from Jerusalem."
+    r"^\s*reporting\s+was\s+contributed\s+by\b",  # "Reporting was contributed by..."
+    r"^\s*updated\s+\w+\s+\d+",                  # "Updated March 21..."
+    r"^\s*published\s+\w+\s+\d+",                # "Published March 21..."
+    r"is\s+a\s+(reporter|correspondent|columnist|editor|writer)\s+(for|at|with)\s+the\b",
+]
+
+# Patterns that signal "everything after this is not the article"
+END_OF_ARTICLE_PATTERNS = [
+    r"^\s*see\s+more\s+on\s*:",
+    r"^\s*more\s+on\s+(the\s+)?\w",
+    r"^\s*more\s+in\s+\w",
+    r"^\s*trending\s+in\b",
+    r"^\s*what\s+to\s+read\s+next\b",
+    r"^\s*related\s+(articles?|stories|coverage)\b",
+    r"^\s*you\s+might\s+(also\s+)?like\b",
+    r"^\s*popular\s+(in|on|stories)\b",
+    r"^\s*editors['']?\s+picks?\b",
 ]
 
 
@@ -58,12 +99,20 @@ def _is_noise(line: str) -> bool:
 
 
 def _is_metadata(line: str) -> bool:
-    low = line.lower().strip()
+    stripped = line.strip()
+    low = stripped.lower()
     if re.match(r"^\s*(byline|author)\s*:", low):
         return True
     if " • " in low and re.search(r"\bby\b", low):
         return True
-    return any(re.search(pattern, low) for pattern in METADATA_PATTERNS)
+    # Standalone timestamps: "March 21, 2026, 9:03 a.m. ET"
+    if re.match(r"^\s*\w+\s+\d{1,2},?\s+\d{4}[,.]?\s+\d{1,2}:\d{2}\s*(a\.?m\.?|p\.?m\.?)", low):
+        return True
+    # Short lines that look like bylines or datelines (not full paragraphs)
+    if len(stripped.split()) <= 15:
+        if any(re.search(pattern, stripped, re.IGNORECASE) for pattern in METADATA_PATTERNS):
+            return True
+    return False
 
 
 def _is_headline(line: str) -> bool:
@@ -76,7 +125,17 @@ def _is_headline(line: str) -> bool:
     letters = re.sub(r"[^A-Za-z]", "", stripped)
     is_shouty = bool(letters) and stripped.upper() == stripped and len(letters) >= 12
     words = stripped.split()
-    return is_shouty or (len(words) <= 12 and not stripped.endswith(".") and stripped.istitle())
+    if is_shouty:
+        return True
+    # Short lines in mostly-title case (allow small words like "an", "in", "to", "the", "of")
+    if len(words) <= 18 and not stripped.endswith("."):
+        small_words = {"a", "an", "and", "as", "at", "but", "by", "for", "if", "in",
+                       "is", "it", "no", "nor", "not", "of", "on", "or", "so", "the",
+                       "to", "up", "vs", "yet", "from", "into", "with"}
+        capitalized = sum(1 for w in words if w[0].isupper() or w.lower() in small_words)
+        if capitalized == len(words) and len(words) >= 4:
+            return True
+    return False
 
 
 def _extract_subtitle(line: str) -> Optional[str]:
@@ -86,23 +145,79 @@ def _extract_subtitle(line: str) -> Optional[str]:
     return None
 
 
+def _is_image_caption(line: str, next_line: str = "") -> bool:
+    """Detect image captions — descriptive lines near Credit lines."""
+    low = line.lower().strip()
+    next_low = next_line.lower().strip() if next_line else ""
+    # Lines containing "Credit" references
+    if re.search(r"credit\s*[\.\:\…]", low):
+        return True
+    if "for the new york times" in low or "for the washington post" in low:
+        return True
+    # If the next line is a credit line, this is likely a caption
+    if next_low and re.search(r"(credit|for the new york times|for the washington post)", next_low):
+        return True
+    return False
+
+
+def _is_author_bio(line: str) -> bool:
+    """Detect author bio lines like 'David Sanger covers the Trump administration...'"""
+    low = line.lower().strip()
+    # "X is a reporter/correspondent/columnist for..."
+    if re.search(r"is\s+a\s+(reporter|correspondent|columnist|editor|writer|journalist)\s+(for|at|with|covering)\b", low):
+        return True
+    # "X covers ... for The Times / The Post / etc."
+    if re.search(r"\bcovers?\s+.{5,}\s+for\s+the\s+\w+", low):
+        return True
+    # "X has covered ... presidents / administrations"
+    if re.search(r"\bhas\s+(covered|reported|written|been\s+a\s+\w*\s*journalist)", low):
+        return True
+    # "X writes often on..." / "X has written X books"
+    if re.search(r"\bwrites?\s+(often|regularly|frequently|about|on)\b", low):
+        return True
+    # "X has been a Times/Post journalist"
+    if re.search(r"has\s+been\s+a\s+\w+\s+journalist", low):
+        return True
+    return False
+
+
+def _is_end_of_article(line: str) -> bool:
+    """Detect lines that signal end of article / start of related content."""
+    low = line.lower().strip()
+    return any(re.search(pattern, low) for pattern in END_OF_ARTICLE_PATTERNS)
+
+
+def _is_nav_fragment(line: str) -> bool:
+    """Detect short navigation-like fragments that aren't real paragraphs."""
+    stripped = line.strip()
+    words = stripped.split()
+    # Very short lines (1-5 words) that don't end with a period are likely nav
+    if len(words) <= 5 and not stripped.endswith((".","!","?",'"',"'")):
+        return True
+    return False
+
+
 def clean_clip(raw_text: str) -> str:
     lines = raw_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-    subtitle = None
+    normalized_lines = [_normalize(raw) for raw in lines]
     cleaned_lines: list[str] = []
     seen = set()
-
-    for raw in lines:
-        line = _normalize(raw)
+    for i, line in enumerate(normalized_lines):
         if not line:
             continue
 
-        explicit_subtitle = _extract_subtitle(line)
-        if explicit_subtitle:
-            subtitle = explicit_subtitle
+        # Once we hit an end-of-article marker, stop collecting
+        if _is_end_of_article(line):
+            break
+
+        # Look ahead for image caption detection
+        next_line = normalized_lines[i + 1] if i + 1 < len(normalized_lines) else ""
+
+        if _is_noise(line) or _is_metadata(line) or _is_headline(line) or _is_image_caption(line, next_line) or _is_author_bio(line):
             continue
 
-        if _is_noise(line) or _is_metadata(line) or _is_headline(line):
+        # Skip short nav-like fragments before the first real paragraph
+        if not cleaned_lines and _is_nav_fragment(line):
             continue
 
         # Strip common bracket wrappers left by copied snippets.
@@ -112,15 +227,16 @@ def clean_clip(raw_text: str) -> str:
         if _is_noise(line):
             continue
 
+        # Skip nav fragments that appear between article paragraphs
+        if _is_nav_fragment(line):
+            continue
+
         key = re.sub(r"\W+", "", line.lower())
         if not key or key in seen:
             continue
         seen.add(key)
         cleaned_lines.append(line)
 
-    if subtitle:
-        body = "\n\n".join(cleaned_lines)
-        return f"*{subtitle}*\n\n{body}".strip()
     return "\n\n".join(cleaned_lines).strip()
 
 
@@ -130,10 +246,6 @@ def validate_output(cleaned_text: str) -> tuple[bool, list[str]]:
     if not stripped:
         issues.append("Output is empty.")
         return False, issues
-
-    first_line = stripped.splitlines()[0].strip()
-    if not (first_line.startswith("*") and first_line.endswith("*") and len(first_line) > 2):
-        issues.append("Output does not start with an italicized subtitle/lede.")
 
     forbidden_snippets = [
         "skip to content",
@@ -159,18 +271,36 @@ def validate_output(cleaned_text: str) -> tuple[bool, list[str]]:
 
 def _llm_prompt(raw_text: str) -> str:
     return (
-        "You clean messy pasted news text into clip-ready markdown.\n"
-        "Output requirements:\n"
-        "1) First line must be ONLY the subtitle/lede in italics using markdown: *...*\n"
-        "2) Remove the main headline/title\n"
-        "3) Remove navigation/footer/UI clutter, ads, newsletter prompts, social/share blocks, comment counters\n"
-        "4) Remove timestamps, publication dates, image/photo credits, bylines\n"
-        "5) Keep the full article body in clean paragraphs (non-italic)\n"
-        "6) Do not add any prefacing text\n"
-        "7) If no clear subtitle exists, use the first meaningful summary sentence as italic first line\n\n"
+        "You clean messy pasted news text into clip-ready markdown.\n\n"
+        "1) Discard the Main Title: Remove the large main article headline.\n\n"
+        "3) Filter Out the Noise: Remove all advertisements, 'Read More' links, 'Recommended for you' blocks, "
+        "newsletter sign-ups, social media buttons, related articles, trending sections, and site navigation.\n\n"
+        "4) Remove Metadata: Delete image captions, photographer credits, timestamps, publication dates, "
+        "datelines (e.g. 'NEW DELHI, March 20 (Reuters) -'), bylines, author bios, and summary bullet lists.\n\n"
+        "5) Clean the Body: Extract the full narrative body of the article following the subtitle. "
+        "Preserve the original text VERBATIM — do not paraphrase, summarize, or rewrite any sentences. "
+        "This should be in standard, non-italicized text.\n\n"
+        "6) Fix Formatting: Standardize into clean, professional paragraphs separated by blank lines. "
+        "Remove excessive line breaks and ghost characters caused by web scraping.\n\n"
+        "Constraint: Do not add any commentary like 'Here is the cleaned text.' "
+        "Start immediately with the article's italicized subtitle.\n\n"
         "Raw article text:\n"
         f"{raw_text}"
     )
+
+
+def _post_process_llm(text: str) -> str:
+    """Clean up common LLM output issues."""
+    lines = text.split("\n")
+    cleaned = []
+    for line in lines:
+        # Strip datelines from start of paragraphs
+        line = re.sub(
+            r"^\s*[A-Z][A-Z\s,]+,\s*\w+\s+\d{1,2}\s*\([^)]+\)\s*-\s*",
+            "", line
+        )
+        cleaned.append(line)
+    return "\n".join(cleaned)
 
 
 def clean_clip_llm_openai(raw_text: str, model: str) -> str:
@@ -219,7 +349,7 @@ def clean_clip_llm_openai(raw_text: str, model: str) -> str:
         text = "\n".join(parts).strip()
     if not text:
         raise RuntimeError("OpenAI API returned no text content.")
-    return text
+    return _post_process_llm(text)
 
 
 def _read_input(raw_text: Optional[str], input_file: Optional[str]) -> str:

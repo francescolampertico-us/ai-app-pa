@@ -110,13 +110,23 @@ def main():
     parser.add_argument('--suffix', type=str, help='Filename suffix (e.g. Partial)', default='')
     parser.add_argument('--since', type=str, help='Filter articles since this timestamp (YYYY-MM-DD HH:MM)', default=None)
     parser.add_argument('--target-date', type=str, help='Override the target date for the file (YYYY-MM-DD)', default=None)
-    parser.add_argument('--output-dir', type=str, help='Specific output directory', default='/Users/francescolampertico/Desktop/Mercury Public Affairs')
-    parser.add_argument('--email-sender', type=str, help='Sender email address', default='francesco.lampertico@gmail.com')
-    parser.add_argument('--email-recipient', type=str, help='Recipient email address (comma-separated)', default='recipient@example.com')
+    parser.add_argument('--output-dir', type=str, help='Specific output directory', default='output')
+    parser.add_argument('--email-sender', type=str, help='Sender email address', default=None)
+    parser.add_argument('--email-recipient', type=str, help='Recipient email address (comma-separated)', default=None)
+    parser.add_argument('--no-email', action='store_true', help='Skip email draft creation')
+    parser.add_argument('--all-sources', action='store_true', help='Include all sources, not just trusted mainstream media')
+    parser.add_argument('--custom-sources', type=str, help='Comma-separated list of custom trusted domains', default=None)
     args = parser.parse_args()
 
     # Parse queries
     queries = [q.strip() for q in args.queries.split(',')] if args.queries else DEFAULT_QUERIES
+
+    # Source filtering mode
+    use_all_sources = args.all_sources
+    active_trusted_sources = TRUSTED_SOURCES
+    if args.custom_sources:
+        active_trusted_sources = [d.strip() for d in args.custom_sources.split(',') if d.strip()]
+        print(f"Using custom sources: {active_trusted_sources}")
 
 
     # Parse constraints
@@ -180,8 +190,8 @@ def main():
                 continue
 
             # Simple domain check
-            is_trusted = False
-            for domain in TRUSTED_SOURCES:
+            is_trusted = use_all_sources  # If all sources, start as True
+            for domain in active_trusted_sources:
                 # 1. Check if full domain in URL (rarely true for GNews redirect links)
                 if domain in source_url:
                     is_trusted = True
@@ -572,20 +582,25 @@ def main():
     doc.save(filename)
     print(f"Saved to {filename}")
     
-    today_formatted = target_date_obj.strftime("%B %d") # e.g. January 24
-    
-    # Construct Plain Text Body (Template for manual pasting)
-    email_body_final = f"Good morning,\n\nhere are the {args.topic} of {today_formatted}\n\n\n\nBest,\n\nFrancesco Lampertico"
+    # 3. Create Email Draft (only if email args provided and not skipped)
+    if not args.no_email and args.email_sender and args.email_recipient:
+        today_formatted = target_date_obj.strftime("%B %d")
 
-    # 3. Create Email Draft
-    recipients_list = [r.strip() for r in args.email_recipient.split(',')]
-    create_email_draft(
-        attachment_path=filename,
-        subject=f"{args.topic} - {today_str}",
-        body=email_body_final,
-        recipients=recipients_list,
-        sender=args.email_sender
-    )
+        # Build email body with clips included
+        email_body_final = f"Good morning,\n\nPlease find attached the {args.topic} for {today_formatted}.\n\n"
+        email_body_final += email_body_text
+        email_body_final += "\nBest regards"
+
+        recipients_list = [r.strip() for r in args.email_recipient.split(',')]
+        create_email_draft(
+            attachment_path=filename,
+            subject=f"{args.topic} - {today_str}",
+            body=email_body_final,
+            recipients=recipients_list,
+            sender=args.email_sender
+        )
+    else:
+        print("Email draft skipped (no email options provided or --no-email set).")
 
 
 if __name__ == "__main__":
