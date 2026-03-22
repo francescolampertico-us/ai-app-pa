@@ -12,7 +12,7 @@ execution:
   entrypoint: tools/influence_disclosure_tracker/execution/run.py
   runtime: python
   notes:
-    - "FARA searches require a local index; run once with --build-fara-index."
+    - "FARA uses bulk CSV downloads from efile.fara.gov, cached locally for 24 hours."
     - "Set LDA_API_KEY for higher LDA rate limits."
 
 inputs:
@@ -65,4 +65,4 @@ dependencies:
     - "Internet access for LDA/FARA APIs"
 
 notes:
-  - "FARA index build can take ~20 minutes and must be completed before FARA searches."
+  - "FARA bulk CSV data is cached locally for 24 hours; first run downloads ~3 MB."

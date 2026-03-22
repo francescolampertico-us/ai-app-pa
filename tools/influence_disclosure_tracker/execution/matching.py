@@ -48,15 +48,19 @@ def match_entity(query_name: str, target_name: str, fuzzy_threshold: float = 85.
     if not q_norm or not t_norm:
         return {"match": False, "match_type": "none", "confidence": 0.0}
 
-    # 1. Exact Normal Match
-    if q_norm == t_norm:
+    # Also create space-stripped versions for comparison
+    q_compact = q_norm.replace(" ", "")
+    t_compact = t_norm.replace(" ", "")
+
+    # 1. Exact Normal Match (also check compact forms)
+    if q_norm == t_norm or q_compact == t_compact:
         return {"match": True, "match_type": "exact", "confidence": 100.0}
-        
-    # 2. Contains Match (Query is fully inside Target, e.g., "apple" in "apple holding")
-    # or vice versa (Target fully inside Query, e.g., "boeing" in "boeing defense")
-    if q_norm in t_norm or t_norm in q_norm:
-        # Penalize slightly for not being exact length
-        len_diff = abs(len(q_norm) - len(t_norm))
+
+    # 2. Contains Match — check both normal and compact forms
+    # e.g., "open ai" in "openai opco" fails, but "openai" in "openaiopco" succeeds
+    if (q_norm in t_norm or t_norm in q_norm or
+            q_compact in t_compact or t_compact in q_compact):
+        len_diff = abs(len(q_compact) - len(t_compact))
         confidence = max(90.0, 99.0 - (len_diff * 0.5))
         return {"match": True, "match_type": "contains", "confidence": round(confidence, 1)}
         

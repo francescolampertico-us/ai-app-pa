@@ -16,12 +16,12 @@ Use the Directive -> Orchestration -> Execution pattern to run this tool reliabl
 
 ### Prereqs
 - If using LDA with higher throughput, set `LDA_API_KEY`.
-- If using FARA, run once with `--build-fara-index` to build the local index.
+- FARA uses bulk CSV downloads (cached 24 hours); no setup needed.
 
 ## Orchestration (how the tool gathers and prepares information)
-1) Parse entities and date range.  
-2) Query LDA and/or FARA APIs with throttling and caching.  
-3) Apply exact, contains, and fuzzy string matching to normalize results.  
+1) Parse entities and date range.
+2) Query LDA API and/or download FARA bulk CSVs (with caching).
+3) Apply exact, contains, and fuzzy string matching to normalize results.
 4) Write normalized CSV tables plus a markdown summary report.
 
 ## Execution (how to run)
@@ -37,18 +37,6 @@ python3 tools/influence_disclosure_tracker/execution/run.py \
   --sources "lda,fara" \
   --out "./output" \
   --max-results 500
-```
-
-### FARA index (one-time)
-If you have not built the FARA index yet:
-
-```bash
-python3 tools/influence_disclosure_tracker/execution/run.py \
-  --entities "Microsoft" \
-  --from 2025-01-01 \
-  --to 2025-12-31 \
-  --sources "fara" \
-  --build-fara-index
 ```
 
 ## Output contract (format expectations)

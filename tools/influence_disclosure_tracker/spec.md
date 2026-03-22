@@ -28,8 +28,8 @@ The tool writes a run folder under `<out>/<entity_or_multiple>/` containing:
 
 ## Limitations / Failure Modes
 - **Match confidence:** string matching includes fuzzy and partial matches; anything below 100% should be verified manually.
-- **API rate limits:** LDA and FARA endpoints throttle requests; large queries may take time.
-- **FARA index dependency:** FARA searches require a one-time local index build (`--build-fara-index`).
+- **API rate limits:** LDA endpoints throttle requests; large queries may take time.
+- **FARA bulk data:** FARA uses bulk CSV downloads cached for 24 hours; first run downloads ~3 MB.
 - **Manual verification:** entries, dates, and filing URLs must be reviewed before external use.
 
 ## Human Review Checklist (Risk: Yellow)

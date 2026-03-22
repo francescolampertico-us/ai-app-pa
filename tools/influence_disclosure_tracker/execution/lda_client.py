@@ -7,11 +7,13 @@ from matching import match_entity
 class LDAClient:
     BASE_URL = "https://lda.gov/api/v1/" # Using lda.gov as requested
     
-    def __init__(self, io_utils: IOUtils, api_key: str = None, fuzzy_threshold: float = 85.0, max_results: int = 500):
+    def __init__(self, io_utils: IOUtils, api_key: str = None, fuzzy_threshold: float = 85.0,
+                 max_results: int = 500, search_field: str = "client"):
         self.io = io_utils
         self.api_key = api_key
         self.fuzzy_threshold = fuzzy_threshold
         self.max_results = max_results
+        self.search_field = search_field
         
         self.session = requests.Session()
         retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
@@ -88,74 +90,112 @@ class LDAClient:
             self.io.log(f"LDA detail fetch error {detail_url}: {e}", "WARNING")
             return {}
 
-    def search_entity(self, entity_query: str, date_from: str, date_to: str):
-        self.io.log(f"Starting LDA search for entity: {entity_query}")
-        
-        # We search by client name and registrant name
-        search_params = [
-            {"client_name": entity_query, "filing_period_start__gte": date_from, "filing_period_end__lte": date_to, "ordering": "-dt_posted"},
-            {"registrant_name": entity_query, "filing_period_start__gte": date_from, "filing_period_end__lte": date_to, "ordering": "-dt_posted"}
-        ]
-        
-        if date_from[:4] == date_to[:4]:
-            for p in search_params:
-                p["filing_year"] = date_from[:4]
-        
+    def _generate_query_variations(self, query: str) -> list:
+        """Generate search variations for an entity name to catch different spellings."""
+        variations = {query}
+        # Without spaces: "Open AI" → "OpenAI"
+        no_space = query.replace(" ", "")
+        variations.add(no_space)
+        # With spaces before uppercase: "OpenAI" → "Open AI"
+        import re
+        spaced = re.sub(r'([a-z])([A-Z])', r'\1 \2', query)
+        variations.add(spaced)
+        # All uppercase
+        variations.add(query.upper())
+        return list(variations)
+
+    def search_entity(self, entity_query: str, date_from: str, date_to: str,
+                      filing_year: int = None, filing_periods: list = None):
+        self.io.log(f"Starting LDA search for entity: {entity_query}" +
+                    (f" (year={filing_year})" if filing_year else ""))
+
+        query_variations = self._generate_query_variations(entity_query)
+        self.io.log(f"Query variations: {query_variations}", "DEBUG")
+
+        # Build date filter params
+        date_filters = {}
+        if filing_year:
+            date_filters["filing_year"] = str(filing_year)
+        elif date_from and date_to and date_from[:4] == date_to[:4]:
+            date_filters["filing_year"] = date_from[:4]
+
+        period_map = {
+            "Q1": "first_quarter", "Q2": "second_quarter",
+            "Q3": "third_quarter", "Q4": "fourth_quarter",
+        }
+        allowed_periods = None
+        if filing_periods and len(filing_periods) < 4:
+            # Only filter by period if not all 4 are selected
+            allowed_periods = {period_map.get(p, p) for p in filing_periods}
+
+        # Determine which API fields to search based on search_field setting
+        if self.search_field == "client":
+            search_fields = ["client_name"]
+        elif self.search_field == "registrant":
+            search_fields = ["registrant_name"]
+        else:
+            search_fields = ["client_name", "registrant_name"]
+
+        # Build search params: variation × field
+        all_search_params = []
+        for variation in query_variations:
+            for field in search_fields:
+                params = {field: variation, "ordering": "-dt_posted"}
+                params.update(date_filters)
+                all_search_params.append(params)
+
         seen_filings = set()
         matched_count = 0
-        rejected_count = 0
-        
-        for params in search_params:
+
+        for params in all_search_params:
             if matched_count >= self.max_results:
                 break
-                
-            # fetch generously but constrained
+
             filings = self.fetch_filings(params, max_fetch=self.max_results * 2)
-            
+
             for f in filings:
                 if matched_count >= self.max_results:
                     break
-                    
-                uuid = f.get("url") # Use URL as unique identifier
+
+                uuid = f.get("url")
                 if uuid in seen_filings:
                     continue
                 seen_filings.add(uuid)
-                
-                if not self._is_within_date_range(f, date_from, date_to):
-                    rejected_count += 1
+
+                # Filter by quarter if needed
+                if allowed_periods and f.get("filing_period") not in allowed_periods:
                     continue
 
-                
-                # Check match confidence
+                # Check match confidence against the original query
                 client_name = f.get("client", {}).get("name", "")
                 reg_name = f.get("registrant", {}).get("name", "")
-                
-                match_c = match_entity(entity_query, client_name, self.fuzzy_threshold)
-                match_r = match_entity(entity_query, reg_name, self.fuzzy_threshold)
-                
-                best_match = match_c if match_c["confidence"] > match_r["confidence"] else match_r
-                
+
+                if self.search_field == "client":
+                    best_match = match_entity(entity_query, client_name, self.fuzzy_threshold)
+                elif self.search_field == "registrant":
+                    best_match = match_entity(entity_query, reg_name, self.fuzzy_threshold)
+                else:
+                    match_c = match_entity(entity_query, client_name, self.fuzzy_threshold)
+                    match_r = match_entity(entity_query, reg_name, self.fuzzy_threshold)
+                    best_match = match_c if match_c["confidence"] > match_r["confidence"] else match_r
+
                 if best_match["match"]:
-                    # Fetch complete detail payload for maximum data accuracy
-                    detail_url = f.get("url")
-                    if detail_url:
-                        detail_filing = self._fetch_filing_detail(detail_url)
-                        if detail_filing:
-                            f = detail_filing  # override with detail variant
-                            
                     self.normalize_and_save(entity_query, f, best_match)
                     matched_count += 1
-                    
-        if rejected_count > 0:
-            self.io.log(f"Rejected {rejected_count} LDA filings outside the requested date range ({date_from} to {date_to}).", "INFO")
+
+        self.io.log(f"LDA search complete for '{entity_query}': {matched_count} matched filings.", "INFO")
 
     def normalize_and_save(self, query: str, filing: dict, match_info: dict):
         f_uuid = filing.get("url")
-        c_id = filing.get("client", {}).get("id")
-        c_name = filing.get("client", {}).get("name")
-        r_id = filing.get("registrant", {}).get("id")
-        r_name = filing.get("registrant", {}).get("name")
-        
+        client = filing.get("client", {})
+        registrant = filing.get("registrant", {})
+        c_id = client.get("id")
+        c_name = client.get("name")
+        r_id = registrant.get("id")
+        r_name = registrant.get("name")
+
+        amount = filing.get("expenses") or filing.get("income")
+
         # 1. Master Record
         self.io.append_row("master_results", {
             "entity_query": query,
@@ -163,39 +203,60 @@ class LDAClient:
             "record_type": filing.get("filing_type_display", "lda_filing"),
             "match_type": match_info["match_type"],
             "match_confidence": match_info["confidence"],
-            "name_primary": c_name or r_name,
-            "id_primary": c_id or r_id,
-            "date_start": filing.get("dt_posted"),
-            "date_end": filing.get("dt_posted"),
-            "amount": filing.get("income") or filing.get("expenses"),
-            "description": filing.get("filing_period_display", ""),
+            "registrant": r_name,
+            "client": c_name,
+            "client_description": client.get("general_description") or "",
+            "filing_year": filing.get("filing_year"),
+            "filing_period": filing.get("filing_period_display", filing.get("filing_period", "")),
+            "amount": amount,
             "url": filing.get("filing_document_url", ""),
-            "raw_ref": f_uuid
         })
-        
+
         # 2. LDA Filing
         self.io.append_row("lda_filings", {
             "filing_uuid": f_uuid,
-            "registrant_id": r_id,
             "registrant_name": r_name,
-            "client_id": c_id,
             "client_name": c_name,
+            "client_description": client.get("general_description") or "",
+            "self_filer": client.get("client_self_select", False),
             "filing_year": filing.get("filing_year"),
             "filing_period": filing.get("filing_period"),
-            "filing_type": filing.get("filing_type"),
-            "amount_reported": filing.get("income") or filing.get("expenses"),
+            "filing_type": filing.get("filing_type_display", filing.get("filing_type", "")),
+            "amount": amount,
             "filing_url": filing.get("filing_document_url")
         })
-        
-        # 3. LDA Issues & Lobbyists
-        for issue in filing.get("lobbying_activities", []):
+
+        # 3. Lobbying Activities — issues, lobbyists, government entities
+        seen_lobbyists = set()
+        for activity in filing.get("lobbying_activities", []):
+            issue_code = activity.get("general_issue_code", "")
+            issue_name = activity.get("general_issue_code_display", issue_code)
+            description = activity.get("description", "")
+            gov_entities = [g.get("name", "") for g in activity.get("government_entities", [])]
+
             self.io.append_row("lda_issues", {
                 "filing_uuid": f_uuid,
-                "issue_code": issue.get("general_issue_code"),
-                "specific_issue": issue.get("description", "")
+                "registrant": r_name,
+                "client": c_name,
+                "issue_code": issue_code,
+                "issue_area": issue_name,
+                "description": description,
+                "government_entities": "; ".join(gov_entities),
             })
-            for lobbyist in issue.get("lobbyists", []):
-                self.io.append_row("lda_lobbyists", {
-                    "filing_uuid": f_uuid,
-                    "lobbyist_name": lobbyist.get("lobbyist", {}).get("name")
-                })
+
+            for lob_entry in activity.get("lobbyists", []):
+                lob = lob_entry.get("lobbyist", {})
+                first = lob.get("first_name", "")
+                last = lob.get("last_name", "")
+                name = f"{first} {last}".strip()
+                covered = lob_entry.get("covered_position", "")
+                lob_key = (f_uuid, name)
+                if lob_key not in seen_lobbyists:
+                    seen_lobbyists.add(lob_key)
+                    self.io.append_row("lda_lobbyists", {
+                        "filing_uuid": f_uuid,
+                        "registrant": r_name,
+                        "client": c_name,
+                        "lobbyist_name": name,
+                        "covered_position": covered or "",
+                    })
