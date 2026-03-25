@@ -22,7 +22,7 @@ sys.path.insert(0, str(TOOLKIT_ROOT / "app"))
 
 st.set_page_config(page_title="Legislative Tracker", page_icon="📜", layout="wide")
 
-from shared import page_header
+from shared import page_header, demo_banner
 page_header(
     title="Legislative Tracker",
     icon="📜",
@@ -207,7 +207,9 @@ with tab_search:
         year = st.number_input("Year", min_value=2010, max_value=current_year + 1,
                                value=current_year, step=1)
 
-    if query and st.button("Search Bills", type="primary", key="btn_search"):
+    demo = demo_banner()
+
+    if query and st.button("Search Bills", type="primary", key="btn_search", disabled=demo):
         # Clear previous state
         for k in ["lt_search_results", "lt_summary_md", "lt_summary_bill_id",
                    "lt_bill_detail_json"]:
@@ -280,7 +282,7 @@ with tab_search:
                         else:
                             st.info(stdout.strip() or stderr.strip() or "Already tracked")
             with btn2:
-                if st.button("📄 Generate AI Summary", key="s_summarize", use_container_width=True):
+                if st.button("📄 Generate AI Summary", key="s_summarize", use_container_width=True, disabled=demo):
                     _generate_summary(bill_id)
 
             # Show summary if we have one for this bill
@@ -377,7 +379,7 @@ with tab_watchlist:
 
             wc1, wc2 = st.columns(2)
             with wc1:
-                if st.button("📄 Generate AI Summary", key="wl_summarize", use_container_width=True):
+                if st.button("📄 Generate AI Summary", key="wl_summarize", use_container_width=True, disabled=demo):
                     _generate_summary(wl_bill_id)
             with wc2:
                 if st.button("🗑️ Remove from Watchlist", key="wl_remove", use_container_width=True):

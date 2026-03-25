@@ -19,10 +19,11 @@ st.set_page_config(
 
 # --- Load shared components ---
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from shared import inject_custom_css, sidebar_nav, page_footer
+from shared import inject_custom_css, sidebar_nav, page_footer, demo_banner
 
 inject_custom_css()
 sidebar_nav()
+demo_banner()
 
 # --- Load tool registry ---
 TOOLKIT_ROOT = Path(__file__).resolve().parent.parent

@@ -19,7 +19,7 @@ sys.path.insert(0, str(TOOLKIT_ROOT / "app"))
 
 st.set_page_config(page_title="Disclosure Tracker", page_icon="🔍", layout="wide")
 
-from shared import page_header
+from shared import page_header, demo_banner
 page_header(
     title="Influence Disclosure Tracker",
     icon="🔍",
@@ -92,7 +92,9 @@ def _rows_to_csv(rows: list[dict], headers: list[str]) -> str:
 
 
 # --- Run ---
-if entities and st.button("Search Disclosures", type="primary"):
+demo = demo_banner()
+
+if entities and st.button("Search Disclosures", type="primary", disabled=demo):
     if not quarters:
         st.warning("Select at least one quarter.")
     elif not filing_years and not all_years:

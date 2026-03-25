@@ -24,7 +24,7 @@ sys.path.insert(0, str(TOOLKIT_ROOT / "app"))
 
 st.set_page_config(page_title="Media Clips", page_icon="📰", layout="wide")
 
-from shared import page_header
+from shared import page_header, demo_banner
 page_header(
     title="Media Clips Generator",
     icon="📰",
@@ -218,7 +218,9 @@ since_date = st.text_input("Filter since (optional)", placeholder="YYYY-MM-DD HH
 
 
 # ─── Step 1: Generate Clips Report ──────────────────────────────────────────
-if topic and queries and st.button("Generate Clips Report", type="primary"):
+demo = demo_banner()
+
+if topic and queries and st.button("Generate Clips Report", type="primary", disabled=demo):
     with st.spinner("Searching and generating clips..."):
         try:
             tmpdir = tempfile.mkdtemp()

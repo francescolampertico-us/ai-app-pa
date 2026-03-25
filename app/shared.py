@@ -2,7 +2,27 @@
 Shared UI components for all toolkit pages.
 """
 
+import os
 import streamlit as st
+
+
+def is_demo_mode() -> bool:
+    """Check if running in demo mode (deployed without API keys)."""
+    return os.environ.get("DEMO_MODE", "").lower() in ("true", "1", "yes")
+
+
+def demo_banner():
+    """Show a banner explaining that tool execution is disabled in demo mode."""
+    if is_demo_mode():
+        st.warning(
+            "**Demo Mode** — This is a read-only preview of the PA AI Toolkit. "
+            "Tool execution is disabled because it requires API keys (OpenAI, LegiScan) "
+            "and would incur costs. You can explore the interface and see example outputs. "
+            "For a live demo, contact Francesco Lampertico.",
+            icon="🔒",
+        )
+        return True
+    return False
 
 
 def inject_custom_css():

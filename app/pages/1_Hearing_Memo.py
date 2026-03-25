@@ -19,7 +19,7 @@ sys.path.insert(0, str(TOOLKIT_ROOT / "app"))
 
 st.set_page_config(page_title="Hearing Memo Generator", page_icon="📝", layout="wide")
 
-from shared import page_header
+from shared import page_header, demo_banner
 page_header(
     title="Congressional Hearing Memo Generator",
     icon="📝",
@@ -59,7 +59,9 @@ with st.expander("Advanced options"):
     )
 
 # --- Run pipeline ---
-if uploaded_file and st.button("Generate Memo", type="primary"):
+demo = demo_banner()
+
+if uploaded_file and st.button("Generate Memo", type="primary", disabled=demo):
     with st.spinner("Running 4-stage pipeline..."):
         try:
             from src.normalizer import normalize
