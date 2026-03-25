@@ -15,17 +15,20 @@ from pathlib import Path
 
 TOOLKIT_ROOT = Path(__file__).resolve().parent.parent.parent
 TOOL_ROOT = TOOLKIT_ROOT / "tools" / "influence_disclosure_tracker"
+sys.path.insert(0, str(TOOLKIT_ROOT / "app"))
 
 st.set_page_config(page_title="Disclosure Tracker", page_icon="🔍", layout="wide")
 
-st.title("🔍 Influence Disclosure Tracker")
-st.caption("v0.1.0  |  Risk: 🟡 Yellow  |  DiGiacomo: #2 Stakeholder Analysis")
-st.markdown(
-    "Retrieves and normalizes lobbying (LDA) and foreign principal (FARA) disclosure "
-    "records, producing CSV tables and a markdown summary report."
+from shared import page_header
+page_header(
+    title="Influence Disclosure Tracker",
+    icon="🔍",
+    version="0.1.0",
+    risk="yellow",
+    digiacomo="#2 Stakeholder Analysis",
+    description="Retrieves and normalizes lobbying (LDA) and foreign principal (FARA) disclosure "
+                "records, producing CSV tables and a markdown summary report.",
 )
-
-st.divider()
 
 # --- Inputs ---
 entities = st.text_input(

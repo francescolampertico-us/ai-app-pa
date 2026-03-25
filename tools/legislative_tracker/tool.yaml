@@ -1,0 +1,75 @@
+id: legislative_tracker
+name: Legislative Tracker
+version: 0.1.0
+risk_level: yellow
+tags: [legislation, bills, tracking, monitoring, summarization, legiscan, public_affairs]
+
+description: >
+  Searches, tracks, and summarizes legislation across federal and state jurisdictions
+  using the LegiScan API. Produces bill search results, watchlist status updates,
+  and AI-generated plain-language summaries with impact analysis and talking points.
+
+execution:
+  entrypoint: tools/legislative_tracker/execution/run.py
+  runtime: python
+  notes:
+    - "Requires a free LegiScan API key (set LEGISCAN_API_KEY env var)."
+    - "Free tier allows 30,000 requests/month across all 50 states + Congress."
+    - "Bill text is base64-encoded from LegiScan; decoded and cleaned before LLM analysis."
+
+inputs:
+  required:
+    - query: "Search keywords or phrases (e.g., 'artificial intelligence', 'data privacy')."
+  optional:
+    - state: "Two-letter state code or 'US' for federal (default: US). Use 'ALL' for all jurisdictions."
+    - year: "Session year to search (default: current year)."
+    - bill_id: "LegiScan bill ID for direct lookup and summarization."
+    - summarize: "Flag to generate AI summary for a specific bill."
+    - watchlist: "Action: add, remove, list, or refresh."
+    - out: "Output directory (default: ./output)."
+
+outputs:
+  artifacts:
+    - search_results.json:
+        format: json
+        description: "Bill search results with metadata (number, title, status, state, sponsors)."
+        path_pattern: "<out>/search_results.json"
+    - bill_summary.md:
+        format: markdown
+        description: "AI-generated plain-language bill summary with impact analysis and talking points."
+        path_pattern: "<out>/<bill_number>/bill_summary.md"
+    - watchlist.json:
+        format: json
+        description: "Persisted watchlist of tracked bills with status history."
+        path_pattern: "execution/.cache/watchlist.json"
+    - report.md:
+        format: markdown
+        description: "Combined report with search results and/or bill summaries."
+        path_pattern: "<out>/report.md"
+
+governance:
+  review:
+    required_for_external_use: true
+    checklist:
+      - "Verify bill numbers and titles match official sources."
+      - "Confirm AI summary accurately reflects bill provisions (spot-check against full text)."
+      - "Review talking points for balanced framing (for AND against)."
+      - "Validate sponsor names and party affiliations."
+      - "Check that status information is current (bills move fast)."
+      - "Manual verification required before external distribution."
+
+dependencies:
+  python_packages:
+    - requests
+    - openai
+    - python-dateutil
+  system:
+    - "Internet access for LegiScan API and OpenAI API"
+  environment:
+    - "LEGISCAN_API_KEY: Free API key from legiscan.com"
+    - "OPENAI_API_KEY: For bill summarization (gpt-4o-mini)"
+
+notes:
+  - "LegiScan API responses are cached locally for 24 hours to minimize API usage."
+  - "Bill text may be very long; the summarizer chunks and synthesizes if needed."
+  - "Watchlist is stored locally in execution/.cache/watchlist.json."

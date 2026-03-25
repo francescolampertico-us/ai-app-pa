@@ -49,3 +49,16 @@ tools:
     outputs:
       format: docx + markdown + json
       artifacts: [memo_docx, memo_text, verification_json, memo_bundle_json]
+
+  - id: legislative_tracker
+    name: Legislative Tracker
+    version: 0.1.0
+    risk_level: yellow
+    path: tools/legislative_tracker
+    description: "Searches, tracks, and summarizes legislation across federal and state jurisdictions via LegiScan API."
+    inputs:
+      required: [query]
+      optional: [state, year, bill_id, summarize, watchlist, out]
+    outputs:
+      format: json + markdown
+      artifacts: [search_results.json, bill_summary.md, watchlist.json, report.md]

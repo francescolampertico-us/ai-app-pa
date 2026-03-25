@@ -56,6 +56,42 @@ The app lives in `app/` and wraps each tool as a page. Each page:
 - Shows results inline + offers file download
 - Displays risk level badge
 
+## Claude Code Skills
+
+Skills are on-demand instruction bundles in `.claude/skills/`. Only the frontmatter (~60 tokens) loads into context by default — the full skill loads only when invoked. This keeps the context window clean while giving Claude access to all tools.
+
+### Available skills
+- `hearing-memo` — Generate congressional hearing memos from transcripts
+- `media-clips` — Daily media monitoring reports from Google News
+- `clip-cleaner` — Clean pasted article text for clips reports
+- `disclosure-tracker` — Search LDA/FARA disclosure records
+- `add-tool` — Scaffold and register a new tool package (automates the workflow above)
+- `eval-tool` — Run a tool's eval cases and report pass/fail
+
+### Skill architecture (Saraev pattern)
+Each skill = `SKILL.md` (orchestrator) + existing `tools/*/execution/` scripts (deterministic execution). The LLM handles decisions and error recovery; Python scripts handle computation. This prevents error compounding (90% accuracy per LLM step = 59% over 5 steps).
+
+### Self-annealing
+When a skill encounters an error: fix the script, test it, update the SKILL.md with what you learned. The system gets stronger over time.
+
+## Subagents
+
+Development subagents live in `.claude/agents/`. They run on Sonnet (cheaper, larger context) and return results to the parent agent.
+
+### Available subagents
+- `research` — Deep research with web search for API exploration, data source investigation
+- `code-reviewer` — Zero-context code review; returns issues by severity with PASS/FAIL verdict
+- `qa` — Generates tests, runs them, reports pass/fail
+
+### Development workflow: write → review → QA → fix → ship
+1. **Write** — Make changes in the parent agent
+2. **Review** — Spawn `code-reviewer` on changed files (read-only, reports back)
+3. **QA** — Spawn `qa` on changed files (generates + runs tests, reports back)
+4. **Fix** — Parent agent reads reports and applies fixes
+5. **Ship** — Only after review passes and tests pass
+
+Spawn review and QA in parallel when reviewing independent files.
+
 ## Commit conventions
 - Small, focused commits
 - Message format: `<verb> <what>` (e.g., "Add stakeholder_briefing tool package")

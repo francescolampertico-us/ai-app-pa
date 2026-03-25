@@ -1,9 +1,10 @@
 """
 Public Affairs AI Toolkit — Streamlit App
 ==========================================
-Main entry point. Sidebar navigation + home dashboard.
+Main entry point. Home dashboard with tool catalog and framework coverage.
 """
 
+import sys
 import streamlit as st
 import yaml
 from pathlib import Path
@@ -15,6 +16,13 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# --- Load shared components ---
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from shared import inject_custom_css, sidebar_nav, page_footer
+
+inject_custom_css()
+sidebar_nav()
 
 # --- Load tool registry ---
 TOOLKIT_ROOT = Path(__file__).resolve().parent.parent
@@ -29,112 +37,153 @@ def load_registry():
 
 registry = load_registry()
 
-# --- Sidebar ---
-st.sidebar.title("PA AI Toolkit")
-st.sidebar.markdown("AI-powered tools for public affairs professionals")
-st.sidebar.divider()
-st.sidebar.markdown("**Navigation**")
-st.sidebar.page_link("streamlit_app.py", label="Home", icon="🏠")
-st.sidebar.page_link("pages/1_Hearing_Memo.py", label="Hearing Memo Generator", icon="📝")
-st.sidebar.page_link("pages/2_Media_Clips.py", label="Media Clips", icon="📰")
-st.sidebar.page_link("pages/3_Clip_Cleaner.py", label="Clip Cleaner", icon="✂️")
-st.sidebar.page_link("pages/4_Disclosure_Tracker.py", label="Disclosure Tracker", icon="🔍")
-st.sidebar.divider()
-st.sidebar.caption("Capstone Project — Francesco Lampertico")
-st.sidebar.caption("M.A. Political Communication, American University")
+# =====================================================================
+# Hero section
+# =====================================================================
+st.markdown("""
+# Public Affairs AI Toolkit
 
-# --- Home page ---
-st.title("Public Affairs AI Toolkit")
-st.markdown(
-    """
-    An AI-powered toolkit for public affairs professionals, grounded in the
-    **DiGiacomo (2025)** framework for PA management. Each tool follows the
-    **DOE pattern** (Directive-Orchestration-Execution) with built-in verification
-    and human review gates.
-    """
+A suite of AI-powered tools for public affairs professionals — from legislative
+monitoring to hearing analysis to disclosure tracking. Built on the
+**DiGiacomo (2026)** framework for PA management.
+""")
+
+# --- Key metrics ---
+tools = registry.get("tools", [])
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("Tools Built", len(tools))
+m2.metric("DiGiacomo Processes", "3 of 5")
+m3.metric("Architecture", "DOE")
+m4.metric("Risk Governance", "3-Tier")
+
+st.divider()
+
+# =====================================================================
+# Tool Catalog
+# =====================================================================
+st.markdown("## Tool Catalog")
+st.markdown("Each tool follows the **DOE pattern** — Directive (task specification), "
+            "Orchestration (data gathering & processing), Execution (verified output).")
+st.markdown("")
+
+RISK_BADGES = {"green": "🟢 Low", "yellow": "🟡 Medium", "red": "🔴 High"}
+TOOL_ICONS = {
+    "hearing_memo_generator": "📝",
+    "media_clips": "📰",
+    "media_clip_cleaner": "✂️",
+    "influence_disclosure_tracker": "🔍",
+    "legislative_tracker": "📜",
+}
+DIGIACOMO_MAP = {
+    "hearing_memo_generator": "#3 Briefing & Position Papers",
+    "media_clips": "#1 Monitoring & Analysis",
+    "media_clip_cleaner": "#1 Monitoring & Analysis",
+    "influence_disclosure_tracker": "#2 Stakeholder Intelligence",
+    "legislative_tracker": "#1 Monitoring & Analysis",
+}
+TOOL_PAGES = {
+    "hearing_memo_generator": "pages/1_Hearing_Memo.py",
+    "media_clips": "pages/2_Media_Clips.py",
+    "influence_disclosure_tracker": "pages/3_Disclosure_Tracker.py",
+    "legislative_tracker": "pages/4_Legislative_Tracker.py",
+}
+
+# Display tools in a 2-column grid
+col_left, col_right = st.columns(2)
+for i, tool in enumerate(tools):
+    col = col_left if i % 2 == 0 else col_right
+    tid = tool["id"]
+    icon = TOOL_ICONS.get(tid, "🔧")
+    risk = RISK_BADGES.get(tool.get("risk_level", ""), tool.get("risk_level", ""))
+    digiacomo = DIGIACOMO_MAP.get(tid, "")
+    page = TOOL_PAGES.get(tid)
+
+    with col:
+        with st.container(border=True):
+            st.markdown(f"### {icon} {tool['name']}")
+            st.caption(f"v{tool['version']}  |  Risk: {risk}  |  {digiacomo}")
+            st.markdown(tool.get("description", ""))
+
+            c1, c2 = st.columns(2)
+            with c1:
+                inputs_req = tool.get("inputs", {}).get("required", [])
+                st.markdown(f"**Inputs:** `{', '.join(inputs_req)}`")
+            with c2:
+                artifacts = tool.get("outputs", {}).get("artifacts", [])
+                st.markdown(f"**Outputs:** `{', '.join(artifacts)}`")
+
+            if page:
+                st.page_link(page, label=f"Open {tool['name']}", icon="➡️")
+
+st.divider()
+
+# =====================================================================
+# DiGiacomo Framework Coverage
+# =====================================================================
+st.markdown("## DiGiacomo Framework Coverage")
+st.markdown("The toolkit maps to the 5 basic PA processes identified in "
+            "DiGiacomo (2026). Green = built, gray = planned for final delivery.")
+
+framework = [
+    {"Process": "1. Monitoring & Analysis",
+     "Tools": "Media Clips, Legislative Tracker",
+     "Status": "🟢 Built"},
+    {"Process": "2. Stakeholder Intelligence",
+     "Tools": "Influence Disclosure Tracker",
+     "Status": "🟢 Built"},
+    {"Process": "3. Briefing & Position Papers",
+     "Tools": "Hearing Memo Generator",
+     "Status": "🟢 Built"},
+    {"Process": "4. Strategy Design",
+     "Tools": "Messaging Matrix, Meeting Prep Brief",
+     "Status": "⬜ Planned"},
+    {"Process": "5. Assessment & Reporting",
+     "Tools": "PA Performance Tracker",
+     "Status": "⬜ Planned"},
+]
+
+st.dataframe(
+    framework,
+    use_container_width=True,
+    hide_index=True,
+    column_config={
+        "Process": st.column_config.TextColumn(width="large"),
+        "Tools": st.column_config.TextColumn(width="large"),
+        "Status": st.column_config.TextColumn(width="small"),
+    },
 )
 
-# --- Tool catalog ---
-st.header("Tool Catalog")
+st.divider()
 
-RISK_BADGES = {
-    "green": "🟢 Green",
-    "yellow": "🟡 Yellow",
-    "red": "🔴 Red",
-}
+# =====================================================================
+# Architecture & Governance
+# =====================================================================
+col_arch, col_gov = st.columns(2)
 
-DIGIACOMO_MAP = {
-    "hearing_memo_generator": "#3 Briefing Creation",
-    "media_clips": "#1 Legislative Monitoring",
-    "media_clip_cleaner": "#1 Legislative Monitoring",
-    "influence_disclosure_tracker": "#2 Stakeholder Analysis",
-}
+with col_arch:
+    st.markdown("### Architecture: DOE Pattern")
+    st.markdown("""
+Every tool follows a three-stage pipeline:
 
-tools = registry.get("tools", [])
-cols = st.columns(2)
+1. **Directive** — Task specification with explicit constraints and output contract
+2. **Orchestration** — Data gathering, API calls, filtering, LLM processing
+3. **Execution** — Deliverable production with verification and human review gate
 
-for i, tool in enumerate(tools):
-    with cols[i % 2]:
-        risk = RISK_BADGES.get(tool.get("risk_level", ""), tool.get("risk_level", ""))
-        digiacomo = DIGIACOMO_MAP.get(tool["id"], "—")
+This separates *what to do* from *how to do it* from *quality control*,
+keeping each stage testable and auditable.
+""")
 
-        st.subheader(tool["name"])
-        st.caption(f"v{tool['version']}  |  Risk: {risk}  |  DiGiacomo: {digiacomo}")
-        st.markdown(tool.get("description", ""))
+with col_gov:
+    st.markdown("### Governance: Risk Tiers")
+    st.markdown("""
+Each tool declares a risk level that determines review requirements:
 
-        inputs_req = tool.get("inputs", {}).get("required", [])
-        st.markdown(f"**Inputs:** {', '.join(inputs_req)}")
+- **🟢 Low** — Output can be used directly (e.g., text cleaning)
+- **🟡 Medium** — Requires human review before external use (e.g., AI summaries, memos)
+- **🔴 High** — Requires expert review and approval (e.g., legal/compliance content)
 
-        artifacts = tool.get("outputs", {}).get("artifacts", [])
-        st.markdown(f"**Outputs:** {', '.join(artifacts)}")
-        st.divider()
-
-# --- DiGiacomo framework coverage ---
-st.header("DiGiacomo Framework Coverage")
-
-framework_data = {
-    "Workflow": [
-        "1. Legislative/Regulatory Monitoring",
-        "2. Stakeholder Mapping & Analysis",
-        "3. Position Paper & Briefing Creation",
-        "4. Advocacy Campaign Planning",
-        "5. Digital Public Affairs",
-        "6. Crisis Communication",
-        "7. Institutional Relationship Management",
-        "8. Performance Measurement",
-    ],
-    "Tool(s)": [
-        "Media Clips, Bill/Regulation Summary (planned)",
-        "Influence Disclosure Tracker, Stakeholder Map (planned)",
-        "Hearing Memo Generator, Stakeholder Briefing (planned)",
-        "Messaging Matrix (planned), Stakeholder Map (planned)",
-        "Messaging Matrix (planned)",
-        "Crisis Response Brief (planned)",
-        "Meeting Prep Brief (planned)",
-        "PA Performance Tracker (planned)",
-    ],
-    "Status": [
-        "Partial",
-        "Partial",
-        "Partial",
-        "Planned",
-        "Planned",
-        "Planned",
-        "Planned",
-        "Planned",
-    ],
-}
-
-st.table(framework_data)
+All AI-generated content carries a provenance notice and review checklist.
+""")
 
 # --- Footer ---
-st.divider()
-st.markdown(
-    """
-    **Architecture:** Every tool follows the DOE pattern — Directive (task specification),
-    Orchestration (data gathering & processing), Execution (verified output with human review gate).
-
-    **Governance:** Tools are classified by risk level (green/yellow/red) with corresponding
-    review requirements. See `STYLE_GUIDE.md` and `RISK_POLICY.md` for details.
-    """
-)
+page_footer()

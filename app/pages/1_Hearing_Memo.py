@@ -15,17 +15,20 @@ from pathlib import Path
 TOOLKIT_ROOT = Path(__file__).resolve().parent.parent.parent
 TOOL_ROOT = TOOLKIT_ROOT / "tools" / "hearing_memo_generator"
 sys.path.insert(0, str(TOOL_ROOT))
+sys.path.insert(0, str(TOOLKIT_ROOT / "app"))
 
 st.set_page_config(page_title="Hearing Memo Generator", page_icon="📝", layout="wide")
 
-st.title("📝 Congressional Hearing Memo Generator")
-st.caption("v1.0.0  |  Risk: 🟡 Yellow  |  DiGiacomo: #3 Briefing Creation")
-st.markdown(
-    "Converts congressional hearing transcripts into professional hearing memos "
-    "with structured extraction, house-style composition, and automated verification."
+from shared import page_header
+page_header(
+    title="Congressional Hearing Memo Generator",
+    icon="📝",
+    version="1.0.0",
+    risk="yellow",
+    digiacomo="#3 Briefing Creation",
+    description="Converts congressional hearing transcripts into professional hearing memos "
+                "with structured extraction, house-style composition, and automated verification.",
 )
-
-st.divider()
 
 # --- Inputs ---
 col1, col2 = st.columns([2, 1])

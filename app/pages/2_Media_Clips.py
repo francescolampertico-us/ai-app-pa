@@ -20,17 +20,20 @@ TOOL_ROOT = TOOLKIT_ROOT / "tools" / "media_clips"
 CLEANER_ROOT = TOOLKIT_ROOT / "tools" / "media_clip_cleaner"
 sys.path.insert(0, str(TOOL_ROOT / "execution"))
 sys.path.insert(0, str(CLEANER_ROOT / "execution"))
+sys.path.insert(0, str(TOOLKIT_ROOT / "app"))
 
 st.set_page_config(page_title="Media Clips", page_icon="📰", layout="wide")
 
-st.title("📰 Media Clips Generator")
-st.caption("v0.1.0  |  Risk: 🟡 Yellow  |  DiGiacomo: #1 Legislative Monitoring")
-st.markdown(
-    "Daily media monitoring tool. Searches Google News with Boolean queries, "
-    "filters to trusted sources, deduplicates, and generates a formatted .docx report."
+from shared import page_header
+page_header(
+    title="Media Clips Generator",
+    icon="📰",
+    version="0.1.0",
+    risk="yellow",
+    digiacomo="#1 Legislative Monitoring",
+    description="Daily media monitoring tool. Searches Google News with Boolean queries, "
+                "filters to trusted sources, deduplicates, and generates a formatted .docx report.",
 )
-
-st.divider()
 
 
 # ─── Helper: rebuild .docx from clips_data ───────────────────────────────────
