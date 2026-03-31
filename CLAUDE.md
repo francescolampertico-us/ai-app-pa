@@ -100,47 +100,51 @@ Spawn review and QA in parallel when reviewing independent files.
 - Tag milestones: `v0.1.0-prototype`, `v1.0.0-final`
 
 ## Project State
-<!-- Updated by /continue skill — keeps session context across conversations -->
+<!-- Updated by /handoff skill — keeps session context across conversations -->
 
-**Last session:** 2026-03-30
+**Last session:** 2026-03-31
 
-**Tools built (5):**
-1. `hearing_memo` (v1.0.0) — congressional hearing memos from transcripts. YouTube transcript support added.
+**Tools built (8):**
+1. `hearing_memo` (v1.0.0) — congressional hearing memos from transcripts. YouTube transcript support.
 2. `media_clips` (v1.0.0) — daily media monitoring from Google News
-3. `influence_disclosure_tracker` (v0.2.0) — LDA + FARA + IRS 990 search. Deep mode extracts XML schedules (C, F, I, J, R) + LLM enrichment.
-4. `messaging_matrix` (v0.1.0) — Message Map grid format (overarching message -> 3 key messages -> 3 supporting facts). 7 output variants including Media Talking Points and Speech Draft.
-5. `legislative_tracker` — status TBD
+3. `influence_disclosure_tracker` (v0.2.0) — LDA + FARA + IRS 990. Deep mode extracts XML schedules + LLM enrichment.
+4. `messaging_matrix` (v0.1.0) — Message Map grid, 7 output variants. Style guides + personalization.
+5. `legislative_tracker` (v0.1.0) — LegiScan API search, track, summarize.
+6. `stakeholder_briefing` (v0.1.0) — Pre-meeting one-pager with profile, positions, disclosures, news, talking points.
+7. `media_list_builder` (v0.1.0) — Targeted media pitch list by issue, location, media type. Excel export.
+8. `media_clip_cleaner` (v0.3.0) — embedded in Media Clips + standalone. LLM mode default.
 
-**What was done last session (2026-03-30):**
-- Expanded IRS 990 deep extraction: added `xml_parser.py` methods for org profile, financials, Schedule J compensation, Schedule F foreign activity
-- Updated `irs990_client.py` Phase 2 to save to new tables: `irs990_deep_profile`, `irs990_deep_compensation`, expanded `irs990_deep_grants` and `irs990_deep_lobbying`
-- Updated `io_utils.py` with new table schemas and dataset entries
-- Updated `report.py` with sections for org profile, financial breakdown, lobbying, compensation, and grants
-- Tested deep mode end-to-end with Heritage Foundation — all tables populated correctly
-- Created `/handoff` skill (`.claude/skills/handoff/SKILL.md`) for session continuity
-- Added Project State section to CLAUDE.md
+**What was done last session (2026-03-31):**
+- Committed all Mar 22-30 work in 4 focused commits (YouTube transcript, IRS 990, Messaging Matrix, app updates)
+- Built Stakeholder Briefing tool: `tools/stakeholder_briefing/` — 3-step pipeline (news + disclosures + LLM synthesis)
+  - Smart disclosure search: entity-based LDA + topic-based LDA (searches by meeting issue keywords via `filing_specific_lobbying_issues` API param)
+  - Dual news query (name + topic), deduped results
+  - Wired FARA + IRS 990 into disclosure search via existing tracker clients
+  - Tested with Sen. Cantwell (legislator) and Heritage Foundation (org) — both working
+- Built Media List Builder tool: `tools/media_list_builder/` — GNews research + gpt-4o journalist synthesis
+  - Excel export with 10 columns (name, outlet, role, media type, location, pitch angle, previous coverage, email, notes)
+  - Formatted with auto-filter, alternating rows, frozen header
+  - Media type normalization fix (LLM returns varied casing)
+  - Tested with DC/AI safety (15 contacts) and Texas/renewable energy (9 contacts)
+- Fixed Messaging Matrix page numbering: was `5_Messaging_Matrix.py` (conflicted with Literature Review), now `6_Messaging_Matrix.py`
+- Added both tools to Streamlit sidebar (`shared.py`) and `tool-registry.yaml`
+- App pages now: 1-Hearing Memo, 2-Media Clips, 3-Disclosure Tracker, 4-Legislative Tracker, 5-Literature Review, 6-Messaging Matrix, 7-Stakeholder Briefing, 8-Media List Builder
+- Updated `.claude/settings.local.json` with permission allowlist (Bash, Edit, Write, Read, WebFetch, WebSearch)
 
-**What was done in prior sessions (2026-03-22 to 2026-03-29):**
-- Built Messaging Matrix v0.1.0: Message Map grid format, 7 variants (Hill Talking Points, Op-Ed, Social Media, Press Release, One-Pager, Media Talking Points, Speech Draft)
-- Restructured Message House -> Message Map (overarching message -> 3 key messages -> 3 supporting facts)
-- Wired `style_samples/message_matrix/instructions/` and `examples/` into generator pipeline
-- Added YouTube transcript support to Hearing Memo (`app/pages/1_Hearing_Memo.py`)
-- Built IRS 990 integration for Disclosure Tracker: ProPublica API search, basic + deep mode, XML parser, LLM enrichment
-- Fixed master_results schema mismatch, filing_years init, LLM enricher JSON parsing
-- Messaging Matrix plan exists at `.claude/plans/glittery-snuggling-hickey.md` for Enhancement 1 (richer inputs), Enhancement 2 (new variants — done), Enhancement 3 (personal writing style)
-
-**Uncommitted files** (nothing committed yet — all work is staged/unstaged):
-- Modified: `CLAUDE.md`, `io_utils.py`, `report.py`, `run.py`, `lda_client.py`, `tool.yaml`, `spec.md`, `skill.md`, `1_Hearing_Memo.py`, `3_Disclosure_Tracker.py`, `5_Messaging_Matrix.py`, `streamlit_app.py`, `app/requirements.txt`, `tool-registry.yaml`, and more
-- New: `irs990_client.py`, `xml_parser.py`, `llm_enricher.py`, `tools/messaging_matrix/` (entire tool), `.claude/skills/handoff/`
+**Uncommitted files:**
+- Modified: `app/shared.py`, `tool-registry.yaml`, deleted `app/pages/5_Messaging_Matrix.py`
+- New: `app/pages/6_Messaging_Matrix.py`, `app/pages/7_Stakeholder_Briefing.py`, `app/pages/8_Media_List_Builder.py`, `tools/stakeholder_briefing/` (entire tool), `tools/media_list_builder/` (entire tool)
 
 **Next priorities:**
-1. Messaging Matrix enhancements (plan at `.claude/plans/glittery-snuggling-hickey.md`): style samples folder, `context_reader.py` for PDF/DOCX upload, `style_analyzer.py` for personal writing style, Streamlit UI updates
-2. Update Streamlit page `3_Disclosure_Tracker.py` with expanders for new deep tables (profile, grants, compensation)
-3. Build remaining tools from capstone plan (legislative tracker, others TBD)
-4. Commit all accumulated work
+1. Commit the new tools (stakeholder briefing + media list builder)
+2. Build remaining tools toward the 7-9 target for Apr 26 deadline (5 remaining from original plan: Stakeholder Map Builder, Crisis Response Brief, Meeting Prep Brief, PA Performance Tracker, Grant Proposal Drafter, Multilingual Content Adapter)
+3. Messaging Matrix enhancements: personal writing style injection (Enhancement 3)
+4. Polish and test all tools end-to-end before final submission
 
 **Known issues:**
-- IRS 990 Schedule I grants show "(Individual)" for recipients when orgs redact business names in filings — EINs still captured for cross-referencing
-- Deep mode runs LLM enrichment on every fuzzy match (not just exact), which burns API credits on irrelevant orgs — consider filtering by confidence threshold
-- Streamlit app entry point is `app/streamlit_app.py` (not `app/Home.py`), run with full path: `/Users/francescolampertico/Library/Python/3.9/bin/streamlit run app/streamlit_app.py`
-- `youtube-transcript-api` v1.x uses instance methods: `YouTubeTranscriptApi().fetch(video_id, languages=['en'])`
+- IRS 990 Schedule I grants show "(Individual)" for recipients when orgs redact names — EINs still captured
+- Deep mode LLM enrichment runs on every fuzzy match — consider confidence threshold filter
+- Streamlit entry: `streamlit run app/streamlit_app.py` from toolkit root
+- `youtube-transcript-api` v1.x: `YouTubeTranscriptApi().fetch(video_id, languages=['en'])`
+- Stakeholder Briefing: FARA search on "Senate Commerce Committee" returns spurious fuzzy matches (Eco Corporation) — consider raising threshold for FARA in briefing context
+- Media List Builder: `openpyxl` must be installed (`pip3 install openpyxl`)
