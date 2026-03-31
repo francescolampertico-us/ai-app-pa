@@ -27,16 +27,16 @@ tools:
 
   - id: influence_disclosure_tracker
     name: Influence Disclosure Tracker
-    version: 0.1.0
+    version: 0.2.0
     risk_level: yellow
     path: tools/influence_disclosure_tracker
-    description: "Collects LDA and FARA disclosure records, normalizes results into CSV tables, and generates a summary report."
+    description: "Collects LDA, FARA, and IRS 990 disclosure records, normalizes results into CSV tables, and generates a summary report. Deep mode adds XML parsing and LLM enrichment for nonprofit PA relevance."
     inputs:
       required: [entities, from, to]
-      optional: [sources, out, max_results, cache_dir]
+      optional: [sources, mode, out, max_results, cache_dir]
     outputs:
       format: csv + markdown
-      artifacts: [master_results.csv, lda_*.csv, fara_*.csv, report.md]
+      artifacts: [master_results.csv, lda_*.csv, fara_*.csv, irs990_*.csv, report.md]
   - id: hearing_memo_generator
     name: Congressional Hearing Memo Generator
     version: 1.0.0
@@ -62,3 +62,16 @@ tools:
     outputs:
       format: json + markdown
       artifacts: [search_results.json, bill_summary.md, watchlist.json, report.md]
+
+  - id: messaging_matrix
+    name: Messaging Matrix
+    version: 0.1.0
+    risk_level: yellow
+    path: tools/messaging_matrix
+    description: "Generates a Message House and platform-specific deliverables (talking points, press statement, social posts, grassroots email, op-ed) from a core policy position."
+    inputs:
+      required: [position]
+      optional: [context, organization, target_audience, variants]
+    outputs:
+      format: markdown + docx
+      artifacts: [messaging_matrix.md, messaging_matrix.docx]

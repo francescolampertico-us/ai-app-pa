@@ -53,7 +53,7 @@ monitoring to hearing analysis to disclosure tracking. Built on the
 tools = registry.get("tools", [])
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Tools Built", len(tools))
-m2.metric("DiGiacomo Processes", "3 of 5")
+m2.metric("DiGiacomo Processes", "4 of 5")
 m3.metric("Architecture", "DOE")
 m4.metric("Risk Governance", "3-Tier")
 
@@ -74,6 +74,7 @@ TOOL_ICONS = {
     "media_clip_cleaner": "✂️",
     "influence_disclosure_tracker": "🔍",
     "legislative_tracker": "📜",
+    "messaging_matrix": "📣",
 }
 DIGIACOMO_MAP = {
     "hearing_memo_generator": "#3 Briefing & Position Papers",
@@ -81,12 +82,14 @@ DIGIACOMO_MAP = {
     "media_clip_cleaner": "#1 Monitoring & Analysis",
     "influence_disclosure_tracker": "#2 Stakeholder Intelligence",
     "legislative_tracker": "#1 Monitoring & Analysis",
+    "messaging_matrix": "#4 Advocacy Campaign Planning",
 }
 TOOL_PAGES = {
     "hearing_memo_generator": "pages/1_Hearing_Memo.py",
     "media_clips": "pages/2_Media_Clips.py",
     "influence_disclosure_tracker": "pages/3_Disclosure_Tracker.py",
     "legislative_tracker": "pages/4_Legislative_Tracker.py",
+    "messaging_matrix": "pages/5_Messaging_Matrix.py",
 }
 
 # Display tools in a 2-column grid
@@ -136,8 +139,8 @@ framework = [
      "Tools": "Hearing Memo Generator",
      "Status": "🟢 Built"},
     {"Process": "4. Strategy Design",
-     "Tools": "Messaging Matrix, Meeting Prep Brief",
-     "Status": "⬜ Planned"},
+     "Tools": "Messaging Matrix",
+     "Status": "🟢 Built"},
     {"Process": "5. Assessment & Reporting",
      "Tools": "PA Performance Tracker",
      "Status": "⬜ Planned"},

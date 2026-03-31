@@ -3,6 +3,14 @@ Shared UI components for all toolkit pages.
 """
 
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load .env from the toolkit root (one level above app/)
+_toolkit_root = Path(__file__).resolve().parent.parent
+load_dotenv(_toolkit_root / ".env")
+
 import streamlit as st
 
 

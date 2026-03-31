@@ -277,9 +277,16 @@ def validate_output(cleaned_text: str) -> tuple[bool, list[str]]:
     return len(issues) == 0, issues
 
 
-def _llm_prompt(raw_text: str) -> str:
+def _llm_prompt(raw_text: str, title: Optional[str] = None) -> str:
+    title_instruction = ""
+    if title:
+        title_instruction = (
+            f'\nIMPORTANT: The article headline is: "{title}". '
+            "Remove this headline and any close variation of it from the output.\n"
+        )
     return (
         "You clean messy pasted news text into clip-ready format.\n\n"
+        f"{title_instruction}"
         "REMOVE all of the following:\n"
         "- The main article headline/title (the big title at the top)\n"
         "- Bylines, author names, author bios\n"
@@ -330,12 +337,15 @@ def _post_process_llm(text: str, title: Optional[str] = None) -> str:
         if not line_clean:
             continue
 
-        # Remove title if it appears as first line
+        # Remove title if it appears as first line (fuzzy match)
         if title and first_body:
+            from difflib import SequenceMatcher
             t_norm = re.sub(r"[^\w\s]", "", title.lower()).strip()
             l_norm = re.sub(r"[^\w\s]", "", line_clean.lower()).strip()
-            if t_norm and l_norm and (t_norm in l_norm or l_norm in t_norm):
-                continue
+            if t_norm and l_norm:
+                ratio = SequenceMatcher(None, t_norm, l_norm).ratio()
+                if ratio > 0.6 or t_norm in l_norm or l_norm in t_norm:
+                    continue
 
         # Skip photo credits, author bios, first published lines
         low = line_clean.lower()
@@ -373,7 +383,7 @@ def clean_clip_llm_openai(raw_text: str, model: str, title: Optional[str] = None
             {
                 "role": "user",
                 "content": [
-                    {"type": "input_text", "text": _llm_prompt(raw_text)},
+                    {"type": "input_text", "text": _llm_prompt(raw_text, title=title)},
                 ],
             }
         ],

@@ -15,3 +15,5 @@ tools/hearing_memo_tool_package/eval/inputs/*
 tools/hearing_memo_tool_package/eval/reference_memos/*.docx
 tools/hearing_memo_tool_package/transcripts/*.pdf
 tools/legislative_tracker/execution/.tmp/
+tools/messaging_matrix/style_samples/*
+!tools/messaging_matrix/style_samples/README.md

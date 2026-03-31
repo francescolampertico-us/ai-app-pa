@@ -188,11 +188,43 @@ def _build_report(clips_data, report_topic, report_date_str):
 
 # ─── Inputs ──────────────────────────────────────────────────────────────────
 topic = st.text_input("Report topic / title", placeholder="e.g., India Media Clips")
-queries = st.text_area(
-    "Search queries (one per line, Boolean syntax supported)",
-    placeholder='"India" AND ("elections" OR "Modi")\n"New Delhi" AND "trade"',
-    height=100,
+
+query_mode = st.radio(
+    "Query mode",
+    ["Simple (keywords)", "Advanced (Boolean)"],
+    horizontal=True,
+    index=0,
 )
+
+if query_mode.startswith("Simple"):
+    st.caption("Enter keywords separated by commas. They will be combined automatically.")
+    kw_include = st.text_input(
+        "Keywords to include",
+        placeholder="e.g., India, elections, Modi",
+    )
+    kw_exclude = st.text_input(
+        "Keywords to exclude (optional)",
+        placeholder="e.g., cricket, Bollywood",
+    )
+    # Auto-build query from keywords
+    if kw_include:
+        terms = [t.strip() for t in kw_include.split(",") if t.strip()]
+        quoted = [f'"{t}"' for t in terms]
+        query_str = " OR ".join(quoted)
+        if kw_exclude:
+            excludes = [t.strip() for t in kw_exclude.split(",") if t.strip()]
+            exclude_str = " ".join(f'-"{e}"' for e in excludes)
+            query_str = f"({query_str}) {exclude_str}"
+        queries = query_str
+        st.caption(f"Generated query: `{queries}`")
+    else:
+        queries = ""
+else:
+    queries = st.text_area(
+        "Search queries (one per line, Boolean syntax supported)",
+        placeholder='"India" AND ("elections" OR "Modi")\n"New Delhi" AND "trade"',
+        height=100,
+    )
 
 col1, col2, col3 = st.columns(3)
 with col1:
@@ -228,7 +260,7 @@ if topic and queries and st.button("Generate Clips Report", type="primary", disa
                 sys.executable,
                 str(TOOL_ROOT / "execution" / "generate_clips.py"),
                 "--topic", topic,
-                "--queries", ",".join(q.strip() for q in queries.strip().split("\n") if q.strip()),
+                "--queries", ",".join(q.strip() for q in queries.strip().split("\n") if q.strip()) if "\n" in queries else queries.strip(),
                 "--period", period,
                 "--target-date", str(target_date),
                 "--output-dir", tmpdir,
