@@ -149,7 +149,10 @@ LENGTH TARGETS (these are critical — write substantially, not telegraphically)
 - Opening statements: 2-4 paragraphs per speaker, 150-300 words each. Cover the speaker's framing, specific concerns, proposals, and any cited facts or events.
 - Witness testimony: 2-4 paragraphs per witness, 150-350 words each. Cover their main argument, key evidence, specific policy prescriptions and recommendations.
 - Q&A exchanges: 1-4 paragraphs per member per round, 150-400 words each. Capture EACH question and its specific answer. If a senator asks 3 questions, write about all 3.
-- Overview: 5-8 sentences, 150-200 words. DO NOT start with the committee/title/date — that is added separately. Instead, write a substantive summary of what the hearing examined and the major issues discussed. Weave the themes into flowing prose — do NOT write a literal list like "Key themes included X, Y, Z." Do NOT mention individual committee members or witnesses by name. Refer to them generically (e.g., "the committee examined," "senators pressed the nominee on," "discussion centered on").
+- Overview: 5-8 sentences, 150-200 words. DO NOT start with the committee/title/date — that is added separately. Write about TOPICS and THEMES only — no speaker attributions at all. Do NOT mention individual committee members or witnesses by name. Do NOT use generic role references either (e.g., "the chairman said", "witnesses testified", "senators pressed"). Instead write purely about what was discussed.
+  GOOD example: "Discussion centered on AI safety regulation and workforce displacement. Key areas of inquiry included federal oversight frameworks, the adequacy of voluntary industry commitments, and projected job losses in manufacturing sectors."
+  BAD example: "The chairman discussed AI safety. Witnesses testified about workforce displacement. Senators pressed for details on federal oversight."
+  Weave the themes into flowing prose — do NOT write a literal list like "Key themes included X, Y, Z."
 
 STYLE:
 - ALWAYS write in professional third person. NEVER use first person ("I", "we", "my").
@@ -235,7 +238,7 @@ def _call_llm(user_prompt: str, model: str = None) -> dict:
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.2,
-            max_tokens=16000,
+            max_tokens=int(os.environ.get("MEMO_MAX_TOKENS", 16000)),
             response_format={"type": "json_object"},
         )
     except Exception as e:
@@ -249,7 +252,7 @@ def _call_llm(user_prompt: str, model: str = None) -> dict:
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.2,
-                max_tokens=16000,
+                max_tokens=int(os.environ.get("MEMO_MAX_TOKENS", 16000)),
                 response_format={"type": "json_object"},
             )
         else:
@@ -270,6 +273,13 @@ def _merge_results(part1: dict, part2: dict) -> dict:
         "qa_exchanges": list(part1.get("qa_exchanges", [])),
         "overview": part1.get("overview", {}),
     }
+
+    # Merge opening statements from part2 (dedup by speaker_heading)
+    existing_speakers = {s.get("speaker_heading", "").lower() for s in merged["opening_statements"]}
+    for stmt in part2.get("opening_statements", []):
+        if stmt.get("speaker_heading", "").lower() not in existing_speakers:
+            merged["opening_statements"].append(stmt)
+            existing_speakers.add(stmt.get("speaker_heading", "").lower())
 
     # Add Q&A exchanges from part2 that aren't duplicates
     existing_members = set()
@@ -350,9 +360,13 @@ def _extract_via_llm(transcript: str, metadata_candidates: dict) -> dict:
         split_points.append(_find_split_point(transcript, target))
     split_points.append(len(transcript))
 
+    OVERLAP_CHARS = 2000
     chunks = []
     for i in range(num_chunks):
-        chunks.append(transcript[split_points[i]:split_points[i + 1]])
+        start = split_points[i]
+        if i > 0:
+            start = max(split_points[i] - OVERLAP_CHARS, split_points[i - 1])
+        chunks.append(transcript[start:split_points[i + 1]])
 
     # --- Call 1: First chunk (opening statements, witnesses, early Q&A) ---
     prompt1 = (
@@ -384,9 +398,10 @@ def _extract_via_llm(transcript: str, metadata_candidates: dict) -> dict:
 
         prompt_n = (
             f"Extract the structured hearing record from this transcript (PART {chunk_idx + 1} of {num_chunks} — "
-            f"this is a continuation of the hearing Q&A). "
-            f"Focus ONLY on Q&A exchanges with NEW senators or later rounds of questioning. "
-            f"Do NOT include opening statements or witness testimony (already extracted).{context}{hints}"
+            f"this is a continuation of the hearing). "
+            f"Extract ALL content you find in this part: opening statements, witness testimony, AND Q&A exchanges. "
+            f"For Q&A, the senators listed below are already covered — avoid duplicating their exchanges "
+            f"unless they return for a new round of questioning.{context}{hints}"
             f"\n\n---TRANSCRIPT PART {chunk_idx + 1} START---\n{chunks[chunk_idx]}\n---TRANSCRIPT PART {chunk_idx + 1} END---"
         )
         print(f"  Extracting Part {chunk_idx + 1}...", file=sys.stderr)

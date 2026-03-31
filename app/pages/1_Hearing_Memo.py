@@ -1,12 +1,13 @@
 """
 Hearing Memo Generator — Streamlit Page
 ========================================
-Upload a congressional hearing transcript, get a professional hearing memo.
+Upload a congressional hearing transcript or paste a YouTube URL to get a professional hearing memo.
 """
 
 import streamlit as st
 import sys
 import os
+import re
 import tempfile
 import json
 from pathlib import Path
@@ -30,6 +31,21 @@ page_header(
                 "with structured extraction, house-style composition, and automated verification.",
 )
 
+def _fetch_youtube_transcript(url: str) -> str:
+    """Extract video ID from URL and fetch transcript text."""
+    # Extract video ID from various YouTube URL formats
+    match = re.search(r'(?:v=|youtu\.be/|/v/|/embed/)([a-zA-Z0-9_-]{11})', url)
+    if not match:
+        raise ValueError("Could not extract video ID from URL. Please check the link.")
+    video_id = match.group(1)
+
+    from youtube_transcript_api import YouTubeTranscriptApi
+    ytt_api = YouTubeTranscriptApi()
+    transcript = ytt_api.fetch(video_id, languages=['en'])
+    # Join all snippet text into a single transcript
+    return "\n".join(snippet.text for snippet in transcript)
+
+
 # --- Inputs ---
 col1, col2 = st.columns([2, 1])
 
@@ -38,6 +54,11 @@ with col1:
         "Upload hearing transcript",
         type=["pdf", "txt"],
         help="PDF or plain text transcript of a congressional hearing",
+    )
+    youtube_url = st.text_input(
+        "Or paste a YouTube URL",
+        placeholder="e.g., https://www.youtube.com/watch?v=...",
+        help="The tool will auto-fetch the transcript from YouTube.",
     )
 
 with col2:
@@ -61,7 +82,9 @@ with st.expander("Advanced options"):
 # --- Run pipeline ---
 demo = demo_banner()
 
-if uploaded_file and st.button("Generate Memo", type="primary", disabled=demo):
+has_input = uploaded_file or (youtube_url and youtube_url.strip())
+
+if has_input and st.button("Generate Memo", type="primary", disabled=demo):
     with st.spinner("Running 4-stage pipeline..."):
         try:
             from src.normalizer import normalize
@@ -70,15 +93,27 @@ if uploaded_file and st.button("Generate Memo", type="primary", disabled=demo):
             from src.verifier import verify
             from src.exporter import export_docx
 
-            # Save uploaded file to temp
-            with tempfile.NamedTemporaryFile(
-                delete=False, suffix=os.path.splitext(uploaded_file.name)[1]
-            ) as tmp:
-                tmp.write(uploaded_file.getbuffer())
-                tmp_path = tmp.name
+            status = st.status("Processing transcript...", expanded=True)
+
+            # Get transcript from YouTube or file upload
+            if youtube_url and youtube_url.strip() and not uploaded_file:
+                status.write("**[0/4]** Fetching transcript from YouTube...")
+                yt_text = _fetch_youtube_transcript(youtube_url.strip())
+                with tempfile.NamedTemporaryFile(
+                    delete=False, suffix=".txt", mode="w", encoding="utf-8"
+                ) as tmp:
+                    tmp.write(yt_text)
+                    tmp_path = tmp.name
+                status.write(f"  Fetched {len(yt_text)} chars from YouTube")
+            else:
+                # Save uploaded file to temp
+                with tempfile.NamedTemporaryFile(
+                    delete=False, suffix=os.path.splitext(uploaded_file.name)[1]
+                ) as tmp:
+                    tmp.write(uploaded_file.getbuffer())
+                    tmp_path = tmp.name
 
             # Stage 1: Normalize
-            status = st.status("Processing transcript...", expanded=True)
             status.write("**[1/4]** Normalizing source text...")
             norm_result = normalize(tmp_path)
             status.write(
@@ -192,5 +227,5 @@ if uploaded_file and st.button("Generate Memo", type="primary", disabled=demo):
             import traceback
             st.code(traceback.format_exc())
 
-elif not uploaded_file:
-    st.info("Upload a hearing transcript (PDF or text) to get started.")
+elif not has_input:
+    st.info("Upload a hearing transcript (PDF or text) or paste a YouTube URL to get started.")

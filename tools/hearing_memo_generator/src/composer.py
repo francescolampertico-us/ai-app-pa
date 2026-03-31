@@ -178,7 +178,18 @@ def _compose_overview(record: dict) -> dict:
         for name in speaker_names:
             if name in s_lower:
                 return True
+        # Catch named references like "Chairman Scott", "Sen. Blumenthal"
         if re.search(r"(chairman|chairwoman|ranking member|sen\.|senator|rep\.)\s+[A-Z]", sentence):
+            return True
+        # Catch generic role attributions like "the chairman said", "witnesses testified"
+        if re.search(
+            r"(the\s+)?(chairman|chairwoman|witnesses?|senators?|committee\s+members?|"
+            r"ranking\s+member|nominees?|members)\s+"
+            r"(said|stated|testified|discussed|raised|pressed|asked|argued|noted|"
+            r"emphasized|highlighted|urged|called|stressed|expressed|outlined|"
+            r"addressed|questioned|described|explained|acknowledged|warned|praised)",
+            s_lower,
+        ):
             return True
         return False
 
