@@ -1,12 +1,12 @@
 id: influence_disclosure_tracker
 name: Influence Disclosure Tracker
-version: 0.1.0
+version: 0.2.0
 risk_level: yellow
 tags: [influence, lobbying, disclosure, lda, fara, public_affairs]
 
 description: >
-  Retrieves and normalizes lobbying and foreign principal disclosure records from
-  the LDA and FARA APIs, producing CSV tables and a markdown summary report.
+  Retrieves and normalizes lobbying, foreign principal, and nonprofit disclosure records from
+  the LDA, FARA, and ProPublica IRS 990 APIs, producing CSV tables and a markdown summary report.
 
 execution:
   entrypoint: tools/influence_disclosure_tracker/execution/run.py
@@ -21,7 +21,8 @@ inputs:
     - from: "Start date (YYYY-MM-DD)."
     - to: "End date (YYYY-MM-DD)."
   optional:
-    - sources: "Comma-separated data sources (default: lda,fara)."
+    - sources: "Comma-separated data sources (default: lda,fara,irs990)."
+    - mode: "Execution mode: basic (default API lookup) or deep (XML parse + LLM enrichment)."
     - out: "Base output directory (default: ./output)."
     - max_results: "Maximum results per source (default: 500)."
     - cache_dir: "Cache directory (default: .cache/influence_disclosure_tracker)."
@@ -40,9 +41,13 @@ outputs:
         format: csv
         description: "FARA detail tables (registrants, foreign principals, documents, short forms)."
         path_pattern: "<out>/<entity_or_multiple>/fara_*.csv"
+    - irs990_*.csv:
+        format: csv
+        description: "IRS 990 nonprofit tables (organizations, filings, plus deep tables if mode=deep)."
+        path_pattern: "<out>/<entity_or_multiple>/irs990_*.csv"
     - report.md:
         format: markdown
-        description: "Narrative summary with match confidence notes."
+        description: "Narrative summary with match confidence notes and LLM enrichment if mode=deep."
         path_pattern: "<out>/<entity_or_multiple>/report.md"
 
 governance:

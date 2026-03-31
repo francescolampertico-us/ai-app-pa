@@ -59,6 +59,8 @@ class ReportGenerator:
         lda_filings = self.io.datasets.get("lda_filings", [])
         lda_issues = self.io.datasets.get("lda_issues", [])
         lda_lobbyists = self.io.datasets.get("lda_lobbyists", [])
+        irs990_filings = self.io.datasets.get("irs990_filings", [])
+        irs990_enrichments = self.io.datasets.get("irs990_deep_enrichments", [])
 
         search_field = self.config.get("search_field", "client")
         scope_label = SEARCH_FIELD_LABEL.get(search_field, "Client filings")
@@ -101,6 +103,7 @@ class ReportGenerator:
             ent_records = [r for r in master if r['entity_query'].lower() == ent.lower()]
             lda_count = len([r for r in ent_records if r['source'] == 'LDA'])
             fara_count = len([r for r in ent_records if r['source'] == 'FARA'])
+            irs990_count = len([r for r in ent_records if r['source'] == 'IRS990'])
 
             total = 0.0
             for r in ent_records:
@@ -126,8 +129,8 @@ class ReportGenerator:
                 lines.append(f"| Outside lobbying firms retained | {len(firms)} |")
             if fara_count:
                 lines.append(f"| FARA records | {fara_count} |")
-            else:
-                lines.append("| FARA records | None |")
+            if irs990_count:
+                lines.append(f"| IRS 990 filings | {irs990_count} |")
             lines.append("")
 
             # Client description as blockquote
@@ -350,6 +353,191 @@ class ReportGenerator:
                 lines.append("")
         else:
             lines.append("No FARA records matched the specified entities.")
+        lines.append("")
+
+        # =====================================================================
+        # IRS 990
+        # =====================================================================
+        lines.append("---")
+        lines.append("")
+        lines.append("## Nonprofit Tax Filings (IRS Form 990)")
+        lines.append("")
+        irs990_master = [r for r in master if r['source'] == 'IRS990']
+        irs990_deep_profile = self.io.datasets.get("irs990_deep_profile", [])
+        irs990_deep_grants = self.io.datasets.get("irs990_deep_grants", [])
+        irs990_deep_compensation = self.io.datasets.get("irs990_deep_compensation", [])
+        irs990_deep_lobbying = self.io.datasets.get("irs990_deep_lobbying", [])
+        irs990_deep_officers = self.io.datasets.get("irs990_deep_officers", [])
+
+        if irs990_master:
+            from collections import OrderedDict
+            org_groups = OrderedDict()
+            for row in irs990_master:
+                name = row.get("registrant", "")
+                if name not in org_groups:
+                    org_groups[name] = []
+                org_groups[name].append(row)
+
+            def fmt_dollar(val):
+                try:
+                    v = float(val)
+                    if v == 0:
+                        return "—"
+                    return f"${v:,.0f}"
+                except (ValueError, TypeError):
+                    return str(val) if val else "—"
+
+            for org_name, org_filings in org_groups.items():
+                lines.append(f"### {self._title_case_name(org_name)}")
+                lines.append("")
+
+                # Find EIN for this org
+                org_ein = None
+                for f in irs990_filings:
+                    if f.get("organization_name") == org_name:
+                        org_ein = f.get("ein")
+                        break
+                if not org_ein:
+                    org_orgs = self.io.datasets.get("irs990_organizations", [])
+                    for o in org_orgs:
+                        if o.get("organization_name") == org_name:
+                            org_ein = o.get("ein")
+                            break
+
+                # Check for Deep Enrichment
+                enrich = next((e for e in irs990_enrichments if e.get("ein") == org_ein and e.get("one_sentence_org_profile", "").strip()), None)
+                if enrich:
+                    lines.append(f"> **AI Summary:** {enrich.get('one_sentence_org_profile')}")
+                    lines.append("> ")
+                    lines.append(f"> **PA Relevance Score:** {enrich.get('pa_relevance_score')}")
+                    lines.append(f"> **Issues:** {enrich.get('issue_area_tags')}")
+                    lines.append(f"> **Tactics:** {enrich.get('likely_advocacy_tactics_named')}")
+                    lines.append("")
+
+                # Deep Profile (org overview from XML)
+                profile = next((p for p in irs990_deep_profile if p.get("ein") == org_ein), None)
+                if profile:
+                    lines.append("#### Organization Profile")
+                    lines.append("")
+                    lines.append("| | |")
+                    lines.append("|---|---|")
+                    if profile.get("website"):
+                        lines.append(f"| **Website** | {profile['website']} |")
+                    if profile.get("formation_year"):
+                        lines.append(f"| **Founded** | {profile['formation_year']} |")
+                    if profile.get("state_of_domicile"):
+                        lines.append(f"| **State** | {profile['state_of_domicile']} |")
+                    lines.append(f"| **Employees** | {profile.get('total_employees', '0')} |")
+                    lines.append(f"| **Volunteers** | {profile.get('total_volunteers', '0')} |")
+                    lines.append(f"| **Board members** | {profile.get('voting_board_members', '0')} (independent: {profile.get('independent_board_members', '0')}) |")
+                    # Activity flags
+                    flags = []
+                    if profile.get("flag_lobbying") not in ("0", "", "false", "False"):
+                        flags.append("Lobbying")
+                    if profile.get("flag_political_campaign") not in ("0", "", "false", "False"):
+                        flags.append("Political Campaign")
+                    if profile.get("flag_grants_to_orgs") not in ("0", "", "false", "False"):
+                        flags.append("Grants to Organizations")
+                    if flags:
+                        lines.append(f"| **Activity flags** | {', '.join(flags)} |")
+                    lines.append("")
+
+                    # Financial breakdown
+                    lines.append("#### Financial Breakdown (Latest XML Filing)")
+                    lines.append("")
+                    lines.append("| Category | Amount |")
+                    lines.append("|:---|---:|")
+                    lines.append(f"| **Total Revenue** | {fmt_dollar(profile.get('total_revenue'))} |")
+                    lines.append(f"| Contributions & Grants | {fmt_dollar(profile.get('contributions_and_grants'))} |")
+                    lines.append(f"| Program Service Revenue | {fmt_dollar(profile.get('program_service_revenue'))} |")
+                    lines.append(f"| Investment Income | {fmt_dollar(profile.get('investment_income'))} |")
+                    lines.append(f"| Government Grants | {fmt_dollar(profile.get('government_grants'))} |")
+                    lines.append(f"| **Total Expenses** | {fmt_dollar(profile.get('total_expenses'))} |")
+                    lines.append(f"| Program Services | {fmt_dollar(profile.get('program_service_expenses'))} |")
+                    lines.append(f"| Management & General | {fmt_dollar(profile.get('management_expenses'))} |")
+                    lines.append(f"| Fundraising | {fmt_dollar(profile.get('fundraising_expenses'))} |")
+                    lines.append(f"| **Net Assets** | {fmt_dollar(profile.get('net_assets'))} |")
+                    if profile.get("foreign_spending") not in ("0", "", None):
+                        lines.append(f"| Foreign Spending | {fmt_dollar(profile.get('foreign_spending'))} |")
+                    lines.append("")
+
+                # Filings table
+                lines.append("#### Filing History")
+                lines.append("")
+                lines.append("| Year | Form Type | Revenue | Expenses | Net Assets | Link |")
+                lines.append("|:---|:---|---:|---:|---:|:---|")
+
+                org_detail = [f for f in irs990_filings if f.get("organization_name") == org_name]
+                org_detail.sort(key=lambda x: str(x.get("tax_year", "")), reverse=True)
+
+                for detail in org_detail:
+                    year = detail.get("tax_year", "")
+                    ftype = detail.get("form_type", "")
+                    pdf = detail.get("pdf_url", "")
+                    link = f"[View PDF]({pdf})" if pdf else ""
+                    rev = fmt_dollar(detail.get("total_revenue"))
+                    exp = fmt_dollar(detail.get("total_functional_expenses"))
+                    ast = fmt_dollar(detail.get("net_assets"))
+                    lines.append(f"| {year} | {ftype} | {rev} | {exp} | {ast} | {link} |")
+                lines.append("")
+
+                # Lobbying (Schedule C)
+                lob = next((l for l in irs990_deep_lobbying if l.get("ein") == org_ein and l.get("schedule_c_present") == "True"), None)
+                if lob:
+                    lines.append("#### Lobbying Activity (Schedule C)")
+                    lines.append("")
+                    lines.append("| Category | Amount |")
+                    lines.append("|:---|---:|")
+                    lines.append(f"| Total Lobbying | {fmt_dollar(lob.get('total_lobbying'))} |")
+                    lines.append(f"| Grassroots Lobbying | {fmt_dollar(lob.get('grassroots_lobbying'))} |")
+                    lines.append(f"| Direct Lobbying | {fmt_dollar(lob.get('direct_lobbying'))} |")
+                    if lob.get("total_sect_162e") not in ("0", "", None):
+                        lines.append(f"| Section 162(e) Lobbying | {fmt_dollar(lob.get('total_sect_162e'))} |")
+                    lines.append("")
+
+                # Top Compensation (Schedule J + Part VII)
+                org_comp = [c for c in irs990_deep_compensation if c.get("ein") == org_ein]
+                org_officers = [o for o in irs990_deep_officers if o.get("ein") == org_ein]
+                if org_comp:
+                    lines.append("#### Top Compensation (Schedule J)")
+                    lines.append("")
+                    lines.append("| Name | From Organization | From Related Orgs | Other |")
+                    lines.append("|:---|---:|---:|---:|")
+                    for c in org_comp:
+                        lines.append(f"| {c.get('name', '')} | {fmt_dollar(c.get('total_compensation_org'))} | {fmt_dollar(c.get('compensation_related_orgs'))} | {fmt_dollar(c.get('other_compensation'))} |")
+                    lines.append("")
+                elif org_officers:
+                    # Fall back to Part VII officers if no Schedule J
+                    top_officers = sorted(org_officers, key=lambda o: float(o.get("compensation", "0") or "0"), reverse=True)[:10]
+                    paid_officers = [o for o in top_officers if float(o.get("compensation", "0") or "0") > 0]
+                    if paid_officers:
+                        lines.append("#### Key Officers & Compensation (Part VII)")
+                        lines.append("")
+                        lines.append("| Name | Title | Compensation |")
+                        lines.append("|:---|:---|---:|")
+                        for o in paid_officers:
+                            lines.append(f"| {o.get('name', '')} | {o.get('title', '')} | {fmt_dollar(o.get('compensation'))} |")
+                        lines.append("")
+
+                # Grants (Schedule I)
+                org_grants = [g for g in irs990_deep_grants if g.get("ein") == org_ein]
+                if org_grants:
+                    lines.append("#### Grants Made (Schedule I)")
+                    lines.append("")
+                    lines.append("| Recipient | Amount | Purpose | Location |")
+                    lines.append("|:---|---:|:---|:---|")
+                    # Sort by amount descending
+                    org_grants.sort(key=lambda g: float(g.get("amount", "0") or "0"), reverse=True)
+                    for g in org_grants:
+                        loc_parts = [g.get("city", ""), g.get("state", "")]
+                        loc = ", ".join(p for p in loc_parts if p) or "—"
+                        purpose = g.get("purpose", "—") or "—"
+                        lines.append(f"| {g.get('recipient', '')} | {fmt_dollar(g.get('amount'))} | {purpose} | {loc} |")
+                    lines.append("")
+
+                lines.append("")
+        else:
+            lines.append("No IRS 990 records matched the specified entities.")
         lines.append("")
 
         # =====================================================================

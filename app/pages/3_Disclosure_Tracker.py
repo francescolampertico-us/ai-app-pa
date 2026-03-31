@@ -23,11 +23,11 @@ from shared import page_header, demo_banner
 page_header(
     title="Influence Disclosure Tracker",
     icon="🔍",
-    version="0.1.0",
+    version="0.2.0",
     risk="yellow",
     digiacomo="#2 Stakeholder Analysis",
-    description="Retrieves and normalizes lobbying (LDA) and foreign principal (FARA) disclosure "
-                "records, producing CSV tables and a markdown summary report.",
+    description="Retrieves and normalizes lobbying (LDA), foreign principal (FARA), and nonprofit tax (IRS 990) "
+                "disclosure records, producing CSV tables and a markdown summary report.",
 )
 
 # --- Inputs ---
@@ -71,7 +71,16 @@ with col2:
         help="Select which quarters to include",
     )
 with col3:
-    sources = st.multiselect("Data sources", ["lda", "fara"], default=["lda"])
+    sources = st.multiselect("Data sources", ["lda", "fara", "irs990"], default=["lda", "irs990"])
+    
+    run_mode = "basic"
+    if "irs990" in sources:
+        run_mode_sel = st.radio(
+            "IRS 990 Mode", 
+            ["Basic", "Deep (XML + LLM)"],
+            help="Basic: Fast lookup of top-level financials. Deep: Comprehensive XML parsing and LLM insights (slower)."
+        )
+        run_mode = "deep" if "Deep" in run_mode_sel else "basic"
 
 with st.expander("Advanced options"):
     adv_col1, adv_col2 = st.columns(2)
@@ -120,6 +129,7 @@ if entities and st.button("Search Disclosures", type="primary", disabled=demo):
                         "--out", tmpdir,
                         "--max-results", str(max_results),
                         "--fuzzy-threshold", str(fuzzy_threshold),
+                        "--mode", run_mode,
                     ]
                     if dry_run:
                         cmd.append("--dry-run")
@@ -153,6 +163,13 @@ if entities and st.button("Search Disclosures", type="primary", disabled=demo):
                     st.session_state["dt_csv_data"] = csv_data
                     st.session_state["dt_has_results"] = True
 
+                    # Notify if search scope was auto-expanded
+                    if "Auto-expanding" in (result.stderr or ""):
+                        st.info(
+                            "No results were found with the selected scope. "
+                            "The search was automatically expanded to include both clients and registrants."
+                        )
+
             except subprocess.TimeoutExpired:
                 st.error("Search timed out after 5 minutes. Try fewer entities or narrower filters.")
                 st.session_state["dt_has_results"] = False
@@ -179,6 +196,11 @@ def _extract_matched_names(csv_data: dict) -> tuple[list[str], list[str]]:
     for r in csv_data.get("fara_foreign_principals", []):
         registrants.add(r.get("registrant_name", ""))
         clients.add(r.get("foreign_principal_name", ""))
+    
+    # IRS 990
+    for r in csv_data.get("irs990_organizations", []):
+        registrants.add(r.get("organization_name", ""))
+
     clients.discard("")
     registrants.discard("")
     return sorted(clients), sorted(registrants)
@@ -218,6 +240,17 @@ def _filter_csv_data(csv_data: dict, allowed_names: set) -> dict:
         or r.get("foreign_principal_name", "") in allowed_names
     ]
     filtered["fara_short_forms"] = csv_data.get("fara_short_forms", [])
+    
+    filtered["irs990_filings"] = [
+        r for r in csv_data.get("irs990_filings", [])
+        if r.get("organization_name", "") in allowed_names
+    ]
+    filtered["irs990_organizations"] = [
+        r for r in csv_data.get("irs990_organizations", [])
+        if r.get("organization_name", "") in allowed_names
+    ]
+    filtered["irs990_deep_enrichments"] = csv_data.get("irs990_deep_enrichments", [])
+    
     return filtered
 
 
@@ -254,18 +287,26 @@ def _filter_report(report_text: str, allowed_names: set) -> str:
     output_lines = list(preamble)
     in_filterable = False
     in_fara = False
+    in_irs990 = False
 
     for header, body in sections:
         if header.startswith("## "):
             if "Lobbying Activity" in header:
                 in_filterable = True
                 in_fara = False
+                in_irs990 = False
             elif "FARA Foreign Agent" in header:
                 in_filterable = True
                 in_fara = True
+                in_irs990 = False
+            elif "Nonprofit Tax Filings" in header:
+                in_filterable = True
+                in_fara = False
+                in_irs990 = True
             else:
                 in_filterable = False
                 in_fara = False
+                in_irs990 = False
             output_lines.append(header)
             output_lines.extend(body)
             continue
@@ -285,6 +326,9 @@ def _filter_report(report_text: str, allowed_names: set) -> str:
                 relevant = any(n.lower() in allowed_lower for n in entity_bold)
                 if not entity_bold:
                     relevant = section_name.lower() in allowed_lower
+            elif in_irs990:
+                # IRS 990: check header name
+                relevant = section_name.lower() in allowed_lower
             else:
                 # LDA: check header name or bold entity names
                 relevant = section_name.lower() in allowed_lower
@@ -533,6 +577,55 @@ if st.session_state.get("dt_has_results"):
                     key="dl_fara_docs",
                 )
 
+        # --- IRS 990 Data Tables ---
+        irs990_filings = csv_data.get("irs990_filings", [])
+        irs_enrichments = csv_data.get("irs990_deep_enrichments", [])
+        
+        if irs990_filings:
+            if not csv_data.get("lda_filings") and not csv_data.get("fara_foreign_principals"):
+                st.divider()
+                st.header("Data Tables")
+                st.markdown("Expand a table to preview, filter, and download.")
+                
+            with st.expander(f"IRS 990 Filings ({len(irs990_filings)} records)"):
+                display_headers = ["Organization", "Year", "Type", "Revenue", "Expenses", "Assets", "PDF", "XML"]
+                table_rows = []
+                for d in irs990_filings:
+                    def fmt(val):
+                        try: return f"${float(val):,.0f}"
+                        except: return str(val) if val else "—"
+                    table_rows.append({
+                        "Organization": d.get("organization_name", "") or "—",
+                        "Year": d.get("tax_year", "") or "—",
+                        "Type": d.get("form_type", "") or "—",
+                        "Revenue": fmt(d.get("total_revenue", "")),
+                        "Expenses": fmt(d.get("total_functional_expenses", "")),
+                        "Assets": fmt(d.get("net_assets", "")),
+                        "PDF": d.get("pdf_url", "") or "—",
+                        "XML": d.get("xml_url", "") or "—",
+                    })
+
+                st.caption(f"Showing {len(table_rows)} documents")
+                st.dataframe(table_rows, use_container_width=True)
+                st.download_button(f"Download ({len(table_rows)} rows)", data=_rows_to_csv(table_rows, display_headers), file_name="irs990_filings.csv", mime="text/csv", key="dl_irs990_filings")
+                
+        if irs_enrichments:
+            with st.expander(f"IRS 990 PA Enrichments ({len(irs_enrichments)} organizations)"):
+                display_headers = ["EIN", "PA Relevance", "Profile", "Issues", "Influence Signals", "Tactics", "Targets"]
+                table_rows = []
+                for d in irs_enrichments:
+                    table_rows.append({
+                        "EIN": d.get("ein", ""),
+                        "PA Relevance": d.get("pa_relevance_score", ""),
+                        "Profile": d.get("one_sentence_org_profile", ""),
+                        "Issues": d.get("issue_area_tags", ""),
+                        "Influence Signals": d.get("top_influence_signals", ""),
+                        "Tactics": d.get("likely_advocacy_tactics_named", ""),
+                        "Targets": d.get("likely_target_institutions_named", "")
+                    })
+                st.dataframe(table_rows, use_container_width=True)
+                st.download_button(f"Download ({len(table_rows)} rows)", data=_rows_to_csv(table_rows, display_headers), file_name="irs990_enrichments.csv", mime="text/csv", key="dl_irs990_enrichments")
+
         # --- Full report download ---
         if report_text:
             st.divider()
@@ -546,11 +639,12 @@ if st.session_state.get("dt_has_results"):
 
     has_lda = csv_data.get("lda_filings") or csv_data.get("lda_issues")
     has_fara = csv_data.get("fara_foreign_principals")
-    if not report_text and not has_lda and not has_fara:
+    has_irs990 = csv_data.get("irs990_filings") or csv_data.get("irs990_organizations")
+    if not report_text and not has_lda and not has_fara and not has_irs990:
         st.warning(
             "No results found. This may happen if no disclosures match "
-            "the entities and quarters selected. Check the pipeline log."
+            "the entities and years selected. Check the pipeline log."
         )
 
 elif not entities:
-    st.info("Enter entity names to search for lobbying and foreign agent disclosures.")
+    st.info("Enter entity names to search for lobbying, foreign agent, and nonprofit disclosures.")

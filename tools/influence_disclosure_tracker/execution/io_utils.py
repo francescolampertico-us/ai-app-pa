@@ -10,8 +10,8 @@ import threading
 OUTPUT_SCHEMAS = {
     "master_results": [
         "entity_query", "source", "record_type", "match_type", "match_confidence",
-        "name_primary", "id_primary", "date_start", "date_end", "amount",
-        "description", "url", "raw_ref"
+        "registrant", "client", "client_description",
+        "filing_year", "filing_period", "amount", "url"
     ],
     "lda_filings": [
         "filing_uuid", "registrant_id", "registrant_name", "client_id", "client_name",
@@ -32,6 +32,45 @@ OUTPUT_SCHEMAS = {
     ],
     "fara_short_forms": [
         "registration_number", "short_form_name"
+    ],
+    "irs990_organizations": [
+        "ein", "organization_name", "ntee_code", "address", "city", "state", "zipcode"
+    ],
+    "irs990_filings": [
+        "ein", "organization_name", "tax_year", "form_type", "total_revenue", 
+        "total_functional_expenses", "net_assets", "pdf_url", "xml_url"
+    ],
+    "irs990_deep_profile": [
+        "ein", "organization_name", "object_id", "website", "formation_year",
+        "state_of_domicile", "total_employees", "total_volunteers",
+        "flag_lobbying", "flag_political_campaign", "flag_grants_to_orgs",
+        "voting_board_members", "independent_board_members",
+        "total_revenue", "contributions_and_grants", "program_service_revenue",
+        "investment_income", "government_grants",
+        "total_expenses", "program_service_expenses", "management_expenses",
+        "fundraising_expenses", "net_assets", "foreign_spending"
+    ],
+    "irs990_deep_lobbying": [
+        "ein", "organization_name", "object_id", "total_lobbying", "grassroots_lobbying",
+        "direct_lobbying", "sect_162e_lobbying", "total_sect_162e", "schedule_c_present"
+    ],
+    "irs990_deep_officers": [
+        "ein", "object_id", "name", "title", "compensation"
+    ],
+    "irs990_deep_grants": [
+        "ein", "object_id", "recipient", "recipient_ein", "amount", "purpose", "city", "state"
+    ],
+    "irs990_deep_compensation": [
+        "ein", "object_id", "name", "total_compensation_org",
+        "compensation_related_orgs", "other_compensation"
+    ],
+    "irs990_deep_related": [
+        "ein", "object_id", "related_name", "related_type"
+    ],
+    "irs990_deep_enrichments": [
+        "ein", "object_id", "pa_relevance_score", "one_sentence_org_profile",
+        "issue_area_tags", "top_influence_signals", "top_risk_flags",
+        "likely_advocacy_tactics_named", "likely_target_institutions_named"
     ]
 }
 
@@ -58,6 +97,7 @@ class IOUtils:
         # Setup file paths
         self.raw_lda_path = os.path.join(self.out_dir, "lda_raw.jsonl")
         self.raw_fara_path = os.path.join(self.out_dir, "fara_raw.jsonl")
+        self.raw_irs990_path = os.path.join(self.out_dir, "irs990_raw.jsonl")
         self.logs_path = os.path.join(self.out_dir, "logs.txt")
         self.report_path = os.path.join(self.out_dir, "report.md")
         self.config_path = os.path.join(self.out_dir, "run_config.json")
@@ -72,7 +112,16 @@ class IOUtils:
             "fara_registrants": [],
             "fara_foreign_principals": [],
             "fara_short_forms": [],
-            "fara_documents": []
+            "fara_documents": [],
+            "irs990_organizations": [],
+            "irs990_filings": [],
+            "irs990_deep_profile": [],
+            "irs990_deep_lobbying": [],
+            "irs990_deep_officers": [],
+            "irs990_deep_grants": [],
+            "irs990_deep_compensation": [],
+            "irs990_deep_related": [],
+            "irs990_deep_enrichments": []
         }
 
     def log(self, message: str, level: str = "INFO"):
@@ -129,7 +178,13 @@ class IOUtils:
         time.sleep(delay)
 
     def append_raw_jsonl(self, source: str, data: dict):
-        path = self.raw_lda_path if source.lower() == "lda" else self.raw_fara_path
+        if source.lower() == "lda":
+            path = self.raw_lda_path
+        elif source.lower() == "fara":
+            path = self.raw_fara_path
+        else:
+            path = self.raw_irs990_path
+            
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(data) + "\n")
 

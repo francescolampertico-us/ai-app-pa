@@ -4,6 +4,7 @@ import argparse
 from io_utils import IOUtils
 from lda_client import LDAClient
 from fara_client import FARAClient
+from irs990_client import IRS990Client
 from report import ReportGenerator
 
 def parse_args():
@@ -15,7 +16,8 @@ def parse_args():
     parser.add_argument("--filing-years", default=None, help="Comma-separated filing years (e.g. 2024,2025)")
     parser.add_argument("--filing-periods", default=None, help="Comma-separated quarters: Q1,Q2,Q3,Q4")
     parser.add_argument("--out", default="./output", help="Output base folder")
-    parser.add_argument("--sources", default="lda,fara", help="Sources to scrape (comma-sep)")
+    parser.add_argument("--sources", default="lda,fara,irs990", help="Sources to scrape (comma-sep)")
+    parser.add_argument("--mode", default="basic", choices=["basic", "deep"], help="Execution mode")
     parser.add_argument("--format", default="csv,md", help="Output formats")
     parser.add_argument("--lda-api-key", default=os.getenv("LDA_API_KEY"), help="LDA API Key")
     parser.add_argument("--fuzzy-threshold", type=float, default=85.0, help="Fuzzy match threshold")
@@ -51,6 +53,7 @@ def main():
         "filing_years": filing_years,
         "filing_periods": filing_periods,
         "sources": sources,
+        "mode": args.mode,
         "search_field": args.search_field,
         "fuzzy_threshold": args.fuzzy_threshold,
         "max_results": args.max_results,
@@ -87,6 +90,14 @@ def main():
         fara_client = FARAClient(io, fuzzy_threshold=args.fuzzy_threshold, max_results=args.max_results)
         for ent in entities:
             fara_client.search_entity(ent, args.from_date or "", args.to_date or "")
+            
+    # 3. IRS 990
+    if "irs990" in sources:
+        irs990_client = IRS990Client(io, fuzzy_threshold=args.fuzzy_threshold,
+                                     max_results=args.max_results, mode=args.mode,
+                                     filing_years=filing_years)
+        for ent in entities:
+            irs990_client.search_entity(ent, args.from_date or "", args.to_date or "")
             
     # Write flat files
     if "csv" in formats:

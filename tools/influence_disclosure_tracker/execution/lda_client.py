@@ -105,7 +105,8 @@ class LDAClient:
         return list(variations)
 
     def search_entity(self, entity_query: str, date_from: str, date_to: str,
-                      filing_year: int = None, filing_periods: list = None):
+                      filing_year: int = None, filing_periods: list = None,
+                      _is_fallback: bool = False):
         self.io.log(f"Starting LDA search for entity: {entity_query}" +
                     (f" (year={filing_year})" if filing_year else ""))
 
@@ -182,6 +183,20 @@ class LDAClient:
                 if best_match["match"]:
                     self.normalize_and_save(entity_query, f, best_match)
                     matched_count += 1
+
+        # Auto-expand to "both" if no results and scope was restricted
+        if matched_count == 0 and self.search_field != "both" and not _is_fallback:
+            original_field = self.search_field
+            self.io.log(
+                f"No results found searching '{original_field}' for '{entity_query}'. "
+                f"Auto-expanding to search both client and registrant fields...",
+                "INFO",
+            )
+            saved_field = self.search_field
+            self.search_field = "both"
+            self.search_entity(entity_query, date_from, date_to, filing_year, filing_periods, _is_fallback=True)
+            self.search_field = saved_field
+            return
 
         self.io.log(f"LDA search complete for '{entity_query}': {matched_count} matched filings.", "INFO")
 

@@ -9,7 +9,8 @@ Use the Directive -> Orchestration -> Execution pattern to run this tool reliabl
 - **From / To dates**: `YYYY-MM-DD` to `YYYY-MM-DD`.
 
 ### Optional (common)
-- **Sources**: `lda`, `fara`, or both (`--sources "lda,fara"`).
+- **Sources**: `lda`, `fara`, `irs990` (`--sources "lda,fara,irs990"`).
+- **Mode**: `basic` (default) or `deep` (LLM-enriched) (`--mode basic`).
 - **Output base**: `--out /path/to/output`.
 - **Max results**: `--max-results 500`.
 - **Cache directory**: `--cache-dir .cache/influence_disclosure_tracker`.
@@ -20,9 +21,10 @@ Use the Directive -> Orchestration -> Execution pattern to run this tool reliabl
 
 ## Orchestration (how the tool gathers and prepares information)
 1) Parse entities and date range.
-2) Query LDA API and/or download FARA bulk CSVs (with caching).
+2) Query LDA API, download FARA bulk CSVs, and/or query ProPublica IRS 990 API.
 3) Apply exact, contains, and fuzzy string matching to normalize results.
-4) Write normalized CSV tables plus a markdown summary report.
+4) If `--mode deep`, retrieve full XML filings and parse/enrich them using an LLM.
+5) Write normalized CSV tables plus a markdown summary report.
 
 ## Execution (how to run)
 
@@ -39,8 +41,20 @@ python3 tools/influence_disclosure_tracker/execution/run.py \
   --max-results 500
 ```
 
+### Example run with IRS 990 deep mode
+```bash
+python3 tools/influence_disclosure_tracker/execution/run.py \
+  --entities "Heritage Foundation" \
+  --filing-years "2023,2024" \
+  --sources "irs990" \
+  --mode deep \
+  --out "./output"
+```
+
 ## Output contract (format expectations)
 - `master_results.csv` with match confidence and normalized fields.
 - `lda_*.csv` tables for LDA filings, issues, and lobbyists.
 - `fara_*.csv` tables for registrants, foreign principals, documents, and short forms.
+- `irs990_organizations.csv` and `irs990_filings.csv` for nonprofit tax data.
+- Deep mode adds: `irs990_deep_lobbying.csv`, `irs990_deep_officers.csv`, `irs990_deep_grants.csv`, `irs990_deep_related.csv`, `irs990_deep_enrichments.csv`.
 - `report.md` with executive summary and match confidence notes.
