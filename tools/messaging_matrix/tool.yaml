@@ -1,0 +1,44 @@
+id: messaging_matrix
+name: Messaging Matrix
+version: 0.1.0
+risk_level: yellow
+digiacomo_process: "#4 Advocacy Campaign Planning, #5 Digital PA"
+
+description: >
+  Takes a core policy position and produces a Message House (core message,
+  supporting pillars, proof points) plus platform-specific communication
+  variants: Hill talking points, press statement, social media posts,
+  grassroots email, and op-ed draft. Each variant is adapted for audience,
+  tone, and format constraints.
+
+inputs:
+  required:
+    - position   # Core policy position or message intent (free text)
+  optional:
+    - context          # Supporting material (bill summary, hearing excerpt, news clips)
+    - organization     # Who is speaking (for attribution in press statement / op-ed)
+    - target_audience  # Primary audience (e.g., "Senate Commerce Committee")
+    - variants         # Comma-separated list of deliverables to generate (default: all)
+
+outputs:
+  format: markdown + docx
+  artifacts:
+    - messaging_matrix.md    # Full report: message house + all variants
+    - messaging_matrix.docx  # DOCX export
+
+execution:
+  entry: execution/run.py
+  dependencies:
+    - openai
+    - python-docx
+  environment:
+    - "OPENAI_API_KEY: Required for message generation"
+  models:
+    - "gpt-4o: Message House strategic generation (Step 1)"
+    - "gpt-4o-mini: Variant format adaptation (Step 2)"
+
+risk_notes:
+  - "LLM-generated messaging must be reviewed by a PA professional before external use."
+  - "Proof points are inferred from context — verify all cited facts and figures."
+  - "Talking points may reflect implicit framing biases from the model."
+  - "Social media posts must be reviewed for brand voice and compliance."
