@@ -101,6 +101,9 @@ def sidebar_nav():
     st.sidebar.page_link("pages/3_Disclosure_Tracker.py", label="Disclosure Tracker", icon="🔍")
     st.sidebar.page_link("pages/4_Legislative_Tracker.py", label="Legislative Tracker", icon="📜")
     st.sidebar.page_link("pages/5_Literature_Review.py", label="Literature Review", icon="📚")
+    st.sidebar.page_link("pages/6_Messaging_Matrix.py", label="Messaging Matrix", icon="📣")
+    st.sidebar.page_link("pages/7_Stakeholder_Briefing.py", label="Stakeholder Briefing", icon="🤝")
+    st.sidebar.page_link("pages/8_Media_List_Builder.py", label="Media List Builder", icon="📋")
 
     st.sidebar.divider()
     st.sidebar.caption("Francesco Lampertico")

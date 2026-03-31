@@ -75,3 +75,29 @@ tools:
     outputs:
       format: markdown + docx
       artifacts: [messaging_matrix.md, messaging_matrix.docx]
+
+  - id: media_list_builder
+    name: Media List Builder
+    version: 0.1.0
+    risk_level: yellow
+    path: tools/media_list_builder
+    description: "Targeted media pitch list: finds journalists covering an issue by location and media type, with pitch angles, previous coverage, and contact info."
+    inputs:
+      required: [issue]
+      optional: [location, media_types, num_contacts]
+    outputs:
+      format: xlsx + markdown
+      artifacts: [media_list.xlsx, media_list.md]
+
+  - id: stakeholder_briefing
+    name: Stakeholder Briefing
+    version: 0.1.0
+    risk_level: yellow
+    path: tools/stakeholder_briefing
+    description: "Pre-meeting one-pager: compiles stakeholder profile, policy positions, disclosure data (LDA/FARA/IRS 990), recent news, and suggested talking points."
+    inputs:
+      required: [stakeholder_name, meeting_purpose]
+      optional: [organization, your_organization, context, context_file, include_disclosures, include_news]
+    outputs:
+      format: markdown + docx
+      artifacts: [stakeholder_briefing.md, stakeholder_briefing.docx]
