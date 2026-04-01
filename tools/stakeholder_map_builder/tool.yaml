@@ -1,0 +1,54 @@
+id: stakeholder_map_builder
+name: Stakeholder Map Builder
+version: 0.1.0
+risk_level: yellow
+digiacomo_process: "#2 Stakeholder Analysis"
+
+description: >
+  Discovers and classifies policy actors around a given issue. Pulls lobbying
+  registrants and clients from LDA filings, bill sponsors from LegiScan, and
+  news context from Google News. Uses gpt-4o to classify each actor by stance
+  (proponent/opponent/neutral/unknown), stakeholder type, and influence tier.
+  Extracts structural relationships (lobbies-for, co-sponsors) and renders an
+  interactive Plotly network graph alongside Excel and DOCX exports.
+
+inputs:
+  required:
+    - policy_issue       # e.g., "artificial intelligence regulation"
+  optional:
+    - scope              # "federal" (default) or "state"
+    - state              # 2-letter code (required when scope=state)
+    - year               # 4-digit year filter
+    - include_types      # list: legislators, lobbyists, corporations, nonprofits
+
+outputs:
+  format: excel + docx + html + json
+  artifacts:
+    - stakeholder_map.xlsx    # Actors sheet (10 cols) + Relationships sheet
+    - stakeholder_map.docx    # Narrative summary organized by stance
+    - stakeholder_map.html    # Interactive Plotly network graph
+    - stakeholder_map.json    # Full structured result
+
+execution:
+  entry: execution/run.py
+  dependencies:
+    - openai
+    - python-docx
+    - openpyxl
+    - gnews
+    - networkx
+    - plotly
+    - python-dotenv
+    - requests
+  environment:
+    - "OPENAI_API_KEY: Required — gpt-4o classification"
+    - "LEGISCAN_API_KEY: Required for legislator discovery (free at legiscan.com)"
+  models:
+    - "gpt-4o: Actor classification, stance analysis, strategic notes"
+
+risk_notes:
+  - "Stance is LLM-inferred from limited public evidence — treat as hypothesis, not fact."
+  - "LDA topic search matches by issue keyword text, not legislative definitions."
+  - "Influence tiers are relative estimates based on available data, not validated scores."
+  - "Relationships are structural (data-derived), not confirmed alliances or coalitions."
+  - "Verify top actors' stances against primary sources before strategic use."
