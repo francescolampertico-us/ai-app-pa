@@ -102,9 +102,9 @@ Spawn review and QA in parallel when reviewing independent files.
 ## Project State
 <!-- Updated by /handoff skill — keeps session context across conversations -->
 
-**Last session:** 2026-03-31
+**Last session:** 2026-03-31 (committed) + 2026-04-01 (new tools)
 
-**Tools built (8):**
+**Tools built (9):**
 1. `hearing_memo` (v1.0.0) — congressional hearing memos from transcripts. YouTube transcript support.
 2. `media_clips` (v1.0.0) — daily media monitoring from Google News
 3. `influence_disclosure_tracker` (v0.2.0) — LDA + FARA + IRS 990. Deep mode extracts XML schedules + LLM enrichment.
@@ -113,38 +113,33 @@ Spawn review and QA in parallel when reviewing independent files.
 6. `stakeholder_briefing` (v0.1.0) — Pre-meeting one-pager with profile, positions, disclosures, news, talking points.
 7. `media_list_builder` (v0.1.0) — Targeted media pitch list by issue, location, media type. Excel export.
 8. `media_clip_cleaner` (v0.3.0) — embedded in Media Clips + standalone. LLM mode default.
+9. `stakeholder_map_builder` (v0.1.0) — Discovers + classifies all actors on a policy issue. LDA + LegiScan + news. Interactive network graph (Plotly/networkx). Excel (actors + relationships) + DOCX.
 
-**What was done last session (2026-03-31):**
-- Committed all Mar 22-30 work in 4 focused commits (YouTube transcript, IRS 990, Messaging Matrix, app updates)
-- Built Stakeholder Briefing tool: `tools/stakeholder_briefing/` — 3-step pipeline (news + disclosures + LLM synthesis)
-  - Smart disclosure search: entity-based LDA + topic-based LDA (searches by meeting issue keywords via `filing_specific_lobbying_issues` API param)
-  - Dual news query (name + topic), deduped results
-  - Wired FARA + IRS 990 into disclosure search via existing tracker clients
-  - Tested with Sen. Cantwell (legislator) and Heritage Foundation (org) — both working
-- Built Media List Builder tool: `tools/media_list_builder/` — GNews research + gpt-4o journalist synthesis
-  - Excel export with 10 columns (name, outlet, role, media type, location, pitch angle, previous coverage, email, notes)
-  - Formatted with auto-filter, alternating rows, frozen header
-  - Media type normalization fix (LLM returns varied casing)
-  - Tested with DC/AI safety (15 contacts) and Texas/renewable energy (9 contacts)
-- Fixed Messaging Matrix page numbering: was `5_Messaging_Matrix.py` (conflicted with Literature Review), now `6_Messaging_Matrix.py`
-- Added both tools to Streamlit sidebar (`shared.py`) and `tool-registry.yaml`
-- App pages now: 1-Hearing Memo, 2-Media Clips, 3-Disclosure Tracker, 4-Legislative Tracker, 5-Literature Review, 6-Messaging Matrix, 7-Stakeholder Briefing, 8-Media List Builder
-- Updated `.claude/settings.local.json` with permission allowlist (Bash, Edit, Write, Read, WebFetch, WebSearch)
+**What was done last session (2026-04-01):**
+- Committed Stakeholder Briefing + Media List Builder + app updates (4 commits, all clean)
+- Built Stakeholder Map Builder tool: `tools/stakeholder_map_builder/`
+  - Actor discovery: LDA topic search (registrants + clients), LegiScan bill sponsors, GNews context
+  - Single gpt-4o classification call: stance (proponent/opponent/neutral/unknown), type, influence tier, evidence
+  - Relationship extraction: lobbies-for (LDA registrant→client) + co-sponsors (LegiScan)
+  - Interactive Plotly network graph: color=stance, size=influence, shape=type, dashed=lobbies-for, solid=co-sponsors
+  - Excel: 2 sheets (Actors 10-col + Relationships 4-col), color-coded Stance column
+  - DOCX: narrative organized by stance, relationships, coalitions, strategic notes
+  - All exports smoke-tested with mock data
+  - Installed: networkx + plotly
+- App pages now: 1-Hearing Memo, 2-Media Clips, 3-Disclosure Tracker, 4-Legislative Tracker, 5-Literature Review, 6-Messaging Matrix, 7-Stakeholder Briefing, 8-Media List Builder, 9-Stakeholder Map Builder
 
-**Uncommitted files:**
-- Modified: `app/shared.py`, `tool-registry.yaml`, deleted `app/pages/5_Messaging_Matrix.py`
-- New: `app/pages/6_Messaging_Matrix.py`, `app/pages/7_Stakeholder_Briefing.py`, `app/pages/8_Media_List_Builder.py`, `tools/stakeholder_briefing/` (entire tool), `tools/media_list_builder/` (entire tool)
+**Uncommitted files:** None — all committed.
 
 **Next priorities:**
-1. Commit the new tools (stakeholder briefing + media list builder)
-2. Build remaining tools toward the 7-9 target for Apr 26 deadline (5 remaining from original plan: Stakeholder Map Builder, Crisis Response Brief, Meeting Prep Brief, PA Performance Tracker, Grant Proposal Drafter, Multilingual Content Adapter)
-3. Messaging Matrix enhancements: personal writing style injection (Enhancement 3)
-4. Polish and test all tools end-to-end before final submission
+1. End-to-end live test of Stakeholder Map Builder (run with "AI regulation" or "drug pricing")
+2. Messaging Matrix fine-tuning (style injection polish)
+3. Polish and test all tools end-to-end before Apr 26 final submission
+4. Optional: additional tool if needed (Crisis Response Brief is highest-value remaining)
 
 **Known issues:**
 - IRS 990 Schedule I grants show "(Individual)" for recipients when orgs redact names — EINs still captured
-- Deep mode LLM enrichment runs on every fuzzy match — consider confidence threshold filter
-- Streamlit entry: `streamlit run app/streamlit_app.py` from toolkit root
-- `youtube-transcript-api` v1.x: `YouTubeTranscriptApi().fetch(video_id, languages=['en'])`
 - Stakeholder Briefing: FARA search on "Senate Commerce Committee" returns spurious fuzzy matches (Eco Corporation) — consider raising threshold for FARA in briefing context
 - Media List Builder: `openpyxl` must be installed (`pip3 install openpyxl`)
+- Stakeholder Map Builder: networkx + plotly must be installed (`pip3 install networkx plotly`)
+- Streamlit entry: `streamlit run app/streamlit_app.py` from toolkit root
+- `youtube-transcript-api` v1.x: `YouTubeTranscriptApi().fetch(video_id, languages=['en'])`
