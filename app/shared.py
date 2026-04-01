@@ -104,6 +104,7 @@ def sidebar_nav():
     st.sidebar.page_link("pages/6_Messaging_Matrix.py", label="Messaging Matrix", icon="📣")
     st.sidebar.page_link("pages/7_Stakeholder_Briefing.py", label="Stakeholder Briefing", icon="🤝")
     st.sidebar.page_link("pages/8_Media_List_Builder.py", label="Media List Builder", icon="📋")
+    st.sidebar.page_link("pages/9_Stakeholder_Map_Builder.py", label="Stakeholder Map Builder", icon="🗺️")
 
     st.sidebar.divider()
     st.sidebar.caption("Francesco Lampertico")
