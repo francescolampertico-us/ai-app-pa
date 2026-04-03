@@ -6,8 +6,6 @@ Node color = stance, node size = influence tier, node symbol = stakeholder type.
 Edge style = relationship type.
 """
 
-import sys
-
 try:
     import networkx as nx
     HAS_NX = True
@@ -63,6 +61,7 @@ def build_network_graph(
     actors: list[dict],
     relationships: list[dict],
     title: str = "",
+    centrality: dict = None,
 ) -> "go.Figure":
     """
     Build an interactive Plotly network graph from actors and relationships.
@@ -100,15 +99,46 @@ def build_network_graph(
         if fid in actor_by_id and tid in actor_by_id:
             G.add_edge(fid, tid, rel_type=rel.get("type", ""), label=rel.get("label", ""))
 
-    # Spring layout — reproducible seed
-    pos = nx.spring_layout(G, k=2.2, seed=42)
+    # Stance-grouped layout: proponents left, opponents right, neutral center-left,
+    # unknown center-right. Each group uses spring layout driven by ALL its edges
+    # (including cross-coalition) so brokers appear pulled toward both sides.
+    stance_order = {"proponent": -1.6, "opponent": 1.6, "neutral": -0.4, "unknown": 0.4}
+    group_graphs = {s: nx.Graph() for s in stance_order}
+    for actor in actors:
+        stance = actor.get("stance", "unknown")
+        if stance not in group_graphs:
+            stance = "unknown"
+        group_graphs[stance].add_node(actor["id"])
+    # Include all edges in the subgraph of each actor's group (not just same-stance)
+    for rel in relationships:
+        fid, tid = rel.get("from_id", ""), rel.get("to_id", "")
+        fs = actor_by_id.get(fid, {}).get("stance", "unknown")
+        ts = actor_by_id.get(tid, {}).get("stance", "unknown")
+        # Add edge to both actors' groups so cross-coalition connections affect layout
+        for stance in (fs, ts):
+            if stance in group_graphs and fid in group_graphs[stance].nodes:
+                group_graphs[stance].add_edge(fid, tid)
+
+    pos = {}
+    for stance, subG in group_graphs.items():
+        if not subG.nodes:
+            continue
+        x_center = stance_order[stance]
+        if len(subG.nodes) == 1:
+            sub_pos = {list(subG.nodes)[0]: (0.0, 0.0)}
+        else:
+            sub_pos = nx.spring_layout(subG, k=1.4, seed=42)
+        for nid, (x, y) in sub_pos.items():
+            pos[nid] = (x_center + x * 0.6, y)
 
     # ── Edge traces (one per relationship type for legend grouping) ──────────
     edge_traces = _build_edge_traces(G, pos, actor_by_id)
 
     # ── Node trace ───────────────────────────────────────────────────────────
+    centrality = centrality or {}
     node_x, node_y, node_text, node_hover = [], [], [], []
     node_colors, node_sizes, node_symbols = [], [], []
+    node_border_colors, node_border_widths = [], []
 
     for actor in actors:
         aid = actor["id"]
@@ -126,9 +156,18 @@ def build_network_graph(
         node_sizes.append(TIER_SIZE.get(tier, 11))
         node_symbols.append(TYPE_SYMBOL.get(atype, "circle"))
 
-        # Short label on node
+        # Border: thick gold border for broker actors (high betweenness), white otherwise
+        bw_score = centrality.get(aid, actor.get("betweenness_centrality", 0))
+        if bw_score > 0.1:
+            node_border_colors.append("#f39c12")   # gold = broker
+            node_border_widths.append(min(6.0, max(2.5, bw_score * 25)))
+        else:
+            node_border_colors.append("#ffffff")
+            node_border_widths.append(1.5)
+
+        # Short label on node — longer limit so names are readable
         name = actor.get("name", "")
-        label = name if len(name) <= 22 else name[:19] + "…"
+        label = name if len(name) <= 30 else name[:27] + "…"
         node_text.append(label)
 
         # Rich hover text
@@ -150,6 +189,8 @@ def build_network_graph(
             f"Influence: {tier.title()}",
             f"LDA Spend: {lda_str}",
         ]
+        if bw_score > 0:
+            hover_lines.append(f"Betweenness: {bw_score:.2f}")
         if evidence:
             hover_lines.append(f"Evidence: {evidence}")
         node_hover.append("<br>".join(hover_lines))
@@ -167,7 +208,7 @@ def build_network_graph(
             color=node_colors,
             size=node_sizes,
             symbol=node_symbols,
-            line=dict(color="#ffffff", width=1.5),
+            line=dict(color=node_border_colors, width=node_border_widths),
             opacity=0.9,
         ),
         showlegend=False,
@@ -209,9 +250,11 @@ def build_network_graph(
     # Annotation for type symbols legend
     fig.add_annotation(
         text=(
-            "<b>Node shapes:</b> ● Legislator  ■ Corporation  ◆ Nonprofit  "
-            "▲ Lobbyist  ★ Coalition<br>"
+            "<b>Layout:</b> Proponents (left) · Neutral (center-left) · Unknown (center-right) · Opponents (right)<br>"
+            "<b>Node shapes:</b> ● Legislator  ■ Corporation  ◆ Nonprofit  ▲ Lobbyist  ★ Coalition<br>"
             "<b>Node size:</b> Influence tier (large=high)  "
+            "<b>Gold border:</b> Bridge actor (connects both sides)  "
+            "<b>Unknown stance:</b> LLM could not determine from available evidence<br>"
             "<b>Edges:</b> ··· lobbies-for  — co-sponsors"
         ),
         xref="paper", yref="paper",

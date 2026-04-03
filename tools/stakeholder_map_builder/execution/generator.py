@@ -337,20 +337,21 @@ CLASSIFICATION_SYSTEM = """You are a political intelligence analyst mapping the 
 You receive a JSON list of policy actors discovered from public lobbying filings (LDA), legislative records (LegiScan), and news sources. Your task is to classify each actor by stance, type, and influence.
 
 CLASSIFICATION RULES:
-1. Base all classifications ONLY on the evidence in the actor data and news context provided.
-2. Do NOT assume stance from organization type alone (e.g., tech companies don't automatically support AI regulation).
-3. Use "unknown" when evidence is insufficient to determine stance — this is the honest answer.
-4. Use "neutral" only when you have specific evidence of a balanced or bipartisan position.
-5. PRESERVE each actor's "id" field exactly as given — it is used for graph rendering.
-6. Include ALL actors from the input in your output — do not drop any.
-7. Refine stakeholder_type based on your knowledge: e.g., "Microsoft Corporation" → corporation, "Heritage Foundation" → nonprofit, "AARP" → coalition, "Akin Gump" → lobbyist.
+1. Use the actor data and news context as primary evidence for classification.
+2. For well-known organizations (major corporations, large trade associations, established nonprofits, advocacy groups), you SHOULD use your knowledge of their established policy positions — cite this as "Known policy position:" in the evidence field. Actively reduce "unknown" classifications by drawing on what you know.
+3. For lobbying firms (registrants), classify as "unknown" — their stance reflects their clients', not their own. Focus stance classification on the clients they represent.
+4. Use "unknown" ONLY when you have no data evidence AND genuinely no knowledge of the organization's position on this type of legislation.
+5. Use "neutral" when you have evidence of a balanced, bipartisan, or deliberately uncommitted position.
+6. PRESERVE each actor's "id" field exactly as given — it is used for graph rendering.
+7. Include ALL actors from the input in your output — do not drop any.
+8. Refine stakeholder_type based on your knowledge: e.g., "Microsoft Corporation" → corporation, "Heritage Foundation" → nonprofit, "AARP" → coalition, "Akin Gump" → lobbyist, "U.S. Chamber of Commerce" → coalition.
 
 INFLUENCE TIER:
 - high: Major institution (Fortune 500, large nonprofit >$100M revenue), large LDA spending (>$500k), primary bill sponsor, committee chair
 - medium: Mid-size organization, moderate LDA activity, cosponsor
 - low: Small organization, minimal LDA data, limited public profile
 
-EVIDENCE format: 1-2 sentences citing specific data from the input (LDA filing, bill number, news headline). Do not fabricate.
+EVIDENCE format: 1-2 sentences. Lead with specific data from the input (LDA filing, bill number, news headline) if available. If using known policy position, write "Known policy position: [reason]." Do not fabricate specific dollar amounts or events not in the data.
 
 Return ONLY a JSON object with this exact structure (no markdown, pure JSON):
 {
@@ -386,8 +387,20 @@ def classify_actors(
     Single gpt-4o call. Classifies all actors by stance, type, and influence tier.
     Returns the full classification dict including top-level narrative fields.
     """
-    actors_json = json.dumps(raw_actors, indent=2)
-    news_text = "\n".join(news_snippets[:15]) if news_snippets else "(none available)"
+    # Trim actor data before sending to reduce prompt size and avoid truncation
+    trimmed_actors = []
+    for a in raw_actors:
+        trimmed_actors.append({
+            "id": a["id"],
+            "name": a["name"],
+            "organization": a.get("organization", ""),
+            "type": a.get("type", "other"),
+            "lda_amount": a.get("lda_amount"),
+            "issue_areas": a.get("issue_areas", [])[:2],  # up to 2 issue areas for context
+            "source": a.get("source", ""),
+        })
+    actors_json = json.dumps(trimmed_actors, indent=2)
+    news_text = "\n".join(news_snippets[:10]) if news_snippets else "(none available)"
 
     prompt = f"""Policy issue: {policy_issue}
 
@@ -407,7 +420,7 @@ Classify all {len(raw_actors)} actors. Preserve every actor's id field exactly."
                 {"role": "user", "content": prompt},
             ],
             temperature=0.3,
-            max_tokens=4000,
+            max_tokens=8000,
             response_format={"type": "json_object"},
         )
         result = json.loads(response.choices[0].message.content)
@@ -421,7 +434,7 @@ Classify all {len(raw_actors)} actors. Preserve every actor's id field exactly."
                 {"role": "user", "content": prompt},
             ],
             temperature=0.1,
-            max_tokens=4000,
+            max_tokens=8000,
             response_format={"type": "json_object"},
         )
         result = json.loads(response.choices[0].message.content)
@@ -509,12 +522,60 @@ def build_map(
     print("Step 1c: Fetching news context...", file=sys.stderr)
     news_snippets = discover_news_snippets(policy_issue)
 
-    # Merge actors, deduplicate by ID
+    # Merge actors, deduplicate by ID first
     all_actors_dict: dict[str, dict] = {}
     for actor in lda_actors + leg_actors:
         aid = actor["id"]
         if aid not in all_actors_dict:
             all_actors_dict[aid] = actor
+        else:
+            # Accumulate LDA amounts and issue areas across duplicate filings
+            if actor.get("lda_amount"):
+                existing = all_actors_dict[aid].get("lda_amount") or 0.0
+                all_actors_dict[aid]["lda_amount"] = existing + actor["lda_amount"]
+            for ia in actor.get("issue_areas", []):
+                if ia not in all_actors_dict[aid]["issue_areas"]:
+                    all_actors_dict[aid]["issue_areas"].append(ia)
+
+    # Secondary deduplication: merge actors with the same normalized name but different prefixes
+    # (e.g. "client_national_assoc" and "lobbyist_national_assoc" are the same org)
+    def _normalize_name(n: str) -> str:
+        return re.sub(r"[^a-z0-9]", "", n.lower())
+
+    norm_to_canonical: dict[str, str] = {}
+    id_remap: dict[str, str] = {}  # old_id → canonical_id
+    for aid, actor in list(all_actors_dict.items()):
+        norm = _normalize_name(actor["name"])
+        if norm in norm_to_canonical:
+            canonical_id = norm_to_canonical[norm]
+            canonical = all_actors_dict[canonical_id]
+            # Merge: keep higher lda_amount, accumulate issue_areas
+            if actor.get("lda_amount"):
+                canonical["lda_amount"] = (canonical.get("lda_amount") or 0) + actor["lda_amount"]
+            for ia in actor.get("issue_areas", []):
+                if ia not in canonical["issue_areas"]:
+                    canonical["issue_areas"].append(ia)
+            # Prefer the non-lobbyist type as canonical type
+            if canonical.get("type") == "lobbyist" and actor.get("type") != "lobbyist":
+                canonical["type"] = actor["type"]
+            id_remap[aid] = canonical_id
+            del all_actors_dict[aid]
+        else:
+            norm_to_canonical[norm] = aid
+
+    # Remap relationship IDs to canonical IDs
+    def _remap_rels(rels: list[dict]) -> list[dict]:
+        remapped = []
+        for r in rels:
+            r2 = dict(r)
+            r2["from_id"] = id_remap.get(r["from_id"], r["from_id"])
+            r2["to_id"] = id_remap.get(r["to_id"], r["to_id"])
+            if r2["from_id"] != r2["to_id"]:  # drop self-loops created by merging
+                remapped.append(r2)
+        return remapped
+
+    lda_rels = _remap_rels(lda_rels)
+    leg_rels = _remap_rels(leg_rels)
 
     raw_actors = list(all_actors_dict.values())
 
