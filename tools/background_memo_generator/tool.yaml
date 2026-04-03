@@ -1,0 +1,40 @@
+id: background_memo_generator
+name: Background Memo Generator
+version: 0.1.0
+risk_level: yellow
+digiacomo_process: "#2 Stakeholder Analysis, #3 Government Relations"
+
+description: >
+  Generates a structured background memo on a client, organization, policy issue,
+  or individual. Takes a subject name and a user-defined list of section headings,
+  then produces a DOCX memo with a standardized header, Overview paragraph, Fast Facts
+  bullet points, and one section per heading — matching house style.
+
+inputs:
+  required:
+    - subject        # Name of the client, organization, issue, or person
+    - sections       # List of section headings to include (user-defined)
+  optional:
+    - date           # Memo date (default: today)
+    - context        # Additional context to guide the LLM (background notes, key angles)
+
+outputs:
+  format: docx + markdown
+  artifacts:
+    - background_memo.docx    # Formatted memo in house style
+    - background_memo.md      # Markdown version
+
+execution:
+  entry: execution/run.py
+  dependencies:
+    - openai
+    - python-docx
+  environment:
+    - "OPENAI_API_KEY: Required for content generation"
+  models:
+    - "gpt-4o: Full memo generation"
+
+risk_notes:
+  - "All facts and figures are LLM-generated — verify against primary sources before distribution."
+  - "Links section contains LLM-suggested URLs — check each link before including."
+  - "Do not distribute without human review."
