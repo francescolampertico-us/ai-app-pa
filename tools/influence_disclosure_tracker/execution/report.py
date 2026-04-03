@@ -181,8 +181,8 @@ class ReportGenerator:
             # --- Quarterly Spending Table ---
             lines.append("#### Quarterly Spending")
             lines.append("")
-            lines.append("| Year | Quarter | Filing Type | Amount |")
-            lines.append("|:---|:---|:---|---:|")
+            lines.append("| Year | Quarter | Filing Type | Amount | Filing |")
+            lines.append("|:---|:---|:---|---:|:---|")
 
             sorted_filings = sorted(
                 reg_filings,
@@ -203,7 +203,9 @@ class ReportGenerator:
                         pass
                 else:
                     amt = "—"
-                lines.append(f"| {year} | {period} | {ftype} | {amt} |")
+                filing_url = f.get('filing_url') or f.get('url') or ''
+                link = f"[View]({filing_url})" if filing_url else "—"
+                lines.append(f"| {year} | {period} | {ftype} | {amt} | {link} |")
 
             if reg_total > 0:
                 lines.append(f"| | | **Total** | **${reg_total:,.0f}** |")
@@ -479,6 +481,9 @@ class ReportGenerator:
                     exp = fmt_dollar(detail.get("total_functional_expenses"))
                     ast = fmt_dollar(detail.get("net_assets"))
                     lines.append(f"| {year} | {ftype} | {rev} | {exp} | {ast} | {link} |")
+
+                if not org_detail:
+                    lines.append(f"| — | — | — | — | — | No filings found for the selected year(s). IRS 990 filings typically lag 1–3 years; try searching without a year filter or with earlier years. |")
                 lines.append("")
 
                 # Lobbying (Schedule C)
