@@ -1,15 +1,19 @@
 """
 Media List Builder Generator
 ===============================
-Two-step pipeline:
-  Step 1 — GNews research: find real articles on the issue to extract journalists/outlets
-  Step 2 — gpt-4o synthesis: expand the list, add pitch angles, fill gaps
+Research-first pipeline — discovers real journalists from actual articles.
+
+Step 1 — Query expansion: LLM generates varied search queries from the issue
+Step 2 — News search: multi-query GNews to find recent articles (~40)
+Step 3 — Byline extraction: fetch each article, extract real author names
+Step 4 — Enrichment: LLM adds pitch angles / role / email — only for real journalists
 """
 
 import os
 import json
 import sys
-from pathlib import Path
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from openai import OpenAI
 
 try:
@@ -17,6 +21,26 @@ try:
     HAS_GNEWS = True
 except ImportError:
     HAS_GNEWS = False
+
+try:
+    from googlenewsdecoder import new_decoderv1
+    HAS_DECODER = True
+except ImportError:
+    HAS_DECODER = False
+
+try:
+    from newspaper import Article
+    HAS_NEWSPAPER = True
+except ImportError:
+    HAS_NEWSPAPER = False
+
+try:
+    import trafilatura
+    HAS_TRAFILATURA = True
+except ImportError:
+    HAS_TRAFILATURA = False
+
+import requests
 
 
 MODEL = "gpt-4o"
@@ -30,103 +54,437 @@ MEDIA_TYPE_LABELS = {
     "podcast": "Podcast",
 }
 
+FETCH_TIMEOUT = 8       # seconds per article fetch
+MAX_WORKERS = 6         # parallel fetches
+MAX_ARTICLES = 40       # cap on articles to fetch bylines from
+
 
 # ---------------------------------------------------------------------------
-# Step 1: News research
+# Step 1: Story analysis + query expansion
 # ---------------------------------------------------------------------------
 
-def research_journalists(issue: str, location: str = "US",
-                         max_results: int = 20) -> list[dict]:
-    """Search Google News for recent articles on the issue to find active journalists."""
+def analyze_story(issue: str, client: OpenAI) -> dict:
+    """
+    Understand what kind of story this is before generating search queries.
+    Returns a brief analysis: beat, themes, adjacent topics.
+    """
+    prompt = (
+        f'A public affairs professional wants to pitch this story:\n"{issue}"\n\n'
+        "Analyze this story and return a JSON object with:\n"
+        "- beat: the journalism beat this belongs to (e.g. 'history & preservation', "
+        "'environmental policy', 'federal budget')\n"
+        "- themes: 2-3 core themes journalists on this beat regularly cover\n"
+        "- adjacent_topics: 4-5 related topics or story types that journalists "
+        "covering this beat would also write about — NOT this specific story, "
+        "but the broader landscape of coverage around it\n\n"
+        '{"beat": "...", "themes": ["...", "..."], "adjacent_topics": ["...", "...", "...", "...", "..."]}'
+    )
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+        max_tokens=300,
+        response_format={"type": "json_object"},
+    )
+    return json.loads(response.choices[0].message.content)
+
+
+def expand_queries(issue: str, location: str, client: OpenAI) -> tuple[list[str], dict]:
+    """
+    Two-stage: first understand the story, then generate beat-aware search queries.
+    Returns (queries, story_analysis).
+    """
+    # Stage 1: understand the story
+    analysis = analyze_story(issue, client)
+    beat = analysis.get("beat", "")
+    adjacent = analysis.get("adjacent_topics", [])
+
+    print(f"  Beat: {beat}", file=sys.stderr)
+    print(f"  Adjacent topics: {adjacent}", file=sys.stderr)
+
+    # Stage 2: turn adjacent topics into search queries
+    loc_note = f" in {location}" if location and location.upper() not in ("US", "USA", "NATIONAL") else ""
+    topics_text = "\n".join(f"- {t}" for t in adjacent)
+    prompt = (
+        f'Story beat: "{beat}"\n'
+        f"Adjacent topics journalists on this beat cover:\n{topics_text}\n\n"
+        f"Convert each adjacent topic into a short Google News search query (3-6 words){loc_note}. "
+        "Each query should find real news articles about that topic. "
+        "Do NOT include the original story — only the adjacent beat coverage.\n\n"
+        "Return a JSON object: "
+        '{"queries": ["...", "...", "...", "...", "..."]}'
+    )
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+        max_tokens=200,
+        response_format={"type": "json_object"},
+    )
+    data = json.loads(response.choices[0].message.content)
+    queries = data.get("queries", [issue])
+    return queries[:5], analysis
+
+
+# ---------------------------------------------------------------------------
+# Step 2: Multi-query news search
+# ---------------------------------------------------------------------------
+
+def search_articles(queries: list[str], location: str,
+                    max_per_query: int = 12) -> list[dict]:
+    """Run GNews for each query variant, deduplicate by URL."""
     if not HAS_GNEWS:
-        print("  gnews not installed, skipping news research", file=sys.stderr)
+        print("  gnews not installed", file=sys.stderr)
         return []
 
-    try:
-        gn = GNews(language="en", country="US", period="180d", max_results=max_results)
+    country = "US"
+    if location and location.upper() not in ("US", "USA", "NATIONAL"):
+        country = "US"  # still search US edition; location is appended to query
 
-        # Build location-aware query
+    seen_urls = set()
+    seen_titles = set()
+    all_articles = []
+
+    gn = GNews(language="en", country=country, period="365d", max_results=max_per_query)
+
+    for q in queries:
+        query = q
         if location and location.upper() not in ("US", "USA", "NATIONAL"):
-            query = f"{issue} {location}"
-        else:
-            query = issue
+            query = f"{q} {location}"
+        try:
+            articles = gn.get_news(query) or []
+            for a in articles:
+                url = a.get("url", "")
+                title = a.get("title", "").lower()
+                if url in seen_urls or title in seen_titles:
+                    continue
+                seen_urls.add(url)
+                if title:
+                    seen_titles.add(title)
+                all_articles.append({
+                    "title": a.get("title", ""),
+                    "source": a.get("publisher", {}).get("title", ""),
+                    "url": url,
+                    "date": a.get("published date", ""),
+                })
+        except Exception as e:
+            print(f"  GNews error for query '{q}': {e}", file=sys.stderr)
 
-        articles = gn.get_news(query) or []
+    return all_articles
 
-        results = []
-        seen_titles = set()
-        for a in articles:
-            title = a.get("title", "")
-            if title.lower() in seen_titles:
+
+# ---------------------------------------------------------------------------
+# Step 3a: Decode Google News redirect URLs → real article URLs
+# ---------------------------------------------------------------------------
+
+def decode_urls(articles: list[dict]) -> list[dict]:
+    """
+    Resolve Google News redirect URLs to real article URLs.
+    Decodes sequentially with a small delay to avoid rate limits.
+    """
+    if not HAS_DECODER:
+        return articles
+
+    decoded = []
+    for article in articles:
+        url = article.get("url", "")
+        if "news.google.com" in url:
+            try:
+                result = new_decoderv1(url)
+                if result.get("status") and result.get("decoded_url"):
+                    article = {**article, "url": result["decoded_url"]}
+                else:
+                    # Can't decode — skip
+                    continue
+                time.sleep(0.2)  # be polite to Google's servers
+            except Exception:
                 continue
-            seen_titles.add(title.lower())
+        decoded.append(article)
 
-            # GNews sometimes includes the source in the title after " - "
-            source = a.get("publisher", {}).get("title", "Unknown")
+    print(f"  Decoded {len(decoded)}/{len(articles)} URLs", file=sys.stderr)
+    return decoded
 
-            results.append({
-                "title": title,
-                "source": source,
-                "url": a.get("url", ""),
-                "date": a.get("published date", ""),
+
+# ---------------------------------------------------------------------------
+# Step 3b: Byline extraction
+# ---------------------------------------------------------------------------
+
+def _extract_authors_newspaper(url: str) -> list[str]:
+    """Try newspaper3k to extract author names from article URL."""
+    try:
+        art = Article(url, request_timeout=FETCH_TIMEOUT)
+        art.download()
+        art.parse()
+        return [a.strip() for a in art.authors if a.strip()]
+    except Exception:
+        return []
+
+
+def _extract_authors_trafilatura(url: str) -> list[str]:
+    """Try trafilatura to extract author metadata."""
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; MediaResearch/1.0)"}
+        resp = requests.get(url, timeout=FETCH_TIMEOUT, headers=headers)
+        if resp.status_code != 200:
+            return []
+        meta = trafilatura.extract_metadata(resp.text, default_url=url)
+        if meta and meta.author:
+            # trafilatura may return semicolon-separated names
+            return [n.strip() for n in meta.author.split(";") if n.strip()]
+    except Exception:
+        pass
+    return []
+
+
+def _fetch_byline(article: dict):
+    """
+    Try to extract at least one author name from the article URL.
+    Returns enriched article dict with 'authors' list, or None if no author found.
+    """
+    url = article.get("url", "")
+    if not url:
+        return None
+
+    authors = []
+
+    # Try newspaper3k first (usually best for author extraction)
+    if HAS_NEWSPAPER:
+        authors = _extract_authors_newspaper(url)
+
+    # Fallback: trafilatura
+    if not authors and HAS_TRAFILATURA:
+        authors = _extract_authors_trafilatura(url)
+
+    if not authors:
+        return None
+
+    return {**article, "authors": authors}
+
+
+def extract_bylines(articles: list[dict]) -> list[dict]:
+    """
+    Parallel byline extraction. Returns articles where at least one author was found.
+    """
+    candidates = articles[:MAX_ARTICLES]
+    results = []
+
+    print(f"  Fetching bylines from {len(candidates)} articles...", file=sys.stderr)
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {executor.submit(_fetch_byline, a): a for a in candidates}
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                if result:
+                    results.append(result)
+            except Exception:
+                pass
+
+    print(f"  Found bylines in {len(results)} articles", file=sys.stderr)
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Group articles by journalist
+# ---------------------------------------------------------------------------
+
+_JUNK_WORDS = {
+    "staff", "editor", "editors", "contributor", "contributors",
+    "reporter", "reporters", "writer", "published", "updated",
+    "community", "anonymous", "guest", "admin", "news", "desk",
+    "margin", "padding", "bottom", "top", "left", "right",  # CSS artifacts
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december",
+}
+
+_JUNK_FRAGMENTS = (
+    "all posts", "published date", "view all", "read more",
+    "follow us", "sign up", "newsletter", "trust", "foundation",
+    "institute", "association", "coalition", "committee", "council",
+    "reuters", "associated press", "wire services",
+)
+
+
+def _is_person_name(name: str) -> bool:
+    """Heuristic: a journalist name should look like 'First Last' — 2-4 words, no junk."""
+    if len(name) < 5 or len(name) > 60:
+        return False
+    lower = name.lower()
+    if any(frag in lower for frag in _JUNK_FRAGMENTS):
+        return False
+    words = name.split()
+    # Must be 2–4 words
+    if len(words) < 2 or len(words) > 4:
+        return False
+    # No word should be a known junk token
+    if any(w.lower().rstrip(".,;") in _JUNK_WORDS for w in words):
+        return False
+    # Each word should start with a capital letter
+    if not all(w[0].isupper() for w in words if w):
+        return False
+    # No hyphens spanning the full name (CSS class artifacts like "Margin-Bottom")
+    if any("-" in w and len(w) > 8 for w in words):
+        return False
+    return True
+
+
+def group_by_journalist(articles_with_bylines: list[dict]) -> list[dict]:
+    """
+    Group articles by author name. Each journalist entry has their outlet
+    and a list of articles they wrote, as evidence of their beat.
+    """
+    journalist_map: dict[str, dict] = {}
+
+    for article in articles_with_bylines:
+        for author in article.get("authors", []):
+            name = author.strip().title()
+            if not _is_person_name(name):
+                continue
+
+            if name not in journalist_map:
+                journalist_map[name] = {
+                    "name": name,
+                    "outlet": article.get("source", ""),
+                    "articles": [],
+                }
+
+            journalist_map[name]["articles"].append({
+                "title": article.get("title", ""),
+                "url": article.get("url", ""),
+                "date": article.get("date", ""),
+                "source": article.get("source", ""),
             })
 
-        return results
-    except Exception as e:
-        print(f"  News research error: {e}", file=sys.stderr)
-        return []
+            # Use the outlet from the most-covered source for this journalist
+            # (outlet they appear most with wins)
+            outlet_counts: dict[str, int] = {}
+            for a in journalist_map[name]["articles"]:
+                s = a.get("source", "")
+                if s:
+                    outlet_counts[s] = outlet_counts.get(s, 0) + 1
+            if outlet_counts:
+                journalist_map[name]["outlet"] = max(outlet_counts, key=outlet_counts.__getitem__)
+
+    # Sort by number of articles (most prolific first)
+    journalists = sorted(journalist_map.values(),
+                         key=lambda j: len(j["articles"]), reverse=True)
+    return journalists
 
 
 # ---------------------------------------------------------------------------
-# Step 2: LLM synthesis
+# Step 4: LLM enrichment
 # ---------------------------------------------------------------------------
 
-MEDIA_LIST_SYSTEM = """You are a senior public affairs media strategist building a targeted media pitch list.
+ENRICH_SYSTEM = """You are a senior public affairs media strategist.
 
-Your job is to identify journalists, editors, and producers who cover the given policy issue
-in the specified geographic area, and suggest a tailored pitch angle for each contact.
+You will receive a list of real journalists discovered via article research.
+Each journalist comes with actual articles they have written on the topic.
+
+Your job is to enrich each contact with:
+- A pitch angle specific to their documented coverage
+- Their role/beat based on what they actually cover
+- A media type classification
+- A guessed email address using the outlet's known email pattern
+- Notes on their relevance
 
 RULES:
-- Use REAL journalist names you are confident about. For any name you are uncertain of, use
-  a plausible name and mark the entire row with [VERIFY] in the Notes column.
-- Outlets must be real, currently operating media organizations.
-- Pitch angles should be SPECIFIC to the journalist's known interests, not generic.
-- For email addresses, use the outlet's known email pattern (e.g., first.last@nytimes.com).
-  If you don't know the pattern, use [RESEARCH NEEDED].
-- Distribute contacts across the requested media types.
-- The media_type field MUST use one of these exact values: "mainstream", "print", "broadcast", "digital", "trade", "podcast"
-- Prioritize journalists who have recently covered the topic or related issues.
-- For local/state requests, include a mix of local and national reporters who cover that region.
+- Do NOT invent or add any journalists not in the input list
+- Base pitch angles on the actual articles provided
+- If you recognise the journalist, include any additional verified context in notes
+- For email: use the outlet's known email pattern (e.g. first.last@nytimes.com).
+  If unknown, use [RESEARCH NEEDED]
+- media_type must be one of: "mainstream", "print", "broadcast", "digital", "trade", "podcast"
+- outlet_website: full https:// URL for the outlet's homepage
+- previous_story_title: title of the most relevant article from their list
+- previous_story_url: URL of that article (use the provided URL — do not fabricate)
+- GEOGRAPHIC SCOPE: if the scope is "national", only include journalists from national-audience
+  outlets (e.g. NYT, WaPo, Politico, NPR, national magazines). Exclude local TV stations,
+  city newspapers, and regional blogs. If the scope is a specific state or city, include
+  both local/regional and national journalists who covered that area.
 
-IMPORTANT: Use the provided news articles as evidence of active coverage. If a journalist's
-name appears in an article byline, they are confirmed active on this beat.
-
-Return a JSON object with this exact structure:
+Return JSON:
 {
   "contacts": [
     {
-      "first_name": "Jane",
-      "last_name": "Smith",
-      "outlet": "The Washington Post",
-      "role": "Technology Policy Reporter",
+      "first_name": "...",
+      "last_name": "...",
+      "outlet": "...",
+      "outlet_website": "https://...",
+      "role": "...",
       "media_type": "mainstream",
-      "location": "Washington, DC",
-      "pitch_angle": "Specific angle tied to their coverage interests",
-      "previous_story_title": "Title of a relevant story they wrote (if known)",
-      "previous_story_url": "URL if available, otherwise empty string",
-      "email": "jane.smith@washpost.com or [RESEARCH NEEDED]",
-      "notes": "Additional context about their coverage"
+      "location": "...",
+      "pitch_angle": "...",
+      "previous_story_title": "...",
+      "previous_story_url": "https://...",
+      "email": "...",
+      "notes": "..."
     }
   ],
-  "pitch_timing": "Brief note on optimal timing for this pitch (2-3 sentences)"
+  "pitch_timing": "..."
 }"""
 
+
+def enrich_contacts(journalists: list[dict], issue: str, location: str,
+                    media_types: list[str], is_national: bool, client: OpenAI) -> dict:
+    """LLM enrichment — adds pitch angles and contact details for real discovered journalists."""
+
+    # Build journalist summaries for the prompt
+    journalist_lines = []
+    for j in journalists:
+        articles_text = "; ".join(
+            f'"{a["title"]}" ({a["date"]}) [{a["url"]}]'
+            for a in j["articles"][:3]
+        )
+        journalist_lines.append(
+            f'- {j["name"]} @ {j["outlet"]}: {articles_text}'
+        )
+
+    media_type_str = ", ".join(MEDIA_TYPE_LABELS.get(mt, mt) for mt in media_types)
+
+    scope_instruction = (
+        "IMPORTANT: The user wants NATIONAL coverage only. "
+        "Exclude journalists from local TV stations, city newspapers, and regional blogs. "
+        "Only include journalists from outlets with a national audience."
+        if is_national else
+        f"The user wants coverage scoped to: {location}. "
+        "Include both local/regional outlets and national journalists who cover that area."
+    )
+
+    prompt = (
+        f"Issue being pitched: {issue}\n"
+        f"Geographic scope: {location}\n"
+        f"Media types requested: {media_type_str}\n"
+        f"{scope_instruction}\n\n"
+        f"Journalists discovered through article research:\n"
+        + "\n".join(journalist_lines)
+        + f"\n\nEnrich all {len(journalists)} journalists above. "
+        f"Assign each a media_type from the requested types where appropriate. "
+        f"Write pitch angles based on their actual documented coverage."
+    )
+
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": ENRICH_SYSTEM},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.3,
+        max_tokens=6000,
+        response_format={"type": "json_object"},
+    )
+
+    return json.loads(response.choices[0].message.content)
+
+
+# ---------------------------------------------------------------------------
+# Main entry point
+# ---------------------------------------------------------------------------
 
 def generate_media_list(issue: str, location: str = "US",
                         media_types: list[str] = None,
                         num_contacts: int = 20) -> dict:
     """
-    Run the full media list pipeline.
+    Run the full research-first media list pipeline.
 
     Returns:
         {
@@ -146,62 +504,57 @@ def generate_media_list(issue: str, location: str = "US",
     media_types = media_types or list(MEDIA_TYPE_LABELS.keys())
     num_contacts = min(num_contacts, 40)
 
-    # Step 1: Research
-    print("Step 1: Researching journalists via Google News...", file=sys.stderr)
-    articles = research_journalists(issue, location, max_results=20)
-    print(f"  Found {len(articles)} relevant articles", file=sys.stderr)
+    is_national = location.upper() in ("US", "USA", "NATIONAL")
 
-    # Step 2: LLM synthesis
-    print(f"Step 2: Generating media list ({num_contacts} contacts)...", file=sys.stderr)
+    # Step 1: Analyze story + expand queries
+    print("Step 1: Analyzing story and expanding search queries...", file=sys.stderr)
+    queries, story_analysis = expand_queries(issue, location, client)
+    print(f"  Queries: {queries}", file=sys.stderr)
 
-    # Build prompt
-    media_type_str = ", ".join(MEDIA_TYPE_LABELS.get(mt, mt) for mt in media_types)
+    # Step 2: Multi-query news search
+    print("Step 2: Searching for articles...", file=sys.stderr)
+    articles = search_articles(queries, location, max_per_query=12)
+    print(f"  Found {len(articles)} unique articles", file=sys.stderr)
 
-    parts = [
-        f"Build a targeted media pitch list for the following issue:",
-        f"Issue: {issue}",
-        f"Geographic scope: {location}",
-        f"Media types to include: {media_type_str}",
-        f"Target number of contacts: {num_contacts}",
-    ]
+    # Step 3: Decode URLs, then extract bylines
+    print("Step 3: Decoding article URLs...", file=sys.stderr)
+    articles = decode_urls(articles)
 
-    if articles:
-        article_text = "\n".join(
-            f"- [{a['date']}] \"{a['title']}\" — {a['source']}"
-            for a in articles[:15]
-        )
-        parts.append(
-            f"\n--- Recent articles on this issue (use these to identify active journalists) ---\n"
-            f"{article_text}"
-        )
+    print("Step 3b: Extracting journalist bylines from articles...", file=sys.stderr)
+    articles_with_bylines = extract_bylines(articles)
 
-    parts.append(
-        f"\nGenerate exactly {num_contacts} contacts distributed across these media types: {media_type_str}. "
-        f"Prioritize journalists who have demonstrated active coverage of this issue."
-    )
+    journalists = group_by_journalist(articles_with_bylines)
+    print(f"  Identified {len(journalists)} unique journalists", file=sys.stderr)
 
-    prompt = "\n".join(parts)
+    if not journalists:
+        # Graceful fallback: return empty list with a message rather than hallucinating
+        return {
+            "issue": issue,
+            "location": location,
+            "media_types": media_types,
+            "contacts": [],
+            "pitch_timing": (
+                "No journalist bylines could be extracted from recent articles on this topic. "
+                "Try broadening the issue description, or manually search trade publications "
+                "for journalists covering this beat."
+            ),
+            "news_research": articles[:10],
+        }
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": MEDIA_LIST_SYSTEM},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.4,
-        max_tokens=6000,
-        response_format={"type": "json_object"},
-    )
+    # Cap to num_contacts (most-covered journalists first)
+    journalists = journalists[:num_contacts]
 
-    result = json.loads(response.choices[0].message.content)
+    # Step 4: LLM enrichment
+    print(f"Step 4: Enriching {len(journalists)} contacts with pitch angles...", file=sys.stderr)
+    enriched = enrich_contacts(journalists, issue, location, media_types, is_national, client)
 
-    # Normalize media_type values to our canonical keys
+    # Normalize media_type values
     label_to_key = {}
     for key, label in MEDIA_TYPE_LABELS.items():
         label_to_key[key.lower()] = key
         label_to_key[label.lower()] = key
 
-    contacts = result.get("contacts", [])
+    contacts = enriched.get("contacts", [])
     for c in contacts:
         raw_type = c.get("media_type", "").lower().strip()
         c["media_type"] = label_to_key.get(raw_type, raw_type)
@@ -215,7 +568,7 @@ def generate_media_list(issue: str, location: str = "US",
         "location": location,
         "media_types": media_types,
         "contacts": contacts,
-        "pitch_timing": result.get("pitch_timing", ""),
+        "pitch_timing": enriched.get("pitch_timing", ""),
         "news_research": articles[:10],
     }
 

@@ -13,11 +13,13 @@ COLUMNS = [
     ("First Name", 14),
     ("Last Name", 16),
     ("Outlet", 24),
+    ("Website", 24),
     ("Role", 24),
     ("Media Type", 14),
     ("Location", 18),
     ("Pitch Angle", 40),
-    ("Previous Coverage", 40),
+    ("Previous Story", 40),
+    ("Story URL", 40),
     ("Email", 30),
     ("Notes", 30),
 ]
@@ -56,22 +58,18 @@ def export_xlsx(result: dict, output_path: str):
     for row_idx, contact in enumerate(result.get("contacts", []), 2):
         prev_title = contact.get("previous_story_title", "")
         prev_url = contact.get("previous_story_url", "")
-        if prev_title and prev_url:
-            prev_coverage = f"{prev_title}\n{prev_url}"
-        elif prev_title:
-            prev_coverage = prev_title
-        else:
-            prev_coverage = ""
 
         row_data = [
             contact.get("first_name", ""),
             contact.get("last_name", ""),
             contact.get("outlet", ""),
+            contact.get("outlet_website", ""),
             contact.get("role", ""),
             contact.get("media_type", ""),
             contact.get("location", ""),
             contact.get("pitch_angle", ""),
-            prev_coverage,
+            prev_title,
+            prev_url,
             contact.get("email", ""),
             contact.get("notes", ""),
         ]
