@@ -17,3 +17,5 @@ tools/hearing_memo_tool_package/transcripts/*.pdf
 tools/legislative_tracker/execution/.tmp/
 tools/messaging_matrix/style_samples/*
 !tools/messaging_matrix/style_samples/README.md
+tools/background_memo_generator/examples/*
+!tools/background_memo_generator/examples/README.md

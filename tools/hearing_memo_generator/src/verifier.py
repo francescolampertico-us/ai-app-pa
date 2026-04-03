@@ -120,7 +120,7 @@ def verify(memo_output: dict, hearing_record: dict) -> dict:
             human_checks.append("Verify SUBJECT line and display title are consistent")
 
     # ===== 5. Heading compliance =====
-    sections = memo_output.get("sections", [])
+    sections = [s for s in memo_output.get("sections", []) if s]  # skip empty dicts
     for section in sections:
         heading = section.get("heading", "")
         if heading not in APPROVED_HEADINGS:

@@ -66,6 +66,7 @@ Skills are on-demand instruction bundles in `.claude/skills/`. Only the frontmat
 - `clip-cleaner` — Clean pasted article text for clips reports
 - `disclosure-tracker` — Search LDA/FARA disclosure records
 - `messaging-matrix` — Generate messaging matrices with multiple output variants
+- `background-memo` — Generate a background memo on a client, organization, issue, or individual
 - `add-tool` — Scaffold and register a new tool package (automates the workflow above)
 - `eval-tool` — Run a tool's eval cases and report pass/fail
 - `handoff` — End-of-session handoff: updates Project State below and generates a resume prompt
@@ -102,44 +103,58 @@ Spawn review and QA in parallel when reviewing independent files.
 ## Project State
 <!-- Updated by /handoff skill — keeps session context across conversations -->
 
-**Last session:** 2026-03-31 (committed) + 2026-04-01 (new tools)
+**Last session:** 2026-04-01 (uncommitted changes — commit before next session)
 
-**Tools built (9):**
-1. `hearing_memo` (v1.0.0) — congressional hearing memos from transcripts. YouTube transcript support.
-2. `media_clips` (v1.0.0) — daily media monitoring from Google News
-3. `influence_disclosure_tracker` (v0.2.0) — LDA + FARA + IRS 990. Deep mode extracts XML schedules + LLM enrichment.
-4. `messaging_matrix` (v0.1.0) — Message Map grid, 7 output variants. Style guides + personalization.
-5. `legislative_tracker` (v0.1.0) — LegiScan API search, track, summarize.
-6. `stakeholder_briefing` (v0.1.0) — Pre-meeting one-pager with profile, positions, disclosures, news, talking points.
-7. `media_list_builder` (v0.1.0) — Targeted media pitch list by issue, location, media type. Excel export.
-8. `media_clip_cleaner` (v0.3.0) — embedded in Media Clips + standalone. LLM mode default.
-9. `stakeholder_map_builder` (v0.1.0) — Discovers + classifies all actors on a policy issue. LDA + LegiScan + news. Interactive network graph (Plotly/networkx). Excel (actors + relationships) + DOCX.
+**Tools built (9):** unchanged — see previous entries.
 
-**What was done last session (2026-04-01):**
-- Committed Stakeholder Briefing + Media List Builder + app updates (4 commits, all clean)
-- Built Stakeholder Map Builder tool: `tools/stakeholder_map_builder/`
-  - Actor discovery: LDA topic search (registrants + clients), LegiScan bill sponsors, GNews context
-  - Single gpt-4o classification call: stance (proponent/opponent/neutral/unknown), type, influence tier, evidence
-  - Relationship extraction: lobbies-for (LDA registrant→client) + co-sponsors (LegiScan)
-  - Interactive Plotly network graph: color=stance, size=influence, shape=type, dashed=lobbies-for, solid=co-sponsors
-  - Excel: 2 sheets (Actors 10-col + Relationships 4-col), color-coded Stance column
-  - DOCX: narrative organized by stance, relationships, coalitions, strategic notes
-  - All exports smoke-tested with mock data
-  - Installed: networkx + plotly
-- App pages now: 1-Hearing Memo, 2-Media Clips, 3-Disclosure Tracker, 4-Legislative Tracker, 5-Literature Review, 6-Messaging Matrix, 7-Stakeholder Briefing, 8-Media List Builder, 9-Stakeholder Map Builder
+**What was done this session:**
 
-**Uncommitted files:** None — all committed.
+*Disclosure Tracker (`tools/influence_disclosure_tracker/execution/report.py`):*
+- Removed explanatory sentences from Schedule C and Schedule I sections (user found them unnecessary)
+- Added note when Filing History is empty: IRS 990s lag 1-3 years, advises trying earlier years
+
+*Media List Builder:*
+- `tools/media_list_builder/execution/generator.py` — strengthened system prompt: podcasts must be policy-focused (named examples: Eye on AI, Hard Fork, Big Technology Podcast); `outlet_website` added to JSON schema with `https://` prefix; `previous_story_url` must be full URL or empty string
+- `tools/media_list_builder/execution/export.py` — split "Previous Coverage" into two columns: "Previous Story" + "Story URL"; added "Website" column
+- `app/pages/7_Media_List_Builder.py` (was 8) — added `_fix_url()` normalizer (adds `https://`, strips blanks/placeholders); `outlet_website` and `previous_story_url` rendered as `st.column_config.LinkColumn`
+
+*App shell — page renumbering:*
+- Literature Review moved from `5_` to `99_` (appears after all tools in sidebar)
+- Tools renumbered: Messaging Matrix=5, Stakeholder Briefing=6, Media List Builder=7, Stakeholder Map Builder=8
+- `app/shared.py` — sidebar now has "Tools" and "Reference" headings; Literature Review under Reference
+- `app/streamlit_app.py` — added Reference section with Literature Review card; fixed TOOL_PAGES for all 9 tools (was missing 3)
+
+*Stakeholder Map Builder — network analysis upgrade (Varone et al. 2016):*
+- `tools/stakeholder_map_builder/execution/analytics.py` — **new file**: computes degree centrality, betweenness centrality, greedy modularity communities, broker identification (actors bridging proponent+opponent sides), multi-venue detection, deterministic strategic summary
+- `tools/stakeholder_map_builder/execution/graph.py` — broker nodes now get gold border (thickness ∝ betweenness, capped 6px); centrality shown in hover; legend annotation updated
+- `tools/stakeholder_map_builder/execution/generator.py` — secondary dedup by normalized name (merges client_X + lobbyist_X same org); classification prompt now allows LLM to use known policy positions (reduces "Unknown" classifications); issue_areas trimmed to 2 (was 1)
+- `app/pages/8_Stakeholder_Map_Builder.py` — calls `analytics.py` after `build_map()`; new "🔬 Network Analysis" tab (tab 2 of 6): metrics row, bridge actors table, centrality rankings (betweenness vs degree), structural communities, multi-venue actors, strategic summary; betweenness + degree + community columns added to Proponents/Opponents/All Actors tabs
+
+**Uncommitted files (all need to be committed):**
+- `app/pages/5_Messaging_Matrix.py` (renamed from 6)
+- `app/pages/6_Stakeholder_Briefing.py` (renamed from 7)
+- `app/pages/7_Media_List_Builder.py` (renamed from 8, modified)
+- `app/pages/8_Stakeholder_Map_Builder.py` (renamed from 9, modified)
+- `app/pages/99_Literature_Review.py` (renamed from 5)
+- `app/shared.py` (modified)
+- `app/streamlit_app.py` (modified)
+- `tools/influence_disclosure_tracker/execution/report.py` (modified)
+- `tools/media_list_builder/execution/export.py` (modified)
+- `tools/media_list_builder/execution/generator.py` (modified)
+- `tools/stakeholder_map_builder/execution/analytics.py` (new)
+- `tools/stakeholder_map_builder/execution/generator.py` (modified)
+- `tools/stakeholder_map_builder/execution/graph.py` (modified)
 
 **Next priorities:**
-1. End-to-end live test of Stakeholder Map Builder (run with "AI regulation" or "drug pricing")
-2. Messaging Matrix fine-tuning (style injection polish)
-3. Polish and test all tools end-to-end before Apr 26 final submission
-4. Optional: additional tool if needed (Crisis Response Brief is highest-value remaining)
+1. Commit all uncommitted changes above
+2. End-to-end test Stakeholder Map Builder with "AI safety regulation" — verify Network Analysis tab renders, broker actors appear with gold border, strategic summary is coherent
+3. End-to-end test Media List Builder — verify podcast results are policy-specific, website + story URLs are clickable
+4. Polish and test remaining tools before Apr 26 final submission
+5. Optional: Crisis Response Brief (highest-value remaining tool)
 
 **Known issues:**
-- IRS 990 Schedule I grants show "(Individual)" for recipients when orgs redact names — EINs still captured
-- Stakeholder Briefing: FARA search on "Senate Commerce Committee" returns spurious fuzzy matches (Eco Corporation) — consider raising threshold for FARA in briefing context
-- Media List Builder: `openpyxl` must be installed (`pip3 install openpyxl`)
-- Stakeholder Map Builder: networkx + plotly must be installed (`pip3 install networkx plotly`)
-- Streamlit entry: `streamlit run app/streamlit_app.py` from toolkit root
+- Stakeholder Map Builder: "Unknown" stance still common for lobbyist firms (by design — firms classified unknown, clients classified by known position)
+- Media List Builder: LLM may still omit `outlet_website` for some contacts; `_fix_url()` in page 7 handles missing protocol
+- IRS 990 Filing History empty when searching current year (2025/2026) — by design, IRS 990s lag 1-3 years
+- Streamlit entry: `streamlit run app/streamlit_app.py` from `toolkit/` root
 - `youtube-transcript-api` v1.x: `YouTubeTranscriptApi().fetch(video_id, languages=['en'])`

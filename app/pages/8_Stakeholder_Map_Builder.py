@@ -30,7 +30,7 @@ page_header(
         "Discovers and classifies all relevant actors on a policy issue — "
         "pulling from LDA lobbying filings, LegiScan bill sponsorships, and news. "
         "Classifies each actor by stance, type, and influence, then renders an "
-        "interactive network graph."
+        "interactive network graph with SNA metrics (Varone et al. 2016)."
     ),
 )
 
@@ -81,7 +81,6 @@ if st.button("Build Stakeholder Map", type="primary", disabled=run_disabled):
     if not os.environ.get("OPENAI_API_KEY"):
         st.error("OPENAI_API_KEY not set. Please configure your API key.")
     else:
-        # Normalise inputs
         scope_val        = scope.lower()
         state_val        = state_input.strip().upper() if scope == "State" and state_input.strip() else "US"
         year_val         = int(year_input) if year_input else None
@@ -89,8 +88,17 @@ if st.button("Build Stakeholder Map", type="primary", disabled=run_disabled):
 
         with st.spinner("Discovering actors and building map… this takes 30-60 seconds."):
             try:
-                from generator import build_map, render_markdown
-                from export import export_xlsx, export_docx
+                import importlib.util as _ilu
+
+                _gen_spec = _ilu.spec_from_file_location("smb_generator", TOOL_ROOT / "execution" / "generator.py")
+                _gen = _ilu.module_from_spec(_gen_spec); _gen_spec.loader.exec_module(_gen)
+                build_map = _gen.build_map
+                render_markdown = _gen.render_markdown
+
+                _exp_spec = _ilu.spec_from_file_location("smb_export", TOOL_ROOT / "execution" / "export.py")
+                _exp = _ilu.module_from_spec(_exp_spec); _exp_spec.loader.exec_module(_exp)
+                export_xlsx = _exp.export_xlsx
+                export_docx = _exp.export_docx
 
                 result = build_map(
                     policy_issue=policy_issue,
@@ -100,23 +108,46 @@ if st.button("Build Stakeholder Map", type="primary", disabled=run_disabled):
                     include_types=include_types_lc,
                 )
 
-                st.session_state["smb_result"]   = result
-                st.session_state["smb_markdown"]  = render_markdown(result)
+                st.session_state["smb_result"]  = result
+                st.session_state["smb_markdown"] = render_markdown(result)
 
-                # Build graph
+                # ── Network analytics (SNA metrics — Varone et al. 2016) ───────
                 try:
-                    from graph import build_network_graph
+                    _an_spec = _ilu.spec_from_file_location("smb_analytics", TOOL_ROOT / "execution" / "analytics.py")
+                    _an = _ilu.module_from_spec(_an_spec); _an_spec.loader.exec_module(_an)
+                    analytics = _an.compute_network_analytics(
+                        result.get("actors", []),
+                        result.get("relationships", []),
+                    )
+                    st.session_state["smb_analytics"] = analytics
+                except Exception as e:
+                    import traceback
+                    st.session_state["smb_analytics"] = None
+                    st.warning(f"Network analytics unavailable: {e}")
+                    st.code(traceback.format_exc())
+
+                # ── Build graph (pass centrality for broker border encoding) ───
+                try:
+                    _gr_spec = _ilu.spec_from_file_location("smb_graph", TOOL_ROOT / "execution" / "graph.py")
+                    _gr = _ilu.module_from_spec(_gr_spec); _gr_spec.loader.exec_module(_gr)
+                    build_network_graph = _gr.build_network_graph
+
+                    centrality = {
+                        a["id"]: a.get("betweenness_centrality", 0)
+                        for a in result.get("actors", [])
+                    }
                     fig = build_network_graph(
                         actors=result.get("actors", []),
                         relationships=result.get("relationships", []),
                         title=f"Stakeholder Map: {policy_issue}",
+                        centrality=centrality,
                     )
                     st.session_state["smb_fig"] = fig
                 except ImportError as e:
                     st.session_state["smb_fig"] = None
                     st.warning(f"Network graph unavailable: {e}. Install networkx and plotly.")
 
-                # Export files
+                # ── Export files ───────────────────────────────────────────────
                 tmpdir    = tempfile.mkdtemp()
                 xlsx_path = Path(tmpdir) / "stakeholder_map.xlsx"
                 docx_path = Path(tmpdir) / "stakeholder_map.docx"
@@ -146,9 +177,10 @@ if st.button("Build Stakeholder Map", type="primary", disabled=run_disabled):
 # ─── Display Results ─────────────────────────────────────────────────────────
 
 if "smb_result" in st.session_state:
-    result  = st.session_state["smb_result"]
-    actors  = result.get("actors", [])
-    rels    = result.get("relationships", [])
+    result    = st.session_state["smb_result"]
+    actors    = result.get("actors", [])
+    rels      = result.get("relationships", [])
+    analytics = st.session_state.get("smb_analytics")
 
     proponents = [a for a in actors if a.get("stance") == "proponent"]
     opponents  = [a for a in actors if a.get("stance") == "opponent"]
@@ -156,25 +188,29 @@ if "smb_result" in st.session_state:
 
     # Summary metrics
     m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("Total Actors",   len(actors))
-    m2.metric("Proponents",     len(proponents))
-    m3.metric("Opponents",      len(opponents))
+    m1.metric("Total Actors",    len(actors))
+    m2.metric("Proponents",      len(proponents))
+    m3.metric("Opponents",       len(opponents))
     m4.metric("Neutral/Unknown", len(neutral))
-    m5.metric("Relationships",  len(rels))
+    m5.metric("Relationships",   len(rels))
 
     st.markdown("")
 
     # ── Tabs ──────────────────────────────────────────────────────────────────
-    tab_network, tab_proponents, tab_opponents, tab_all, tab_summary = st.tabs(
-        ["🕸️ Network Graph", "✅ Proponents", "❌ Opponents", "📋 All Actors", "📄 Summary"]
-    )
+    tab_network, tab_sna, tab_proponents, tab_opponents, tab_all, tab_summary = st.tabs([
+        "🕸️ Network Graph",
+        "🔬 Network Analysis",
+        "✅ Proponents",
+        "❌ Opponents",
+        "📋 All Actors",
+        "📄 Summary",
+    ])
 
-    # Network Graph tab
+    # ── Network Graph tab ─────────────────────────────────────────────────────
     with tab_network:
         fig = st.session_state.get("smb_fig")
         if fig is not None:
             st.plotly_chart(fig, use_container_width=True)
-            # HTML download
             html_str = fig.to_html(include_plotlyjs="cdn")
             st.download_button(
                 "⬇ Download Interactive Graph (.html)",
@@ -189,7 +225,124 @@ if "smb_result" in st.session_state:
                 for a in actors[:10]:
                     st.markdown(f"- **{a['name']}** ({a.get('stance', 'unknown').title()})")
 
-    # Proponents tab
+    # ── Network Analysis tab (Varone et al. 2016) ─────────────────────────────
+    with tab_sna:
+        if not analytics:
+            st.info("Network analytics unavailable — re-run the map to compute SNA metrics.")
+        else:
+            import pandas as pd
+
+            # Key metrics row
+            an1, an2, an3, an4 = st.columns(4)
+            an1.metric("Network Density",       f"{analytics['network_density']:.3f}")
+            an2.metric("Structural Communities", analytics["communities"])
+            an3.metric("Bridge Actors",          len(analytics["brokers"]))
+            an4.metric("Multi-venue Actors",     len(analytics["multi_venue_actors"]))
+
+            st.markdown("")
+
+            # Strategic summary
+            if analytics.get("strategic_summary"):
+                st.success(analytics["strategic_summary"])
+
+            st.divider()
+
+            # Bridge actors
+            st.markdown("### Bridge Actors")
+            st.caption(
+                "Bridge actors sit between the proponent and opponent coalitions. "
+                "Per Varone, Ingold & Jourdain (2016), betweenness centrality predicts "
+                "advocacy access — these actors are the highest-value engagement targets. "
+                "They appear with a **gold border** on the network graph."
+            )
+            brokers = analytics.get("brokers", [])
+            if brokers:
+                broker_df = pd.DataFrame([{
+                    "Name":          b["name"],
+                    "Type":          b.get("stakeholder_type", "").title(),
+                    "Stance":        b.get("stance", "").title(),
+                    "Betweenness":   round(b["betweenness_centrality"], 3),
+                    "Degree":        round(b["degree_centrality"], 3),
+                    "Organization":  b.get("organization", ""),
+                } for b in brokers])
+                st.dataframe(broker_df, use_container_width=True, hide_index=True)
+            else:
+                if not analytics.get("has_edges"):
+                    st.info("No relationships detected — betweenness centrality requires at least one lobbying or co-sponsorship edge.")
+                elif not analytics.get("has_both_sides"):
+                    st.info("Bridge actor detection requires both proponent and opponent actors. Check stance classifications in the Proponents / Opponents tabs.")
+                else:
+                    st.info("No actors currently bridge the proponent and opponent coalitions directly.")
+
+            st.divider()
+
+            # Centrality rankings
+            st.markdown("### Centrality Rankings")
+            cr_left, cr_right = st.columns(2)
+
+            with cr_left:
+                st.markdown("**Top by Betweenness** (brokerage power)")
+                st.caption("How often this actor lies on the shortest path between others.")
+                bw_df = pd.DataFrame([{
+                    "Name":        a.get("name", ""),
+                    "Betweenness": round(a.get("betweenness_centrality", 0), 3),
+                    "Stance":      a.get("stance", "").title(),
+                } for a in analytics["top_by_betweenness"]])
+                st.dataframe(bw_df, use_container_width=True, hide_index=True)
+
+            with cr_right:
+                st.markdown("**Top by Degree** (coalition reach)")
+                st.caption("Number of direct connections — reflects breadth of engagement.")
+                deg_df = pd.DataFrame([{
+                    "Name":   a.get("name", ""),
+                    "Degree": round(a.get("degree_centrality", 0), 3),
+                    "Stance": a.get("stance", "").title(),
+                } for a in analytics["top_by_degree"]])
+                st.dataframe(deg_df, use_container_width=True, hide_index=True)
+
+            st.divider()
+
+            # Structural communities
+            st.markdown("### Structural Communities")
+            st.caption(
+                "Communities detected algorithmically from the relationship structure "
+                "(greedy modularity maximization). They may not align with proponent/opponent labels — "
+                "divergence often reveals cross-coalition coordination."
+            )
+            if analytics["communities"] > 1:
+                community_rows = []
+                for a in actors:
+                    community_rows.append({
+                        "Community":   f"C{a.get('community_id', 0) + 1}",
+                        "Name":        a.get("name", ""),
+                        "Stance":      a.get("stance", "").title(),
+                        "Type":        a.get("stakeholder_type", "").title(),
+                    })
+                comm_df = pd.DataFrame(community_rows).sort_values(["Community", "Stance"])
+                st.dataframe(comm_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("All actors fall into a single structural community — the network may be too sparse for meaningful cluster detection.")
+
+            # Multi-venue actors
+            multi_venue = analytics.get("multi_venue_actors", [])
+            if multi_venue:
+                st.divider()
+                st.markdown("### Multi-venue Actors")
+                st.caption(
+                    "These actors are active in both administrative (LDA filings) and "
+                    "legislative (LegiScan) venues. Multi-venue presence is associated with "
+                    "higher advocacy influence per Varone et al. (2016)."
+                )
+                mv_df = pd.DataFrame([{
+                    "Name":        a.get("name", ""),
+                    "Type":        a.get("stakeholder_type", "").title(),
+                    "Stance":      a.get("stance", "").title(),
+                    "LDA Amount":  f"${float(a['lda_amount']):,.0f}" if a.get("lda_amount") else "—",
+                    "Bills":       ", ".join(a.get("bill_numbers", [])),
+                } for a in multi_venue])
+                st.dataframe(mv_df, use_container_width=True, hide_index=True)
+
+    # ── Proponents tab ────────────────────────────────────────────────────────
     with tab_proponents:
         if result.get("proponent_summary"):
             st.info(result["proponent_summary"])
@@ -200,6 +353,7 @@ if "smb_result" in st.session_state:
                 "Type":           a.get("stakeholder_type", "").title(),
                 "Organization":   a.get("organization", ""),
                 "Influence":      a.get("influence_tier", "").title(),
+                "Betweenness":    round(a.get("betweenness_centrality", 0), 3) if analytics else "—",
                 "Evidence":       a.get("evidence", ""),
                 "LDA Amount ($)": (
                     f"${float(a['lda_amount']):,.0f}"
@@ -210,7 +364,7 @@ if "smb_result" in st.session_state:
         else:
             st.info("No proponents identified for this issue.")
 
-    # Opponents tab
+    # ── Opponents tab ─────────────────────────────────────────────────────────
     with tab_opponents:
         if result.get("opponent_summary"):
             st.info(result["opponent_summary"])
@@ -221,6 +375,7 @@ if "smb_result" in st.session_state:
                 "Type":           a.get("stakeholder_type", "").title(),
                 "Organization":   a.get("organization", ""),
                 "Influence":      a.get("influence_tier", "").title(),
+                "Betweenness":    round(a.get("betweenness_centrality", 0), 3) if analytics else "—",
                 "Evidence":       a.get("evidence", ""),
                 "LDA Amount ($)": (
                     f"${float(a['lda_amount']):,.0f}"
@@ -231,7 +386,7 @@ if "smb_result" in st.session_state:
         else:
             st.info("No opponents identified for this issue.")
 
-    # All Actors tab
+    # ── All Actors tab ────────────────────────────────────────────────────────
     with tab_all:
         import pandas as pd
         df_all = pd.DataFrame([{
@@ -239,6 +394,9 @@ if "smb_result" in st.session_state:
             "Type":           a.get("stakeholder_type", "").title(),
             "Stance":         a.get("stance", "").title(),
             "Influence":      a.get("influence_tier", "").title(),
+            "Betweenness":    round(a.get("betweenness_centrality", 0), 3) if analytics else "—",
+            "Degree":         round(a.get("degree_centrality", 0), 3) if analytics else "—",
+            "Community":      f"C{a.get('community_id', 0) + 1}" if analytics else "—",
             "Organization":   a.get("organization", ""),
             "Evidence":       a.get("evidence", ""),
             "LDA Amount ($)": (
@@ -253,14 +411,14 @@ if "smb_result" in st.session_state:
             st.markdown("#### Relationships")
             id_to_name = {a["id"]: a["name"] for a in actors}
             rels_df = pd.DataFrame([{
-                "From":              id_to_name.get(r["from_id"], r["from_id"]),
-                "To":                id_to_name.get(r["to_id"],   r["to_id"]),
-                "Relationship":      r.get("type", "").replace("_", " ").title(),
-                "Label":             r.get("label", ""),
+                "From":         id_to_name.get(r["from_id"], r["from_id"]),
+                "To":           id_to_name.get(r["to_id"],   r["to_id"]),
+                "Relationship": r.get("type", "").replace("_", " ").title(),
+                "Label":        r.get("label", ""),
             } for r in rels])
             st.dataframe(rels_df, use_container_width=True, hide_index=True)
 
-    # Summary tab
+    # ── Summary tab ───────────────────────────────────────────────────────────
     with tab_summary:
         if result.get("issue_summary"):
             st.markdown("### Issue Overview")
@@ -278,7 +436,7 @@ if "smb_result" in st.session_state:
 
         st.caption(
             "Stance classifications are LLM-inferred from public data (LDA, LegiScan, news) — "
-            "verify before strategic use."
+            "verify before strategic use. Network metrics computed via Varone, Ingold & Jourdain (2016) framework."
         )
 
     # ── Downloads ─────────────────────────────────────────────────────────────

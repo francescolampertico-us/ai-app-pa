@@ -89,37 +89,37 @@ Write the talking points now based on this Message Map:
 MEDIA_TALKING_POINTS_PROMPT = _SHARED_PREAMBLE + """
 FORMAT: Media Talking Points (preparation document for a spokesperson doing TV, radio, or print interviews)
 
-Follow this EXACT structure, modeled on real spokesperson preparation documents:
+Follow this EXACT structure:
 
 ---
 
-Start with:
-**Main message**
-One paragraph (3-5 sentences) describing the overarching frame/narrative the spokesperson should project. This is NOT a sound bite — it is the strategic lens through which every answer should be filtered. Use a governing metaphor or analogy when possible.
+**[APPEARANCE CONTEXT LINE]**
+One line: outlet name, date, spokesperson name and title. Example: "CBS MORNINGS · October 6, 2025 · Sen. Jane Smith (D-CA)"
 
-Then:
-**Message adaptation by issue**
-For each likely topic area (3-5 topics), provide:
-- A subheading naming the issue (e.g., "Affordability → Talent Retention")
-- 2-3 sentences explaining how to connect this issue to the main message, using analogies and specific framing
-- **Key words:** 3-5 specific terms to use consistently for this issue
+---
 
-Then:
-**Focus Note** (optional)
-1-2 sentences of tactical advice for this specific appearance context. Include real-world examples the spokesperson can reference naturally (e.g., "Barbershops: 24 forms and 12 in-person steps just to open one.").
+Then 4-7 argument sections. Each section follows this format exactly:
 
-Then:
-**Predicted Questions & Talking Points**
-4-6 likely questions (including hostile ones). For each:
-- The question as a bold heading
-- 2-4 bullet-point response elements: a direct answer, a pivot to the main message, and a proof point or example
-- For hostile questions: acknowledge, pivot, deliver — never match the hostility
+**[BOLD ARGUMENT HEADING — one declarative sentence stating the claim]**
+2-3 sentences explaining the argument and how to frame it for a broadcast audience.
+- Proof point with source in brackets [Source, Year]
+- Proof point with source in brackets [Source, Year]
+- Proof point with source in brackets [Source, Year]
+
+After all argument sections, end with:
+
+**[CALL TO ACTION]**
+2-3 sentences. Name the specific bill, vote, or ask. Close with a bridge phrase that ties back to the core message.
+
+---
 
 CONSTRAINTS:
 - 400-600 words total
-- Written for someone who will SPEAK these — every phrase must sound natural aloud
+- Written for someone who will SPEAK these — short sentences, natural rhythm, no jargon
+- Every proof point must have a source citation in brackets. Use [VERIFY] if uncertain.
+- Use precise numbers (5.4%, not "about 5%"; $3,800, not "thousands")
 - Tone: confident, quotable, conversational but authoritative
-- Responses should be 2-4 sentences max — the spokesperson can always expand
+- Bold only the argument headings and call-to-action heading
 
 Write the media talking points now based on this Message Map:
 {message_house}
@@ -188,11 +188,11 @@ Produce FOUR separate pieces of content, one for each platform:
 - No emojis
 
 **LinkedIn** (150-300 words):
-- Open with a striking number or personal observation — NOT "I'm excited to share..."
-- Structure: Hook (1-2 sentences) → The gap/problem (2-3 sentences) → The substance with data (3-5 sentences) → Personal stake or invitation (1-2 sentences)
-- Professional, thought-leadership tone
-- Show the thinking process ("When I first saw that gap, I went looking for an explanation...")
-- End with a genuine question or invitation to engage
+- Open with a striking number, counterintuitive fact, or insight — NOT "I'm excited to share..."
+- Structure: Hook (1-2 sentences) → The gap/problem (2-3 sentences) → The substance with data (3-5 sentences) → Invitation to engage (1-2 sentences)
+- Professional, thought-leadership tone written from an ORGANIZATIONAL perspective — use "we" for organizational actions, or write in third person. Do NOT use first-person singular ("I") at any point.
+- Frame insights as observations about the issue, not personal discoveries: "The data shows..." not "I found..."
+- End with a genuine question that invites the audience to respond
 - 3-5 relevant hashtags at the end
 - No emojis
 

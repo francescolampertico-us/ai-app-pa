@@ -35,10 +35,47 @@ VARIANT_STYLE_MAP = {
     "speech_draft": "speeches_style_guide.md",
 }
 
+# Map variant IDs to their samples folder (under style_samples/)
+VARIANT_SAMPLES_MAP = {
+    "social_media": "social_media",
+    "media_talking_points": "media_talking_points",
+    "talking_points": "talking_points",
+    "news_release": "press_releases",
+    "op_ed": "op_eds",
+    "grassroots_email": "emails",
+    "speech_draft": "speeches",
+}
+
 
 # ---------------------------------------------------------------------------
 # Message Matrix instructions/examples loading
 # ---------------------------------------------------------------------------
+
+def _load_variant_examples(variant_id: str, style_samples_root: str = "") -> str:
+    """Load platform-specific example outputs for a given variant.
+
+    Looks in style_samples/<folder>/my_samples/ for user-provided examples.
+    Returns example text to inject into the variant prompt, or empty string.
+    """
+    if not style_samples_root:
+        return ""
+
+    folder = VARIANT_SAMPLES_MAP.get(variant_id)
+    if not folder:
+        return ""
+
+    root = Path(style_samples_root).parent  # style_guides/ -> style_samples/
+    samples_dir = root / folder / "my_samples"
+    if not samples_dir.exists():
+        return ""
+
+    files = read_directory(str(samples_dir))
+    if not files:
+        return ""
+
+    parts = [f"--- {f['name']} ---\n{f['text'][:4000]}" for f in files[:3]]
+    return "\n\n".join(parts)
+
 
 def _load_matrix_instructions(style_samples_root: str = "") -> tuple[str, str]:
     """Load user instructions and examples from message_matrix/ folder.
@@ -325,9 +362,15 @@ def generate_matrix(position: str, context: str = "", organization: str = "",
         if style_guide:
             print(f"  Using style guide for {label}", file=sys.stderr)
 
+        # Load platform-specific examples (takes priority over generic matrix examples)
+        variant_examples = _load_variant_examples(vid, style_guides_dir)
+        examples_to_use = variant_examples or matrix_examples
+        if variant_examples:
+            print(f"  Using {label} examples", file=sys.stderr)
+
         generated[vid] = generate_variant(
             client, vid, house, context, organization, style_guide,
-            matrix_examples
+            examples_to_use
         )
 
     return {"message_house": house, "variants": generated}

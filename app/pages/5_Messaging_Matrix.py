@@ -152,8 +152,15 @@ if position and selected_variants and st.button("Generate Messaging Matrix", typ
     else:
         with st.spinner("Generating Message House and deliverables..."):
             try:
-                from generator import generate_matrix, render_markdown
-                from export import export_docx
+                import importlib.util as _ilu
+                _gen_spec = _ilu.spec_from_file_location("mm_generator", TOOL_ROOT / "execution" / "generator.py")
+                _gen = _ilu.module_from_spec(_gen_spec); _gen_spec.loader.exec_module(_gen)
+                generate_matrix = _gen.generate_matrix
+                render_markdown = _gen.render_markdown
+
+                _exp_spec = _ilu.spec_from_file_location("mm_export", TOOL_ROOT / "execution" / "export.py")
+                _exp = _ilu.module_from_spec(_exp_spec); _exp_spec.loader.exec_module(_exp)
+                export_docx = _exp.export_docx
 
                 result = generate_matrix(
                     position=position,

@@ -397,6 +397,32 @@ def _compose_display_title(record: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Procedural actions composer
+# ---------------------------------------------------------------------------
+
+def _compose_procedural_actions(record: dict) -> dict:
+    """Compose the Procedural Actions section (motions, votes, subpoenas)."""
+    actions = record.get("procedural_actions", [])
+    if not actions:
+        return {}
+
+    parts = []
+    for action in actions:
+        desc = action.get("description", "").strip()
+        if desc:
+            parts.append(desc)
+
+    if not parts:
+        return {}
+
+    return {
+        "heading": "Procedural Actions",
+        "body": "\n\n".join(parts),
+        "subsections": [],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Main composition entry point
 # ---------------------------------------------------------------------------
 
@@ -432,6 +458,7 @@ def compose(record_dict: dict,
         _compose_opening_statements(record_dict),
         _compose_witnesses(record_dict),
         _compose_qa(record_dict),
+        _compose_procedural_actions(record_dict),
     ]
 
     footer_text = confidentiality_footer or DEFAULT_CONFIDENTIALITY_FOOTER
@@ -472,8 +499,10 @@ def render_memo_text(memo_output: dict) -> str:
 
     # Sections
     for section in memo_output["sections"]:
+        if not section:
+            continue
         lines.append(section["heading"])
-        if section["body"]:
+        if section.get("body"):
             lines.append(section["body"])
             lines.append("")
 

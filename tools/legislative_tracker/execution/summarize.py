@@ -247,14 +247,31 @@ def _two_pass_extract(client: OpenAI, bill_detail: dict, bill_text: str) -> str:
 def format_bill_header(bill_detail: dict) -> str:
     """Generate the bill overview header for the report."""
     sponsors = bill_detail.get("sponsors", [])
-    sponsor_lines = []
-    for s in sponsors[:10]:
-        line = f"  - {s['name']} ({s['party']})"
-        if s.get("role"):
-            line += f" — {s['role']}"
-        sponsor_lines.append(line)
-    if len(sponsors) > 10:
-        sponsor_lines.append(f"  - ... and {len(sponsors) - 10} more")
+
+    # Separate primary sponsor from co-sponsors
+    primary = [s for s in sponsors if s.get("sponsor_type_id") == 1 or s.get("role", "").lower() in ("sponsor", "primary sponsor", "author")]
+    cosponsors = [s for s in sponsors if s not in primary]
+    # Fallback: if type_id not set, treat first as primary
+    if not primary and sponsors:
+        primary = [sponsors[0]]
+        cosponsors = sponsors[1:]
+
+    def _format_sponsor(s):
+        parts = [s['name']]
+        if s.get('party') or s.get('role'):
+            meta = " — ".join(filter(None, [s.get('party'), s.get('role')]))
+            parts.append(f"({meta})")
+        return " ".join(parts)
+
+    primary_str = _format_sponsor(primary[0]) if primary else "Not available"
+
+    cosponsor_lines = []
+    for s in cosponsors[:20]:
+        cosponsor_lines.append(f"  - {_format_sponsor(s)}")
+    if len(cosponsors) > 20:
+        cosponsor_lines.append(f"  - ... and {len(cosponsors) - 20} more")
+
+    cosponsor_block = "\n".join(cosponsor_lines) if cosponsor_lines else "  - None"
 
     header = f"""## Bill Overview
 
@@ -265,8 +282,14 @@ def format_bill_header(bill_detail: dict) -> str:
 - **Status:** {bill_detail.get('status', 'N/A')} (as of {bill_detail.get('status_date', 'N/A')})
 - **Last Action:** {bill_detail.get('last_action', 'N/A')} ({bill_detail.get('last_action_date', 'N/A')})
 - **Official URL:** {bill_detail.get('state_url', bill_detail.get('url', 'N/A'))}
-- **Sponsors:**
-{chr(10).join(sponsor_lines) if sponsor_lines else '  - Not available'}
-- **Subjects:** {', '.join(bill_detail.get('subjects', [])) or 'Not specified'}"""
+- **Subjects:** {', '.join(bill_detail.get('subjects', [])) or 'Not specified'}
+
+## Sponsors
+
+### Primary Sponsor
+  - {primary_str}
+
+### Co-Sponsors ({len(cosponsors)})
+{cosponsor_block}"""
 
     return header

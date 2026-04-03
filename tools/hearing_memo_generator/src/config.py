@@ -22,12 +22,14 @@ HEADING_WITNESS_SECTION = "Witnesses Introductions and Testimonies"
 # Variation seen in some examples (singular):
 HEADING_WITNESS_SECTION_ALT = "Witnesses Introduction and Testimonies"
 HEADING_QA = "Q&A"
+HEADING_PROCEDURAL_ACTIONS = "Procedural Actions"
 
 DEFAULT_SECTION_ORDER = [
     HEADING_HEARING_OVERVIEW,
     HEADING_OPENING_STATEMENTS,
     HEADING_WITNESS_SECTION,
     HEADING_QA,
+    HEADING_PROCEDURAL_ACTIONS,
 ]
 
 APPROVED_HEADINGS = {
@@ -37,6 +39,7 @@ APPROVED_HEADINGS = {
     HEADING_WITNESS_SECTION,
     HEADING_WITNESS_SECTION_ALT,
     HEADING_QA,
+    HEADING_PROCEDURAL_ACTIONS,
 }
 
 # ---------- Confidentiality footer (STYLE_GUIDE §18, CHANGELOG_V2) ----------

@@ -75,6 +75,7 @@ TOOL_ICONS = {
     "influence_disclosure_tracker": "🔍",
     "legislative_tracker": "📜",
     "messaging_matrix": "📣",
+    "background_memo_generator": "📄",
 }
 DIGIACOMO_MAP = {
     "hearing_memo_generator": "#3 Briefing & Position Papers",
@@ -83,6 +84,7 @@ DIGIACOMO_MAP = {
     "influence_disclosure_tracker": "#2 Stakeholder Intelligence",
     "legislative_tracker": "#1 Monitoring & Analysis",
     "messaging_matrix": "#4 Advocacy Campaign Planning",
+    "background_memo_generator": "#2 Stakeholder Analysis",
 }
 TOOL_PAGES = {
     "hearing_memo_generator": "pages/1_Hearing_Memo.py",
@@ -90,6 +92,10 @@ TOOL_PAGES = {
     "influence_disclosure_tracker": "pages/3_Disclosure_Tracker.py",
     "legislative_tracker": "pages/4_Legislative_Tracker.py",
     "messaging_matrix": "pages/5_Messaging_Matrix.py",
+    "stakeholder_briefing": "pages/6_Stakeholder_Briefing.py",
+    "media_list_builder": "pages/7_Media_List_Builder.py",
+    "stakeholder_map_builder": "pages/8_Stakeholder_Map_Builder.py",
+    "background_memo_generator": "pages/9_Background_Memo.py",
 }
 
 # Display tools in a 2-column grid
@@ -118,6 +124,26 @@ for i, tool in enumerate(tools):
 
             if page:
                 st.page_link(page, label=f"Open {tool['name']}", icon="➡️")
+
+st.divider()
+
+# =====================================================================
+# Reference
+# =====================================================================
+st.markdown("## Reference")
+with st.container(border=True):
+    col_lit, col_lit_desc = st.columns([1, 3])
+    with col_lit:
+        st.markdown("### 📚 Literature Review")
+        st.caption("Research foundation")
+    with col_lit_desc:
+        st.markdown(
+            "Key findings from the academic literature on AI integration in public affairs. "
+            "Covers Mollick's human-AI task allocation model, DiGiacomo's PA workflow framework, "
+            "and empirical evidence on LLM performance in policy contexts. "
+            "All citations verified against source PDFs (March 2026)."
+        )
+        st.page_link("pages/99_Literature_Review.py", label="Open Literature Review", icon="➡️")
 
 st.divider()
 
