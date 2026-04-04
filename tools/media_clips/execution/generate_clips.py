@@ -239,8 +239,8 @@ def main():
                     
                     if art_date < since_date:
                         pass_date_filter = False
-                except:
-                    pass
+                except (ValueError, TypeError):
+                    pass  # Unparseable date — include article
 
             if is_trusted and pass_date_filter and source_url not in seen_urls and norm_title not in seen_titles:
                 seen_urls.add(source_url)
@@ -423,7 +423,7 @@ def main():
              if idx_sep != -1:
                  title = title[:idx_sep]
                  
-        url = article.get('final_url')
+        url = article.get('final_url') or article.get('url', '')
         date = article.get('published date', today_str)
         # Date Cleaning
         date_cleaned_clip = date
@@ -431,18 +431,18 @@ def main():
              from dateutil import parser
              dt = parser.parse(date)
              date_cleaned_clip = dt.strftime("%B %d, %Y")
-        except:
+        except (ValueError, OverflowError):
              try:
                  parts = date.split(' ')
                  if len(parts) >= 4:
                      day = parts[1]
                      month_short = parts[2]
                      year = parts[3]
-                     month_map = {"Jan": "January", "Feb": "February", "Mar": "March", "Apr": "April", "May": "May", "Jun": "June", 
+                     month_map = {"Jan": "January", "Feb": "February", "Mar": "March", "Apr": "April", "May": "May", "Jun": "June",
                                   "Jul": "July", "Aug": "August", "Sep": "September", "Oct": "October", "Nov": "November", "Dec": "December"}
                      month_long = month_map.get(month_short, month_short)
                      date_cleaned_clip = f"{month_long} {day}, {year}"
-             except:
+             except (IndexError, KeyError):
                   if ',' in date:
                       date_cleaned_clip = date.split(',', 1)[1].strip()
 
@@ -454,7 +454,11 @@ def main():
         p_head = doc.add_paragraph()
         run_src = p_head.add_run(f"{source}\n")
         set_font(run_src, bold=True)
-        add_hyperlink(p_head, url, f"{title}", bold=False)
+        if url:
+            add_hyperlink(p_head, url, f"{title}", bold=False)
+        else:
+            run_title = p_head.add_run(title)
+            set_font(run_title)
         p_head.add_run("\n")
         
         author_str = "By Staff"

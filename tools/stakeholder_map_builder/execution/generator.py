@@ -91,14 +91,18 @@ def discover_lda_actors(
     print(f"  LDA topic search: '{topic_query}'", file=sys.stderr)
     session = _lda_session()
 
+    params = {
+        "filing_specific_lobbying_issues": topic_query,
+        "ordering": "-dt_posted",
+        "page_size": min(max_results, 25),
+    }
+    if year:
+        params["filing_year"] = year
+
     try:
         resp = session.get(
             "https://lda.gov/api/v1/filings/",
-            params={
-                "filing_specific_lobbying_issues": topic_query,
-                "ordering": "-dt_posted",
-                "page_size": min(max_results, 25),
-            },
+            params=params,
             timeout=15,
         )
         resp.raise_for_status()

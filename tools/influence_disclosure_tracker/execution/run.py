@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 import os
+import sys
+
+EXEC_DIR = os.path.dirname(os.path.abspath(__file__))
+if EXEC_DIR not in sys.path:
+    sys.path.insert(0, EXEC_DIR)
+
 import argparse
 from io_utils import IOUtils
 from lda_client import LDAClient

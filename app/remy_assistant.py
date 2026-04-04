@@ -7,8 +7,10 @@ and execute the toolkit's existing tools through their CLI entry points.
 
 from __future__ import annotations
 
+import csv
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -178,11 +180,16 @@ def chat_with_remy(
     model: str = "gpt-4o-mini",
 ) -> dict[str, Any]:
     """Run one assistant turn, allowing tool calls against the toolkit."""
-    from openai import OpenAI
-
     history = history or []
     uploaded_files = uploaded_files or []
     catalog = load_tool_catalog()
+
+    fast_path = _maybe_autorun_tool(user_message, history, catalog, uploaded_files)
+    if fast_path:
+        return fast_path
+
+    from openai import OpenAI
+
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
     messages: list[dict[str, Any]] = [
@@ -235,6 +242,25 @@ def chat_with_remy(
         "text": "I hit the tool-calling limit before producing a final answer. Ask again with a narrower request.",
         "tool_events": tool_events,
     }
+
+
+def _maybe_autorun_tool(
+    user_message: str,
+    history: list[dict[str, Any]],
+    catalog: list[dict[str, Any]],
+    uploaded_files: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    disclosure_args = _parse_disclosure_query(user_message)
+    if not disclosure_args:
+        disclosure_args = _parse_confirmation_from_history(user_message, history)
+
+    if disclosure_args:
+        result = _run_tool("influence_disclosure_tracker", disclosure_args, catalog, uploaded_files)
+        return {
+            "text": _compose_disclosure_response(result, disclosure_args),
+            "tool_events": [result],
+        }
+    return None
 
 
 def _tool_schemas(catalog: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1085,6 +1111,265 @@ def _infer_tool_details_from_text(text: str, catalog: list[dict[str, Any]]) -> l
         elif tool["id"].replace("_", " ") in lowered:
             matches.append(_get_tool_details(tool["id"], catalog))
     return matches[:2]
+
+
+def _parse_disclosure_query(user_message: str) -> dict[str, Any] | None:
+    text = " ".join(user_message.strip().split())
+    lowered = text.lower()
+
+    if "lobby" not in lowered:
+        return None
+
+    entity = None
+    patterns = [
+        r"(?:can you please\s+|please\s+|hi remy,?\s+|remy,?\s+|look\s+|find out\s+|tell me\s+)?how much\s+(?P<entity>.+?)\s+spent\b",
+        r"what did\s+(?P<entity>.+?)\s+spend\b",
+        r"how much lobbying did\s+(?P<entity>.+?)\s+do",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            entity = match.group("entity")
+            break
+
+    period = _parse_quarter_range(text)
+    if not entity or not period:
+        return None
+
+    return {
+        "entities": _clean_entity_name(entity),
+        "from_date": period["from_date"],
+        "to_date": period["to_date"],
+        "sources": ["lda"],
+        "mode": "basic",
+    }
+
+
+def _parse_confirmation_from_history(
+    user_message: str,
+    history: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    lowered = user_message.strip().lower()
+    if lowered not in {
+        "yes",
+        "yes.",
+        "yes, proceed",
+        "yes, proceed.",
+        "yes, proceed with those inputs",
+        "yes, proceed with those inputs.",
+        "proceed",
+        "proceed.",
+        "go ahead",
+        "go ahead.",
+    }:
+        return None
+
+    for item in reversed(history):
+        if item.get("role") != "assistant":
+            continue
+        content = item.get("content") or ""
+        entity_match = re.search(r'Entities:\s*"([^"]+)"', content, flags=re.IGNORECASE)
+        from_match = re.search(r'From date:\s*"(\d{4}-\d{2}-\d{2})"', content, flags=re.IGNORECASE)
+        to_match = re.search(r'To date:\s*"(\d{4}-\d{2}-\d{2})"', content, flags=re.IGNORECASE)
+        if entity_match and from_match and to_match:
+            return {
+                "entities": entity_match.group(1).strip(),
+                "from_date": from_match.group(1),
+                "to_date": to_match.group(1),
+                "sources": ["lda"],
+                "mode": "basic",
+            }
+    return None
+
+
+def _parse_quarter_range(text: str) -> dict[str, str] | None:
+    quarter_match = re.search(r"\bq([1-4])\s*(20\d{2})\b", text, flags=re.IGNORECASE)
+    if quarter_match:
+        quarter = int(quarter_match.group(1))
+        year = int(quarter_match.group(2))
+        return _quarter_to_dates(year, quarter)
+
+    named_match = re.search(
+        r"\b(first|1st|second|2nd|third|3rd|fourth|4th|four|last)\s+quarter\s+of\s+(20\d{2})\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if named_match:
+        quarter_token = named_match.group(1).lower()
+        year = int(named_match.group(2))
+        quarter_map = {
+            "first": 1,
+            "1st": 1,
+            "second": 2,
+            "2nd": 2,
+            "third": 3,
+            "3rd": 3,
+            "fourth": 4,
+            "4th": 4,
+            "four": 4,
+            "last": 4,
+        }
+        return _quarter_to_dates(year, quarter_map[quarter_token])
+
+    return None
+
+
+def _quarter_to_dates(year: int, quarter: int) -> dict[str, str]:
+    starts = {
+        1: (f"{year}-01-01", f"{year}-03-31"),
+        2: (f"{year}-04-01", f"{year}-06-30"),
+        3: (f"{year}-07-01", f"{year}-09-30"),
+        4: (f"{year}-10-01", f"{year}-12-31"),
+    }
+    from_date, to_date = starts[quarter]
+    return {"from_date": from_date, "to_date": to_date}
+
+
+def _clean_entity_name(value: str) -> str:
+    cleaned = re.sub(r"^(the)\s+", "", value.strip(), flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+in\s+the\s+.*$", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+on\s+lobbying.*$", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"[?.!,]+$", "", cleaned)
+    if cleaned.islower():
+        return cleaned.strip().title()
+    return cleaned.strip()
+
+
+def _compose_disclosure_response(result: dict[str, Any], arguments: dict[str, Any]) -> str:
+    entity = arguments["entities"]
+    from_date = arguments["from_date"]
+    to_date = arguments["to_date"]
+
+    if not result.get("ok"):
+        error = result.get("error") or result.get("stderr") or "unknown error"
+        return (
+            f"I tried to run the Influence Disclosure Tracker for {entity} from {from_date} through {to_date}, "
+            f"but it failed: {error}"
+        )
+
+    summary = _summarize_lda_filings(
+        result,
+        entity=entity,
+        filing_period=_filing_period_from_dates(from_date, to_date),
+    )
+    if not summary["rows"]:
+        return (
+            f"I ran the Influence Disclosure Tracker for {entity} from {from_date} through {to_date}, "
+            "but I did not find billable LDA filing rows with reported amounts in that range."
+        )
+
+    direct_lines = "\n".join(
+        f"- {name}: ${amount:,.0f}"
+        for name, amount in summary["direct_payers"]
+    )
+    response = (
+        f"I ran the Influence Disclosure Tracker for {entity} from {from_date} through {to_date}. "
+        f"For that quarter, the direct reported lobbying total tied to {entity} was ${summary['direct_total']:,.0f}.\n\n"
+        f"Who appears to have been paid directly by {entity} in the LDA filings:\n{direct_lines}"
+    )
+
+    if summary["indirect_payers"]:
+        indirect_lines = "\n".join(
+            f"- {name}: ${amount:,.0f}"
+            for name, amount in summary["indirect_payers"]
+        )
+        response += (
+            "\n\nThere is also an indirect/subcontractor filing that appears to sit on top of another firm's engagement:\n"
+            f"{indirect_lines}\n\n"
+            "I am not adding that indirect amount into the direct client-spend total to avoid double counting."
+        )
+
+    response += (
+        "\n\nThis is based on the underlying LDA filing data returned by the tool. "
+        "Treat it as medium-risk output and review the filings before external use."
+    )
+    return response
+
+
+def _summarize_lda_filings(
+    result: dict[str, Any],
+    entity: str,
+    filing_period: str | None,
+) -> dict[str, Any]:
+    lda_path = None
+    for artifact in result.get("artifacts", []):
+        if artifact["name"] == "lda_filings.csv":
+            lda_path = Path(artifact["path"])
+            break
+
+    if not lda_path or not lda_path.exists():
+        return {
+            "direct_total": 0.0,
+            "direct_payers": [],
+            "indirect_payers": [],
+            "rows": [],
+        }
+
+    rows = []
+    direct_totals: dict[str, float] = {}
+    indirect_totals: dict[str, float] = {}
+    entity_norm = _normalize_entity(entity)
+    with open(lda_path, encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            row_period = (row.get("filing_period") or "").strip().lower()
+            if filing_period and row_period != filing_period:
+                continue
+            amount_raw = (row.get("amount") or "").strip()
+            if not amount_raw:
+                continue
+            try:
+                amount = float(amount_raw)
+            except ValueError:
+                continue
+            if amount <= 0:
+                continue
+            rows.append(row)
+            registrant = (row.get("registrant_name") or "Unknown").strip()
+            client_name = (row.get("client_name") or "").strip()
+            client_norm = _normalize_entity(client_name)
+            if entity_norm and entity_norm == client_norm:
+                direct_totals[registrant] = direct_totals.get(registrant, 0.0) + amount
+            else:
+                indirect_totals[registrant] = indirect_totals.get(registrant, 0.0) + amount
+
+    direct_payers = sorted(direct_totals.items(), key=lambda item: item[1], reverse=True)
+    indirect_payers = sorted(indirect_totals.items(), key=lambda item: item[1], reverse=True)
+    direct_total = sum(amount for _, amount in direct_payers)
+    return {
+        "direct_total": direct_total,
+        "direct_payers": direct_payers,
+        "indirect_payers": indirect_payers,
+        "rows": rows,
+    }
+
+
+def _filing_period_from_dates(from_date: str, to_date: str) -> str | None:
+    if len(from_date) != 10 or len(to_date) != 10:
+        return None
+    year = from_date[:4]
+    quarter_map = {
+        (f"{year}-01-01", f"{year}-03-31"): "first_quarter",
+        (f"{year}-04-01", f"{year}-06-30"): "second_quarter",
+        (f"{year}-07-01", f"{year}-09-30"): "third_quarter",
+        (f"{year}-10-01", f"{year}-12-31"): "fourth_quarter",
+    }
+    return quarter_map.get((from_date, to_date))
+
+
+def _normalize_entity(value: str) -> str:
+    normalized = value.upper()
+    normalized = normalized.replace(",", " ")
+    normalized = normalized.replace(".", " ")
+    normalized = normalized.replace("LLC", " ")
+    normalized = normalized.replace("INC", " ")
+    normalized = normalized.replace("CORP", " ")
+    normalized = normalized.replace("CORPORATION", " ")
+    normalized = normalized.replace("COMPANY", " ")
+    normalized = normalized.replace("PBC", " ")
+    normalized = normalized.replace("ON BEHALF OF", " ")
+    normalized = " ".join(normalized.split())
+    return normalized.strip()
 
 
 def _normalize_history(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
