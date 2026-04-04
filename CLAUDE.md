@@ -103,58 +103,36 @@ Spawn review and QA in parallel when reviewing independent files.
 ## Project State
 <!-- Updated by /handoff skill — keeps session context across conversations -->
 
-**Last session:** 2026-04-01 (uncommitted changes — commit before next session)
+**Last session:** 2026-04-03
 
-**Tools built (9):** unchanged — see previous entries.
+**Tools built (10):** Media Clips, Media Clip Cleaner, Disclosure Tracker, Hearing Memo, Legislative Tracker, Messaging Matrix, Stakeholder Briefing, Media List Builder, Stakeholder Map Builder, Background Memo Generator
+
+**App assistant:** Remy (`app/pages/0_Remy.py` + `app/remy_assistant.py`) — tool-aware in-app PA assistant. Routes work, collects missing inputs, executes toolkit tools via OpenAI function-calling loop. Not a tool; not in tool-registry.yaml.
 
 **What was done this session:**
 
-*Disclosure Tracker (`tools/influence_disclosure_tracker/execution/report.py`):*
-- Removed explanatory sentences from Schedule C and Schedule I sections (user found them unnecessary)
-- Added note when Filing History is empty: IRS 990s lag 1-3 years, advises trying earlier years
+*Background Memo Generator — polished (2026-04-02):*
+- `execution/research.py` — GNews → `googlenewsdecoder` → trafilatura pipeline; up to 5 articles × 3000 chars each
+- `execution/generator.py` — rewrote system prompt for house style; added `research_context` and `disclosure_context` params; auto-appends lobbying section when LDA/FARA filings found
+- `execution/export.py` — renamed "Relevant Links" → "Links"; removed unused imports
+- `app/pages/9_Background_Memo.py` — disclosure auto-runs all years; file upload (PDF/DOCX/TXT/MD); web research step
+- Bug fix: disclosure tracker path fixed with `Path.rglob("report.md")`
 
-*Media List Builder:*
-- `tools/media_list_builder/execution/generator.py` — strengthened system prompt: podcasts must be policy-focused (named examples: Eye on AI, Hard Fork, Big Technology Podcast); `outlet_website` added to JSON schema with `https://` prefix; `previous_story_url` must be full URL or empty string
-- `tools/media_list_builder/execution/export.py` — split "Previous Coverage" into two columns: "Previous Story" + "Story URL"; added "Website" column
-- `app/pages/7_Media_List_Builder.py` (was 8) — added `_fix_url()` normalizer (adds `https://`, strips blanks/placeholders); `outlet_website` and `previous_story_url` rendered as `st.column_config.LinkColumn`
-
-*App shell — page renumbering:*
-- Literature Review moved from `5_` to `99_` (appears after all tools in sidebar)
-- Tools renumbered: Messaging Matrix=5, Stakeholder Briefing=6, Media List Builder=7, Stakeholder Map Builder=8
-- `app/shared.py` — sidebar now has "Tools" and "Reference" headings; Literature Review under Reference
-- `app/streamlit_app.py` — added Reference section with Literature Review card; fixed TOOL_PAGES for all 9 tools (was missing 3)
-
-*Stakeholder Map Builder — network analysis upgrade (Varone et al. 2016):*
-- `tools/stakeholder_map_builder/execution/analytics.py` — **new file**: computes degree centrality, betweenness centrality, greedy modularity communities, broker identification (actors bridging proponent+opponent sides), multi-venue detection, deterministic strategic summary
-- `tools/stakeholder_map_builder/execution/graph.py` — broker nodes now get gold border (thickness ∝ betweenness, capped 6px); centrality shown in hover; legend annotation updated
-- `tools/stakeholder_map_builder/execution/generator.py` — secondary dedup by normalized name (merges client_X + lobbyist_X same org); classification prompt now allows LLM to use known policy positions (reduces "Unknown" classifications); issue_areas trimmed to 2 (was 1)
-- `app/pages/8_Stakeholder_Map_Builder.py` — calls `analytics.py` after `build_map()`; new "🔬 Network Analysis" tab (tab 2 of 6): metrics row, bridge actors table, centrality rankings (betweenness vs degree), structural communities, multi-venue actors, strategic summary; betweenness + degree + community columns added to Proponents/Opponents/All Actors tabs
-
-**Uncommitted files (all need to be committed):**
-- `app/pages/5_Messaging_Matrix.py` (renamed from 6)
-- `app/pages/6_Stakeholder_Briefing.py` (renamed from 7)
-- `app/pages/7_Media_List_Builder.py` (renamed from 8, modified)
-- `app/pages/8_Stakeholder_Map_Builder.py` (renamed from 9, modified)
-- `app/pages/99_Literature_Review.py` (renamed from 5)
-- `app/shared.py` (modified)
-- `app/streamlit_app.py` (modified)
-- `tools/influence_disclosure_tracker/execution/report.py` (modified)
-- `tools/media_list_builder/execution/export.py` (modified)
-- `tools/media_list_builder/execution/generator.py` (modified)
-- `tools/stakeholder_map_builder/execution/analytics.py` (new)
-- `tools/stakeholder_map_builder/execution/generator.py` (modified)
-- `tools/stakeholder_map_builder/execution/graph.py` (modified)
+*Remy — new in-app assistant (2026-04-03):*
+- `app/pages/0_Remy.py` — Streamlit chat UI; page `0_` prefix puts it first in sidebar
+- `app/remy_assistant.py` — OpenAI function-calling loop; loads tool catalog from `tool-registry.yaml`; dispatches to tool CLI entry points; returns text + tool_events with artifact download links
+- `app/shared.py` — sidebar updated to include Remy (page 0) and Background Memo (page 9)
+- `app/streamlit_app.py` — home page updated: Remy featured at top, tool catalog grid updated
 
 **Next priorities:**
-1. Commit all uncommitted changes above
-2. End-to-end test Stakeholder Map Builder with "AI safety regulation" — verify Network Analysis tab renders, broker actors appear with gold border, strategic summary is coherent
-3. End-to-end test Media List Builder — verify podcast results are policy-specific, website + story URLs are clickable
+1. End-to-end test Background Memo Generator with "Institut Macaya" — verify disclosure section appears with TSG Advocates DC, $90k
+2. End-to-end test with "Jagello 2000" — verify web research produces specific content
+3. Test Remy end-to-end: tool routing, input collection, execution
 4. Polish and test remaining tools before Apr 26 final submission
-5. Optional: Crisis Response Brief (highest-value remaining tool)
 
 **Known issues:**
-- Stakeholder Map Builder: "Unknown" stance still common for lobbyist firms (by design — firms classified unknown, clients classified by known position)
-- Media List Builder: LLM may still omit `outlet_website` for some contacts; `_fix_url()` in page 7 handles missing protocol
-- IRS 990 Filing History empty when searching current year (2025/2026) — by design, IRS 990s lag 1-3 years
-- Streamlit entry: `streamlit run app/streamlit_app.py` from `toolkit/` root
-- `youtube-transcript-api` v1.x: `YouTubeTranscriptApi().fetch(video_id, languages=['en'])`
+- Background Memo: GNews may return few results for niche subjects — file upload is the fallback
+- Background Memo: Disclosure section only added if LDA/FARA filings found
+- Stakeholder Map Builder: Network Analysis still untested end-to-end
+- IRS 990 Filing History empty for current year (by design — 1-3 year lag)
+- Streamlit entry: `python3 -m streamlit run app/streamlit_app.py` from `toolkit/` root

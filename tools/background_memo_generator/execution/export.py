@@ -24,8 +24,6 @@ Structure:
 
 from datetime import date
 from docx import Document
-from docx.shared import Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 
 def _add_normal(doc: Document, text: str, bold: bool = False) -> None:
@@ -98,8 +96,8 @@ def export_docx(result: dict, output_path: str, memo_date: str = "") -> None:
 
         _add_blank(doc)
 
-    # ── Relevant Links ───────────────────────────────────────────────────────
-    _add_normal(doc, "Relevant Links")
+    # ── Links ─────────────────────────────────────────────────────────────────
+    _add_normal(doc, "Links")
     for link in result["links"]:
         label = link.get("label", "")
         url = link.get("url", "")

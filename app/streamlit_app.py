@@ -49,6 +49,14 @@ monitoring to hearing analysis to disclosure tracking. Built on the
 **DiGiacomo (2026)** framework for PA management.
 """)
 
+with st.container(border=True):
+    st.markdown("### 🎯 Remy")
+    st.markdown(
+        "Need a strategist before you need a tool? Remy is the in-app assistant that can route work, "
+        "collect missing inputs, explain outputs, and run supported toolkit tools."
+    )
+    st.page_link("pages/0_Remy.py", label="Open Remy", icon="➡️")
+
 # --- Key metrics ---
 tools = registry.get("tools", [])
 m1, m2, m3, m4 = st.columns(4)
