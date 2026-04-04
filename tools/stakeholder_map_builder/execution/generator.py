@@ -618,8 +618,10 @@ def build_map(
     print(f"  Classified {len(classified_actors)} actors", file=sys.stderr)
 
     # Step 3: Extract and filter relationships
+    # Use raw_actors (canonical IDs, pre-LLM) — not classified_actors — so that
+    # LLM ID drift doesn't silently drop all edges.
     print("Step 3: Extracting relationships...", file=sys.stderr)
-    relationships = extract_relationships(lda_rels, leg_rels, classified_actors)
+    relationships = extract_relationships(lda_rels, leg_rels, raw_actors)
     print(f"  {len(relationships)} relationships retained", file=sys.stderr)
 
     # Sort actors: proponents → opponents → neutral → unknown, then high → low influence
