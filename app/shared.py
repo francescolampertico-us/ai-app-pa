@@ -100,6 +100,7 @@ def sidebar_nav():
     st.sidebar.markdown("**Tools**")
     st.sidebar.page_link("pages/1_Hearing_Memo.py", label="Hearing Memo", icon="📝")
     st.sidebar.page_link("pages/2_Media_Clips.py", label="Media Clips", icon="📰")
+    st.sidebar.page_link("pages/2b_Media_Clip_Cleaner.py", label="Clip Cleaner", icon="✂️")
     st.sidebar.page_link("pages/3_Disclosure_Tracker.py", label="Disclosure Tracker", icon="🔍")
     st.sidebar.page_link("pages/4_Legislative_Tracker.py", label="Legislative Tracker", icon="📜")
     st.sidebar.page_link("pages/5_Messaging_Matrix.py", label="Messaging Matrix", icon="📣")
