@@ -1,21 +1,49 @@
-.DS_Store
-tmp/
+# ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
+*.pyo
 .env
-output/
+.venv/
+venv/
+
+# ── Node / Vite ───────────────────────────────────────────────────────────────
+node_modules/
+web-app/dist/
+
+# ── FastAPI runtime ───────────────────────────────────────────────────────────
+fastapi-backend/jobs_output/
+fastapi-backend/.venv/
+
+# ── Tool caches & temp output ─────────────────────────────────────────────────
 .cache/
-tools/hearing_memo_tool_package/eval/runs/
-tools/hearing_memo_tool_package/baseline/*.zip
-tools/hearing_memo_tool_package/ANTIGRAVITY_*.md
-tools/hearing_memo_tool_package/baseline/
-tools/hearing_memo_tool_package/examples/final_outputs/
-tools/hearing_memo_tool_package/eval/inputs/*
-!tools/hearing_memo_tool_package/eval/inputs/README.md
-tools/hearing_memo_tool_package/eval/reference_memos/*.docx
-tools/hearing_memo_tool_package/transcripts/*.pdf
-tools/legislative_tracker/execution/.tmp/
-tools/messaging_matrix/style_samples/*
-!tools/messaging_matrix/style_samples/README.md
-tools/background_memo_generator/examples/*
-!tools/background_memo_generator/examples/README.md
+toolkit/tools/legislative_tracker/execution/.cache/
+toolkit/tools/legislative_tracker/execution/.tmp/
+output/
+tmp/
+
+# ── Toolkit-specific exclusions ───────────────────────────────────────────────
+toolkit/tools/hearing_memo_generator/eval/runs/
+toolkit/tools/hearing_memo_generator/eval/inputs/*
+!toolkit/tools/hearing_memo_generator/eval/inputs/README.md
+toolkit/tools/hearing_memo_generator/baseline/
+toolkit/tools/hearing_memo_generator/examples/final_outputs/
+toolkit/tools/messaging_matrix/style_samples/*
+!toolkit/tools/messaging_matrix/style_samples/README.md
+toolkit/tools/background_memo_generator/examples/*
+!toolkit/tools/background_memo_generator/examples/README.md
+
+# ── OS & editor ──────────────────────────────────────────────────────────────
+.DS_Store
+.Rhistory
+*.swp
+
+# ── Nested repos (reference materials, not part of submission) ────────────────
+knowledge/
+literature_review/
+brand-toolkit/
+test/
+.agents/
+.cache/
+.Rhistory
+.mcp.json
+.claudeignore

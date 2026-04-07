@@ -1,0 +1,28 @@
+{
+    "entities": [
+        "Microsoft"
+    ],
+    "from_date": "",
+    "to_date": "",
+    "filing_years": [
+        2025
+    ],
+    "filing_periods": [
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q4"
+    ],
+    "sources": [
+        "lda"
+    ],
+    "mode": "basic",
+    "search_field": "client",
+    "fuzzy_threshold": 85.0,
+    "max_results": 500,
+    "formats": [
+        "csv",
+        "md"
+    ],
+    "dry_run": false
+}

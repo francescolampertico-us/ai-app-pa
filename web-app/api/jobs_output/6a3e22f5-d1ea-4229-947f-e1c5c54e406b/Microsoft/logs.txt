@@ -1,0 +1,22 @@
+[2026-04-06 06:10:30] [INFO] Starting Influence Disclosure Tracker (Log Level: INFO)
+[2026-04-06 06:10:30] [INFO] Starting LDA search for entity: Microsoft (year=2025)
+[2026-04-06 06:10:30] [DEBUG] Query variations: ['Microsoft', 'MICROSOFT']
+[2026-04-06 06:10:32] [INFO] Fetching LDA: https://lda.gov/api/v1/filings/?client_name=Microsoft&ordering=-dt_posted&filing_year=2025
+[2026-04-06 06:10:34] [INFO] Fetching LDA: https://lda.gov/api/v1/filings/?client_name=Microsoft&filing_year=2025&ordering=-dt_posted&page=2
+[2026-04-06 06:10:37] [INFO] Fetching LDA: https://lda.gov/api/v1/filings/?client_name=Microsoft&filing_year=2025&ordering=-dt_posted&page=3
+[2026-04-06 06:10:40] [INFO] Fetching LDA: https://lda.gov/api/v1/filings/?client_name=Microsoft&filing_year=2025&ordering=-dt_posted&page=4
+[2026-04-06 06:10:42] [INFO] Fetching LDA: https://lda.gov/api/v1/filings/?registrant_name=Microsoft&ordering=-dt_posted&filing_year=2025
+[2026-04-06 06:10:44] [INFO] Fetching LDA: https://lda.gov/api/v1/filings/?client_name=MICROSOFT&ordering=-dt_posted&filing_year=2025
+[2026-04-06 06:10:46] [INFO] Fetching LDA: https://lda.gov/api/v1/filings/?client_name=MICROSOFT&filing_year=2025&ordering=-dt_posted&page=2
+[2026-04-06 06:10:48] [INFO] Fetching LDA: https://lda.gov/api/v1/filings/?client_name=MICROSOFT&filing_year=2025&ordering=-dt_posted&page=3
+[2026-04-06 06:10:51] [INFO] Fetching LDA: https://lda.gov/api/v1/filings/?client_name=MICROSOFT&filing_year=2025&ordering=-dt_posted&page=4
+[2026-04-06 06:10:53] [INFO] Fetching LDA: https://lda.gov/api/v1/filings/?registrant_name=MICROSOFT&ordering=-dt_posted&filing_year=2025
+[2026-04-06 06:10:54] [INFO] LDA search complete for 'Microsoft': 88 matched filings.
+[2026-04-06 06:10:54] [INFO] Flushing datasets to CSV...
+[2026-04-06 06:10:54] [INFO] Wrote 88 rows to master_results.csv
+[2026-04-06 06:10:54] [INFO] Wrote 88 rows to lda_filings.csv
+[2026-04-06 06:10:54] [INFO] Wrote 256 rows to lda_issues.csv
+[2026-04-06 06:10:54] [INFO] Wrote 286 rows to lda_lobbyists.csv
+[2026-04-06 06:10:54] [INFO] Generating Markdown Report...
+[2026-04-06 06:10:54] [INFO] Report saved to /Users/francescolampertico/Desktop/capstone_project/web-app/api/jobs_output/6a3e22f5-d1ea-4229-947f-e1c5c54e406b/Microsoft/report.md
+[2026-04-06 06:10:54] [INFO] Run completed successfully.
