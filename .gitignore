@@ -47,3 +47,4 @@ test/
 .Rhistory
 .mcp.json
 .claudeignore
+web-app/api/
