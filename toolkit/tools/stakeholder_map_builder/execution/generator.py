@@ -1,8 +1,8 @@
 """
-Stakeholder Map Builder — Generator
-=====================================
+Stakeholder Map — Generator
+===========================
 Four-step pipeline:
-  Step 1 — Discover actors: LDA topic search + LegiScan bill sponsors + GNews context
+  Step 1 — Discover actors: LegiScan bill sponsors + LDA topic search + supplemental news/web context
   Step 2 — Classify actors: gpt-4.1 infers stance, type, and influence from discovered data
   Step 3 — Extract relationships: lobbies-for (LDA) + co-sponsors (LegiScan)
   Step 4 — Assemble and sort the final result
@@ -514,91 +514,6 @@ def discover_brave_context(policy_issue: str, max_results: int = 8) -> list[str]
             print(f"  Brave supplemental context search error for '{query}': {exc}", file=sys.stderr)
     print(f"  Brave: {len(snippets)} supplemental web context items", file=sys.stderr)
     return snippets[:12]
-
-
-BRAVE_ACTOR_SYSTEM = """You are helping expand a stakeholder map with supplemental web discovery.
-
-Use the provided Brave search snippets to identify 0-6 additional actors that appear relevant to the issue and are not already in the structured-source actor list.
-
-Rules:
-- Treat Brave results as supplemental discovery and corroboration only.
-- Prefer actors tied to testimony, coalition membership, public statements, comment letters, reports, or issue pages.
-- Do not repeat actors already discovered from structured sources.
-- Do not invent organizations not grounded in the snippets.
-- Return only actors that look materially relevant to the issue.
-
-Return ONLY JSON:
-{
-  "actors": [
-    {
-      "name": "Actor name",
-      "type": "legislator|lobbyist|corporation|nonprofit|coalition|other",
-      "evidence": "Short snippet-backed reason this actor appears relevant"
-    }
-  ]
-}"""
-
-
-def discover_brave_actors(
-    client: OpenAI,
-    policy_issue: str,
-    existing_names: set[str],
-    brave_snippets: list[str],
-) -> list[dict]:
-    if not brave_snippets:
-        return []
-
-    prompt = (
-        f"Policy issue: {policy_issue}\n\n"
-        f"Existing actors to avoid duplicating:\n{', '.join(sorted(existing_names)[:80])}\n\n"
-        "Brave search snippets:\n"
-        + "\n".join(f"- {snippet}" for snippet in brave_snippets[:12])
-    )
-    try:
-        response = client.chat.completions.create(
-            model=_active_model(MODEL),
-            messages=[
-                {"role": "system", "content": BRAVE_ACTOR_SYSTEM},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.2,
-            **_response_format_kwarg(),
-        )
-        data = _parse_json_content(response.choices[0].message.content)
-        nominees = data.get("actors", [])
-    except Exception as exc:
-        print(f"  Brave actor extraction failed: {exc}", file=sys.stderr)
-        return []
-
-    discovered = []
-    norm_existing = {_normalize_name(name) for name in existing_names}
-    for actor in nominees:
-        name = str(actor.get("name", "")).strip()
-        if not name:
-            continue
-        norm = _normalize_name(name)
-        if norm in norm_existing:
-            continue
-        discovered.append({
-            "id": _make_id(name, "web"),
-            "name": name,
-            "organization": name,
-            "type": actor.get("type", "other"),
-            "stakeholder_type": actor.get("type", "other"),
-            "lda_amount": None,
-            "issue_areas": [],
-            "source": "brave",
-            "source_names": ["brave"],
-            "source_types": ["Web source"],
-            "source_labels": ["Web source"],
-            "source_summary": "Web source",
-            "observed_evidence": actor.get("evidence", ""),
-            "evidence": actor.get("evidence", ""),
-        })
-        norm_existing.add(norm)
-
-    print(f"  Brave: discovered {len(discovered)} supplemental actors", file=sys.stderr)
-    return discovered[:6]
 
 
 # ---------------------------------------------------------------------------
@@ -1263,17 +1178,17 @@ def build_map(
         client_kwargs["base_url"] = base_url
     client = OpenAI(**client_kwargs)
 
-    # Step 1: Discover actors from all sources
-    print("Step 1a: Generating LDA search queries...", file=sys.stderr)
+    # Step 1: Discover actors from structured sources first
+    print("Step 1a: Discovering legislative actors...", file=sys.stderr)
+    leg_state = state if scope == "state" else "US"
+    leg_actors, leg_rels = discover_legislative_actors(policy_issue, state=leg_state, year=year)
+
+    print("Step 1b: Generating LDA search queries...", file=sys.stderr)
     lda_queries = generate_lda_queries(client, policy_issue)
     print(f"  Queries: {lda_queries}", file=sys.stderr)
 
-    print("Step 1b: Discovering LDA actors...", file=sys.stderr)
+    print("Step 1c: Discovering LDA actors...", file=sys.stderr)
     lda_actors, lda_rels = discover_lda_actors(lda_queries, year=year)
-
-    print("Step 1c: Discovering legislative actors...", file=sys.stderr)
-    leg_state = state if scope == "state" else "US"
-    leg_actors, leg_rels = discover_legislative_actors(policy_issue, state=leg_state, year=year)
 
     print("Step 1d: Fetching news context...", file=sys.stderr)
     news_snippets = discover_news_snippets(policy_issue)

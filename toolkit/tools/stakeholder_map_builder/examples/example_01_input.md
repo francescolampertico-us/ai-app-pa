@@ -3,7 +3,6 @@
 ```
 policy_issue: "artificial intelligence regulation"
 scope: federal
-year: null
 include_types: null
 ```
 

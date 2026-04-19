@@ -1,6 +1,6 @@
 """
-Stakeholder Map Builder — Network Analytics
-============================================
+Stakeholder Map — Network Analytics
+===================================
 Computes Social Network Analysis metrics per the Varone, Ingold & Jourdain (2016)
 framework: "Studying Policy Advocacy Through Social Network Analysis."
 

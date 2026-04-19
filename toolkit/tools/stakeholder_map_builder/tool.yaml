@@ -1,16 +1,16 @@
 id: stakeholder_map_builder
-name: Stakeholder Map Builder
+name: Stakeholder Map
 version: 0.1.0
 risk_level: yellow
 digiacomo_process: "#2 Stakeholder Analysis"
 
 description: >
-  Discovers and classifies policy actors around a given issue. Pulls lobbying
-  registrants and clients from LDA filings, bill sponsors from LegiScan, and
-  news context from Google News. Uses gpt-4o to classify each actor by stance
-  (proponent/opponent/neutral/unknown), stakeholder type, and influence tier.
-  Extracts structural relationships (lobbies-for, co-sponsors) and renders an
-  interactive Plotly network graph alongside Excel and DOCX exports.
+  Discovers and classifies policy actors around a given issue. Uses LegiScan
+  bill sponsors and LDA filings as the structured backbone, with news and
+  supplemental web context to strengthen evidence. Classifies each actor by
+  stance (proponent/opponent/neutral/unknown), stakeholder type, and influence
+  tier. Extracts structural relationships (lobbies-for, co-sponsors) and
+  renders an interactive Plotly network graph alongside Excel and DOCX exports.
 
 inputs:
   required:
@@ -18,7 +18,6 @@ inputs:
   optional:
     - scope              # "federal" (default) or "state"
     - state              # 2-letter code (required when scope=state)
-    - year               # 4-digit year filter
     - include_types      # list: legislators, lobbyists, corporations, nonprofits
 
 outputs:
@@ -41,10 +40,11 @@ execution:
     - python-dotenv
     - requests
   environment:
-    - "OPENAI_API_KEY: Required — gpt-4o classification"
+    - "OPENAI_API_KEY: Required — actor classification and strategic analysis"
     - "LEGISCAN_API_KEY: Required for legislator discovery (free at legiscan.com)"
+    - "BRAVE_SEARCH_API_KEY: Optional — supplemental public web evidence/context"
   models:
-    - "gpt-4o: Actor classification, stance analysis, strategic notes"
+    - "ChangeAgent: Actor classification, stance analysis, strategic notes"
 
 risk_notes:
   - "Stance is LLM-inferred from limited public evidence — treat as hypothesis, not fact."

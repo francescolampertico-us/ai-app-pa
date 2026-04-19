@@ -1,6 +1,6 @@
 """
-Stakeholder Map Builder — CLI Entry Point
-==========================================
+Stakeholder Map — CLI Entry Point
+=================================
 Usage:
   python3 execution/run.py --policy_issue "artificial intelligence regulation"
   python3 execution/run.py --policy_issue "clean energy tax credits" --scope state --state TX
@@ -29,7 +29,7 @@ def main():
 Examples:
   python3 execution/run.py --policy_issue "AI regulation"
   python3 execution/run.py --policy_issue "clean energy" --scope state --state TX
-  python3 execution/run.py --policy_issue "drug pricing" --year 2024 --out ./output
+  python3 execution/run.py --policy_issue "drug pricing" --out ./output
         """,
     )
     parser.add_argument(
@@ -43,10 +43,6 @@ Examples:
     parser.add_argument(
         "--state", default="US",
         help="Two-letter state code (only used when --scope state, e.g., TX, CA)",
-    )
-    parser.add_argument(
-        "--year", type=int, default=None,
-        help="Filter to a specific year (default: current year from APIs)",
     )
     parser.add_argument(
         "--include_types", nargs="+",
@@ -75,8 +71,6 @@ Examples:
 
     print(f"\nBuilding stakeholder map for: '{args.policy_issue}'", file=sys.stderr)
     print(f"Scope: {args.scope.title()}{' (' + args.state + ')' if args.scope == 'state' else ''}", file=sys.stderr)
-    if args.year:
-        print(f"Year filter: {args.year}", file=sys.stderr)
     print("", file=sys.stderr)
 
     # Add execution dir to path
@@ -92,7 +86,6 @@ Examples:
             policy_issue=args.policy_issue,
             scope=args.scope,
             state=args.state,
-            year=args.year,
             include_types=args.include_types,
         )
     except ValueError as e:

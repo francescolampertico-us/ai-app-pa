@@ -1,4 +1,4 @@
-# Stakeholder Map Builder — Specification
+# Stakeholder Map — Specification
 
 ## Purpose
 
@@ -27,7 +27,6 @@ Implements DiGiacomo (2025) **#2 Stakeholder Analysis** — the systematic ident
 | `policy_issue` | Yes | The issue to map. Use 2-4 word phrases for best results: "AI regulation", "drug pricing reform", "clean energy tax credits". Avoid proper bill names (LegiScan searches by keyword, not bill number). |
 | `scope` | No | `federal` (default) or `state`. If `state`, also provide `state`. |
 | `state` | No | Two-letter state code (e.g., `TX`, `CA`). Only used when `scope=state`. |
-| `year` | No | Filter LDA/LegiScan to a specific year. Default: current results from APIs. |
 | `include_types` | No | Filter to actor types: `legislators`, `lobbyists`, `corporations`, `nonprofits`. Default: all types included. |
 
 ---
@@ -67,11 +66,12 @@ Full structured result including all actor dicts and relationship dicts.
 
 | Source | What it finds | Relationship extracted |
 |--------|--------------|----------------------|
-| **LDA** (`filing_specific_lobbying_issues`) | Lobbying firms + their clients actively lobbying on the issue | lobbies-for (registrant → client) |
 | **LegiScan** (`getSearch`) | Bill primary sponsors and co-sponsors | co-sponsors (legislator ↔ legislator) |
+| **LDA** (`filing_specific_lobbying_issues`) | Lobbying firms + their clients actively lobbying on the issue | lobbies-for (registrant → client) |
 | **GNews** | News headlines — used as context for LLM classification only | None |
+| **Brave Search** | Supplemental public issue pages, testimony, coalition, report, and statement evidence | None |
 
-Actor cap: 50 total (all legislators + top LDA actors by spend).
+Actor cap: 50 total (up to 20 legislators + up to 30 non-legislative actors).
 
 ---
 
@@ -83,7 +83,7 @@ Actor cap: 50 total (all legislators + top LDA actors by spend).
 | **No actor profiles** | Actors are classified from LDA/LegiScan data only — no individual deep profiles. For a profile, run Stakeholder Briefing. |
 | **Stance is inferred** | The LLM classifies stance based on indirect evidence (what issues they lobby, which bills they sponsor). "Unknown" is the honest answer when evidence is thin. |
 | **LegiScan requires API key** | Without `LEGISCAN_API_KEY`, legislators will not appear in the map. Get a free key at legiscan.com. |
-| **News context only** | GNews results are used as classification context, not structured data. Actors mentioned only in news do not appear as nodes. |
+| **News/web context only** | GNews and Brave Search are used as supplemental classification context and evidence support, not as the actor-discovery backbone. |
 | **Max 50 actors** | For performance and LLM context window reasons. Very large issues (e.g., "healthcare") may be under-represented. |
 | **FARA not included** | Foreign agent disclosures are not searched in this tool (use Influence Disclosure Tracker for FARA). |
 
