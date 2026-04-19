@@ -493,7 +493,7 @@ def _handle_hearing_memo(job_id: str, values: dict[str, list[str]], uploads: lis
 
     cmd = [
         sys.executable,
-        str(TOOLS_ROOT / "hearing_memo_generator" / "execution" / "run.py"),
+        str(TOOLS_ROOT / "hearing_memo" / "execution" / "run.py"),
         "--input",
         str(source_path),
         "--output",
@@ -522,7 +522,7 @@ def _handle_hearing_memo(job_id: str, values: dict[str, list[str]], uploads: lis
     proc = _run_command(
         job_id,
         cmd,
-        TOOLS_ROOT / "hearing_memo_generator",
+        TOOLS_ROOT / "hearing_memo",
         "Running hearing memo pipeline...",
         progress=20,
         timeout=600,

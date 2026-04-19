@@ -41,10 +41,10 @@ tools:
       format: csv + markdown
       artifacts: [master_results.csv, lda_*.csv, fara_*.csv, irs990_*.csv, report.md]
   - id: hearing_memo_generator
-    name: Congressional Hearing Memo Generator
+    name: Congressional Hearing Memo
     version: 1.0.0
     risk_level: yellow
-    path: tools/hearing_memo_generator
+    path: tools/hearing_memo
     frontend_path: /memos
     description: "Drafts house-style congressional hearing memos from transcripts with verification and DOCX export."
     inputs:

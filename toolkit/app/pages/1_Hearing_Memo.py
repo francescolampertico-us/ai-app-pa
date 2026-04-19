@@ -1,5 +1,5 @@
 """
-Hearing Memo Generator — Streamlit Page
+Hearing Memo — Streamlit Page
 ========================================
 Upload a congressional hearing transcript or paste a YouTube URL to get a professional hearing memo.
 """
@@ -14,15 +14,15 @@ from pathlib import Path
 
 # Add tool paths
 TOOLKIT_ROOT = Path(__file__).resolve().parent.parent.parent
-TOOL_ROOT = TOOLKIT_ROOT / "tools" / "hearing_memo_generator"
+TOOL_ROOT = TOOLKIT_ROOT / "tools" / "hearing_memo"
 sys.path.insert(0, str(TOOL_ROOT))
 sys.path.insert(0, str(TOOLKIT_ROOT / "app"))
 
-st.set_page_config(page_title="Hearing Memo Generator", page_icon="📝", layout="wide")
+st.set_page_config(page_title="Hearing Memo", page_icon="📝", layout="wide")
 
 from shared import page_header, demo_banner
 page_header(
-    title="Congressional Hearing Memo Generator",
+    title="Congressional Hearing Memo",
     icon="📝",
     version="1.0.0",
     risk="yellow",

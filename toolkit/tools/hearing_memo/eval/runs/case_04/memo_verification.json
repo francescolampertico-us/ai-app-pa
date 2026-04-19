@@ -1,0 +1,17 @@
+{
+  "verdict": "pass",
+  "flags": [
+    "OVERVIEW_SHORT: Overview is 70 words (target: 110–170)",
+    "OVERVIEW_TOO_GRANULAR: Overview mentions specific speakers: Ms. Gibson. Should stay high-level."
+  ],
+  "human_checks": [
+    "No opening statements detected — may need manual review",
+    "Hearing date not detected",
+    "Committee name not detected",
+    "Affiliation not detected for witness: Rosemary Gibson",
+    "Affiliation not detected for witness: Chan Harjivan",
+    "Affiliation not detected for witness: Rosemary Gibson",
+    "Affiliation not detected for witness: Gordon Chang",
+    "Affiliation not detected for witness: Ted Yoho"
+  ]
+}

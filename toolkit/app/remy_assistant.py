@@ -420,7 +420,7 @@ def _tool_schemas(catalog: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "type": "function",
                 "function": {
                     "name": "run_hearing_memo_generator",
-                    "description": "Run the Hearing Memo Generator tool on an uploaded transcript file.",
+                    "description": "Run the Hearing Memo tool on an uploaded transcript file.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -828,7 +828,7 @@ def _run_hearing_memo(arguments: dict[str, Any], uploaded_files: list[dict[str, 
     docx_path = outdir / "hearing_memo.docx"
     text_path = outdir / "hearing_memo.md"
     json_path = outdir / "hearing_memo_bundle.json"
-    script = TOOLKIT_ROOT / "tools" / "hearing_memo_generator" / "execution" / "run.py"
+    script = TOOLKIT_ROOT / "tools" / "hearing_memo" / "execution" / "run.py"
     cmd = [
         sys.executable,
         str(script),

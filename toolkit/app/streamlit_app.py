@@ -170,7 +170,7 @@ framework = [
      "Tools": "Influence Disclosure Tracker",
      "Status": "🟢 Built"},
     {"Process": "3. Briefing & Position Papers",
-     "Tools": "Hearing Memo Generator",
+     "Tools": "Hearing Memo",
      "Status": "🟢 Built"},
     {"Process": "4. Strategy Design",
      "Tools": "Messaging Matrix",

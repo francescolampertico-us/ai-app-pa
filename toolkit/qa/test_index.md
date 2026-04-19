@@ -4,7 +4,7 @@ This is the master board for canonical manual coverage. `Status` refers to overa
 
 | Tool | Test Pack | Smoke | Edge | Regression Placeholder | Last Run | Status |
 |---|---|---:|---:|---:|---|---|
-| Hearing Memo | [hearing_memo_generator.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/hearing_memo_generator.md) | Yes | Yes | Yes | Not run | Ready |
+| Hearing Memo | [hearing_memo.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/hearing_memo.md) | Yes | Yes | Yes | Not run | Ready |
 | Disclosure Tracker | [influence_disclosure_tracker.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/influence_disclosure_tracker.md) | Yes | Yes | Yes | Not run | Ready |
 | Media Clips | [media_clips.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/media_clips.md) | Yes | Yes | Yes | Not run | Ready |
 | Media List Builder | [media_list_builder.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/media_list_builder.md) | Yes | Yes | Yes | Not run | Ready |

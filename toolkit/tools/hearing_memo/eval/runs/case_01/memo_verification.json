@@ -1,0 +1,14 @@
+{
+  "verdict": "pass",
+  "flags": [
+    "OVERVIEW_SHORT: Overview is 75 words (target: 110–170)",
+    "OVERLONG: 'Senator Tommy Tuberville (R-AL)' is 243 words (target: 70–180)"
+  ],
+  "human_checks": [
+    "Date extracted from publication header; verify this is the hearing date",
+    "Affiliation not detected for witness: Ted Yoho",
+    "Affiliation not detected for witness: Gordon Chang",
+    "Affiliation not detected for witness: Rosemary Gibson",
+    "Affiliation not detected for witness: Chan Harjivan"
+  ]
+}

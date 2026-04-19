@@ -29,7 +29,7 @@ surfaces:
     title: Hearing Memo
     execute_endpoint: /api/tools/execute/hearing_memo_generator
     live_case_id: HM-SMK-01
-    test_case_path: toolkit/qa/test_cases/hearing_memo_generator.md
+    test_case_path: toolkit/qa/test_cases/hearing_memo.md
     helper_endpoints: []
     regressions: [REG-0001]
     test_ids:
