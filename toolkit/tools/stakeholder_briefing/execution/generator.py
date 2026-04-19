@@ -111,7 +111,7 @@ def fetch_news(stakeholder_name: str, meeting_purpose: str = "",
                 "description": a.get("description", ""),
             })
 
-        return results
+        return _filter_news_results(results, stakeholder_name, meeting_purpose, max_items=min(max_results, 5))
     except Exception as e:
         print(f"  News fetch error: {e}", file=sys.stderr)
         return []
@@ -166,7 +166,7 @@ def _lda_topic_search(meeting_purpose: str, max_results: int = 15) -> list[dict]
 
     try:
         resp = session.get(
-            "https://lda.gov/api/v1/filings/",
+            "https://lda.senate.gov/api/v1/filings/",
             params={
                 "filing_specific_lobbying_issues": topic_query,
                 "ordering": "-dt_posted",
@@ -262,6 +262,101 @@ def _meeting_terms(meeting_purpose: str) -> list[str]:
     return list(dict.fromkeys(terms))
 
 
+def _is_public_official_context(stakeholder_name: str, organization: str = "") -> bool:
+    """Detect elected/government stakeholders where entity disclosure lookups create noise."""
+    text = f"{stakeholder_name} {organization}".lower()
+    person_signals = {
+        "sen.", "senator", "rep.", "representative", "congressman", "congresswoman",
+        "delegate", "assemblymember", "assemblyman", "assemblywoman", "mayor",
+        "governor", "lt. governor", "lieutenant governor", "secretary", "commissioner",
+        "attorney general", "councilmember", "councilwoman", "councilman",
+    }
+    org_signals = {
+        "u.s. senate", "us senate", "senate", "house of representatives",
+        "u.s. house", "us house", "congress", "state senate", "state house",
+        "city council", "county board", "governor's office", "governor office",
+        "department of", "committee on", "committee for", "ministry of",
+    }
+    return any(signal in text for signal in person_signals | org_signals)
+
+
+def _entity_search_target(stakeholder_name: str, organization: str = "") -> str:
+    """Choose the best disclosure search target for non-government stakeholders."""
+    if _is_public_official_context(stakeholder_name, organization):
+        return stakeholder_name
+    return organization if organization else stakeholder_name
+
+
+def _meeting_needs_topic_disclosures(meeting_purpose: str) -> bool:
+    """Only use topic-LDA when the meeting objective actually calls for lobbying intel."""
+    if not meeting_purpose:
+        return False
+    purpose = meeting_purpose.lower()
+    disclosure_signals = {
+        "lobby", "lobbying", "lobbied", "filing", "filings", "lda", "fara",
+        "disclosure", "influence", "advocacy landscape", "who is backing",
+        "who's backing", "who is opposing", "who's opposing", "outside pressure",
+        "trade association", "industry push", "coalition map", "stakeholder map",
+    }
+    return any(signal in purpose for signal in disclosure_signals)
+
+
+def _score_news_item(article: dict, stakeholder_name: str, meeting_terms: list[str]) -> int:
+    haystack = " ".join([
+        str(article.get("title", "")),
+        str(article.get("description", "")),
+        str(article.get("source", "")),
+    ]).lower()
+
+    score = 0
+    stakeholder_bits = [part.lower() for part in stakeholder_name.split() if len(part) > 2]
+    if stakeholder_bits and any(bit in haystack for bit in stakeholder_bits):
+        score += 2
+
+    for term in meeting_terms:
+        if term in haystack:
+            score += 3 if len(term) > 4 else 1
+
+    # Down-rank generic appearance coverage that does not advance the meeting objective.
+    generic_media_signals = {
+        "interview", "appearance", "podcast", "panel", "conference", "summit",
+        "event", "speech", "keynote", "remarks", "fox news", "cnn", "msnbc",
+    }
+    if any(signal in haystack for signal in generic_media_signals):
+        score -= 1
+
+    return score
+
+
+def _filter_news_results(news: list[dict], stakeholder_name: str,
+                         meeting_purpose: str, max_items: int = 5) -> list[dict]:
+    """Keep only news items that are clearly useful for the meeting objective."""
+    if not news:
+        return []
+
+    meeting_terms = _meeting_terms(meeting_purpose)
+    if not meeting_terms:
+        return news[:max_items]
+
+    scored = []
+    for article in news:
+        enriched = dict(article)
+        enriched["_relevance_score"] = _score_news_item(article, stakeholder_name, meeting_terms)
+        scored.append(enriched)
+
+    scored.sort(key=lambda item: item.get("_relevance_score", 0), reverse=True)
+    filtered = [item for item in scored if item.get("_relevance_score", 0) >= 3]
+    if not filtered:
+        filtered = [item for item in scored if item.get("_relevance_score", 0) >= 2]
+
+    cleaned = []
+    for item in filtered[:max_items]:
+        record = dict(item)
+        record.pop("_relevance_score", None)
+        cleaned.append(record)
+    return cleaned
+
+
 def _score_topic_disclosure(record: dict, meeting_terms: list[str]) -> int:
     """Score how directly an LDA topic filing helps with the actual meeting topic."""
     haystack = " ".join([
@@ -282,7 +377,7 @@ def _score_topic_disclosure(record: dict, meeting_terms: list[str]) -> int:
 
 
 def _filter_topic_disclosures(disclosures: list[dict], meeting_purpose: str, max_items: int = 5) -> list[dict]:
-    """Keep the most meeting-relevant LDA topic disclosures without wiping the section entirely."""
+    """Keep only topic-LDA entries that are directly useful to the meeting objective."""
     if not disclosures:
         return []
     terms = _meeting_terms(meeting_purpose)
@@ -293,10 +388,14 @@ def _filter_topic_disclosures(disclosures: list[dict], meeting_purpose: str, max
         scored.append(enriched)
 
     scored.sort(key=lambda item: item.get("_topic_score", 0), reverse=True)
-    filtered = [item for item in scored if item.get("_topic_score", 0) >= 1]
-    if len(filtered) < min(2, len(scored)):
-        filtered = scored[: min(max_items, max(3, len(filtered)))]
-    return filtered[:max_items]
+    filtered = [item for item in scored if item.get("_topic_score", 0) >= 3]
+
+    cleaned = []
+    for item in filtered[:max_items]:
+        record = dict(item)
+        record.pop("_topic_score", None)
+        cleaned.append(record)
+    return cleaned
 
 
 def fetch_disclosures(stakeholder_name: str, organization: str = "",
@@ -327,8 +426,9 @@ def fetch_disclosures(stakeholder_name: str, organization: str = "",
         "irs990": {"organizations": [], "filings": []},
     }
 
-    # --- LDA Entity Search (by name/org) ---
-    entity = organization if organization else stakeholder_name
+    # --- LDA/FARA/IRS Entity Search (by name/org) ---
+    entity = _entity_search_target(stakeholder_name, organization)
+    skip_entity_search = _is_public_official_context(stakeholder_name, organization)
 
     try:
         from io_utils import IOUtils
@@ -337,73 +437,77 @@ def fetch_disclosures(stakeholder_name: str, organization: str = "",
     except Exception as e:
         print(f"  Could not init IOUtils: {e}", file=sys.stderr)
         # Still try topic search even if entity search fails
-        if meeting_purpose:
+        if meeting_purpose and _meeting_needs_topic_disclosures(meeting_purpose):
             result["lda_topic"] = _filter_topic_disclosures(_lda_topic_search(meeting_purpose), meeting_purpose)
             print(f"  LDA topic: {len(result['lda_topic'])} actors found", file=sys.stderr)
         return result
 
-    # LDA by entity name
-    try:
-        from lda_client import LDAClient
-        lda = LDAClient(io, fuzzy_threshold=85.0, max_results=20, search_field="both")
-        lda.search_entity(entity, from_date, to_date)
+    if skip_entity_search:
+        print("  Entity disclosure search skipped for public official/government stakeholder", file=sys.stderr)
+    else:
+        # LDA by entity name
+        try:
+            from lda_client import LDAClient
+            lda = LDAClient(io, fuzzy_threshold=85.0, max_results=20, search_field="both")
+            lda.search_entity(entity, from_date, to_date)
 
-        lda_filings = io.datasets.get("lda_filings", [])
-        lda_issues = io.datasets.get("lda_issues", [])
+            lda_filings = io.datasets.get("lda_filings", [])
+            lda_issues = io.datasets.get("lda_issues", [])
 
-        issues_by_filing = {}
-        for issue in lda_issues:
-            fid = issue.get("filing_uuid", "")
-            if fid not in issues_by_filing:
-                issues_by_filing[fid] = []
-            issues_by_filing[fid].append(issue.get("specific_issue", ""))
+            issues_by_filing = {}
+            for issue in lda_issues:
+                fid = issue.get("filing_uuid", "")
+                if fid not in issues_by_filing:
+                    issues_by_filing[fid] = []
+                issues_by_filing[fid].append(issue.get("specific_issue", ""))
 
-        for f in lda_filings[:15]:
-            fid = f.get("filing_uuid", "")
-            f["issues"] = issues_by_filing.get(fid, [])
+            for f in lda_filings[:15]:
+                fid = f.get("filing_uuid", "")
+                f["issues"] = issues_by_filing.get(fid, [])
 
-        result["lda_entity"] = lda_filings[:15]
-        print(f"  LDA entity: {len(lda_filings)} filings found", file=sys.stderr)
-    except Exception as e:
-        print(f"  LDA entity search error: {e}", file=sys.stderr)
+            result["lda_entity"] = lda_filings[:15]
+            print(f"  LDA entity: {len(lda_filings)} filings found", file=sys.stderr)
+        except Exception as e:
+            print(f"  LDA entity search error: {e}", file=sys.stderr)
 
     # --- LDA Topic Search (by meeting purpose) ---
-    if meeting_purpose:
+    if meeting_purpose and _meeting_needs_topic_disclosures(meeting_purpose):
         result["lda_topic"] = _filter_topic_disclosures(_lda_topic_search(meeting_purpose), meeting_purpose)
         print(f"  LDA topic: {len(result['lda_topic'])} actors found", file=sys.stderr)
 
-    # --- FARA ---
-    try:
-        from fara_client import FARAClient
-        fara = FARAClient(io, fuzzy_threshold=85.0, max_results=20)
-        fara.search_entity(entity, from_date, to_date)
+    if not skip_entity_search:
+        # --- FARA ---
+        try:
+            from fara_client import FARAClient
+            fara = FARAClient(io, fuzzy_threshold=85.0, max_results=20)
+            fara.search_entity(entity, from_date, to_date)
 
-        fara_registrants = io.datasets.get("fara_registrants", [])
-        fara_principals = io.datasets.get("fara_foreign_principals", [])
-        result["fara"] = {
-            "registrants": fara_registrants[:10],
-            "foreign_principals": fara_principals[:10],
-        }
-        total_fara = len(fara_registrants) + len(fara_principals)
-        print(f"  FARA: {total_fara} records found", file=sys.stderr)
-    except Exception as e:
-        print(f"  FARA search error: {e}", file=sys.stderr)
+            fara_registrants = io.datasets.get("fara_registrants", [])
+            fara_principals = io.datasets.get("fara_foreign_principals", [])
+            result["fara"] = {
+                "registrants": fara_registrants[:10],
+                "foreign_principals": fara_principals[:10],
+            }
+            total_fara = len(fara_registrants) + len(fara_principals)
+            print(f"  FARA: {total_fara} records found", file=sys.stderr)
+        except Exception as e:
+            print(f"  FARA search error: {e}", file=sys.stderr)
 
-    # --- IRS 990 ---
-    try:
-        from irs990_client import IRS990Client
-        irs = IRS990Client(io, fuzzy_threshold=85.0, max_results=10, mode="basic")
-        irs.search_entity(entity, from_date, to_date)
+        # --- IRS 990 ---
+        try:
+            from irs990_client import IRS990Client
+            irs = IRS990Client(io, fuzzy_threshold=85.0, max_results=10, mode="basic")
+            irs.search_entity(entity, from_date, to_date)
 
-        irs_orgs = io.datasets.get("irs990_organizations", [])
-        irs_filings = io.datasets.get("irs990_filings", [])
-        result["irs990"] = {
-            "organizations": irs_orgs[:5],
-            "filings": irs_filings[:5],
-        }
-        print(f"  IRS 990: {len(irs_orgs)} orgs, {len(irs_filings)} filings found", file=sys.stderr)
-    except Exception as e:
-        print(f"  IRS 990 search error: {e}", file=sys.stderr)
+            irs_orgs = io.datasets.get("irs990_organizations", [])
+            irs_filings = io.datasets.get("irs990_filings", [])
+            result["irs990"] = {
+                "organizations": irs_orgs[:5],
+                "filings": irs_filings[:5],
+            }
+            print(f"  IRS 990: {len(irs_orgs)} orgs, {len(irs_filings)} filings found", file=sys.stderr)
+        except Exception as e:
+            print(f"  IRS 990 search error: {e}", file=sys.stderr)
 
     return result
 
@@ -422,10 +526,14 @@ RULES:
 - If a fact is too uncertain to state cleanly, omit it rather than hedging inline.
 - Do NOT fabricate specific statistics, quotes, or dates.
 - Use the news articles and disclosure data provided to ground your analysis.
-- Use disclosure material selectively. Topic lobbying activity can be included as directional intelligence when it materially informs the meeting objective, but do not dump a long unrelated filing list.
+- Use disclosure material selectively. Include LDA/FARA/IRS 990 only when it is directly relevant to the meeting objective or the stakeholder's own issue activity.
+- Do NOT use topic-based LDA as filler for policymaker meetings. If the meeting is with a senator or other official and the objective is a policy discussion rather than lobbying/disclosure intelligence, omit unrelated outside filings.
 - If the stakeholder is a legislator, mention committee assignments, caucus memberships, and recent legislative actions.
 - If the stakeholder is an organization, mention leadership, budget/revenue, and key programs.
 - Do not make speculative local-benefit or constituency inferences unless supported by explicit evidence in the source material.
+- Limit policy positions to items clearly relevant to the stated meeting objective.
+- Limit recent news to items clearly relevant to the stated meeting objective; ignore generic media appearances or weakly related coverage.
+- Make talking points and key questions directly responsive to the stakeholder's demonstrated issue activity, not generic public profile material.
 
 QUANTITY REQUIREMENTS:
 - profile.key_areas: EXACTLY 5 policy areas, ordered by relevance to the meeting
@@ -714,7 +822,8 @@ def generate_briefing(stakeholder_name: str, meeting_purpose: str,
     if not api_key:
         raise ValueError("OPENAI_API_KEY is required.")
 
-    client = OpenAI(api_key=api_key)
+    # Fail fast if the active LLM endpoint is unavailable instead of leaving the job stuck.
+    client = OpenAI(api_key=api_key, timeout=90.0, max_retries=1)
 
     # Step 1: Gather data
     news = []
