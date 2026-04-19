@@ -26,11 +26,12 @@ Score each dimension from 1 to 5.
 
 ### 5. Structural compliance
 - All seven required sections are present
-- Summary reads like an analyst brief rather than raw notes
+- Verified summary reads like a clear source-grounded translation rather than raw legal fragments
 - Coverage and validation state are surfaced in JSON/app payloads
 
 ### 6. UI success
 - Completed summarize jobs always produce visible output
+- Quick preview remains distinct from detailed summary while jobs are running
 - Download controls for summary and bill detail are available
 - Search-path and watchlist-path summarization both render correctly
 

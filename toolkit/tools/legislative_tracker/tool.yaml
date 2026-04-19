@@ -5,17 +5,17 @@ risk_level: yellow
 tags: [legislation, bills, tracking, monitoring, summarization, legiscan, public_affairs]
 
 description: >
-  Searches, tracks, and summarizes legislation across federal and state jurisdictions
+  Searches, tracks, previews, and summarizes legislation across federal and state jurisdictions
   using the LegiScan API. Produces bill search results, watchlist status updates,
-  and ChangeAgent-generated verified source summaries only when every displayed line
-  can be traced back to the official bill text.
+  fast metadata previews, and verified source summaries only when
+  every displayed line can be traced back to the official bill text.
 
 execution:
   entrypoint: tools/legislative_tracker/execution/run.py
   runtime: python
   notes:
     - "Requires a free LegiScan API key (set LEGISCAN_API_KEY env var)."
-    - "Legislative summarization is ChangeAgent-only."
+    - "Legislative summarization uses the repo-configured LLM runtime."
     - "Free tier allows 30,000 requests/month across all 50 states + Congress."
     - "Bill text is base64-encoded from LegiScan; decoded, normalized, and extracted before synthesis."
 
@@ -26,7 +26,7 @@ inputs:
     - state: "Two-letter state code or 'US' for federal (default: US). Use 'ALL' for all jurisdictions."
     - year: "Session year to search (default: current year)."
     - bill_id: "LegiScan bill ID for direct lookup and summarization."
-    - summarize: "Flag to generate AI summary for a specific bill."
+    - summarize: "Flag to generate preview or detailed summary output for a specific bill."
     - watchlist: "Action: add, remove, list, or refresh."
     - out: "Output directory (default: ./output)."
 
@@ -38,7 +38,7 @@ outputs:
         path_pattern: "<out>/search_results.json"
     - bill_summary.md:
         format: markdown
-        description: "Verified source summary when full bill text is available and all displayed lines are traceable; otherwise a refusal report with diagnostics."
+        description: "Quick preview or verified source summary depending on mode; otherwise a refusal report with diagnostics."
         path_pattern: "<out>/<bill_number>/bill_summary.md"
     - watchlist.json:
         format: json
@@ -66,10 +66,10 @@ dependencies:
     - openai
     - python-dateutil
   system:
-    - "Internet access for LegiScan API and ChangeAgent proxy"
+    - "Internet access for LegiScan API and the configured summarization proxy"
   environment:
     - "LEGISCAN_API_KEY: Free API key from legiscan.com"
-    - "CHANGE_AGENT_API_KEY: Required for bill summarization"
+    - "Summarization API key: use the credential expected by the current runtime"
 
   notes:
   - "LegiScan API responses are cached locally for 24 hours to minimize API usage."

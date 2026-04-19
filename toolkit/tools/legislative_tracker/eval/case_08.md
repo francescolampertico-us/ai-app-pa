@@ -1,4 +1,4 @@
-# Eval Case 08: Metadata-only fallback
+# Eval Case 08: Missing source text refusal
 
 ## Scenario
 - Use a valid bill where LegiScan returns no usable bill text, or simulate missing usable text in a controlled run

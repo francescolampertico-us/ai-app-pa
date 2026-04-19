@@ -1,12 +1,12 @@
 # Legislative Tracker
 
 ## Purpose
-Search, track, and summarize legislation across federal and state jurisdictions. Combines bill discovery (keyword search), monitoring (persistent watchlist), and ChangeAgent-powered source-text translation that only emits a verified summary when every displayed line is supported by the bill text.
+Search, track, preview, and summarize legislation across federal and state jurisdictions. Combines bill discovery (keyword search), monitoring (persistent watchlist), fast metadata previews, and a controlled source-text translation workflow that only emits a verified summary when every displayed line is supported by the bill text.
 
 ## When to use
 - Scanning for bills related to a policy topic across jurisdictions.
 - Monitoring known bills for status changes (committee action, floor vote, enactment).
-- Generating a plain-language summary of a bill for a briefing, meeting prep, or messaging.
+- Generating a quick metadata preview of a bill before deciding whether to run full-text analysis.
 - Generating a verified source summary grounded directly in bill text and official bill metadata.
 - Feeding bill context into downstream tools (Stakeholder Briefing, Meeting Prep Brief, Messaging Matrix).
 
@@ -18,7 +18,7 @@ Search, track, and summarize legislation across federal and state jurisdictions.
 - `state` — two-letter state code, `US` for federal, or `ALL` for all jurisdictions.
 - `year` — legislative session year.
 - `bill_id` — LegiScan bill ID for direct lookup.
-- `--summarize` — generate AI summary for a specific bill.
+- `--summarize` — generate bill summary output for a specific bill.
 - `--watchlist add|remove|list|refresh` — manage the bill watchlist.
 - `--out` — output directory.
 
@@ -30,6 +30,7 @@ Depending on the operation:
 
 ### Summarize
 - `bill_summary.md` — structured markdown report containing:
+  - **Quick Preview** — metadata-based preview generated without scanning full bill text
   - **Bill Overview** — number, title, state, status, sponsors, last action
   - **Verified Source Summary** — emitted only when the tool has complete usable bill text and all displayed lines are text-supported
   - Otherwise: **Summary Unavailable** diagnostics explaining why a verified summary could not be produced
@@ -49,18 +50,18 @@ Depending on the operation:
 
 ## Limitations / Failure Modes
 - **API key required**: LegiScan requires a free API key; tool will error without it.
-- **ChangeAgent required**: Summarization requires ChangeAgent credentials and proxy routing.
+- **Summarization runtime required**: Verified summarization requires the repo-configured LLM credentials and proxy routing.
 - **Rate limits**: Free tier allows 30,000 requests/month. Heavy usage across many states may hit limits.
 - **Bill text availability**: If complete usable bill text is unavailable, the tool must refuse to produce a verified summary.
 - **Amendment-heavy text**: Strike/insert drafting can block verified summary generation if the extracted claims cannot be traced cleanly.
 - **AI summary accuracy**: Verified summaries are constrained to direct textual support; unsupported lines are blocked rather than shown.
+- **Preview scope**: Quick preview is metadata-based and is not a substitute for verified full-text analysis.
 - **Stale status**: Bill status is cached; real-time changes may not reflect immediately.
 - **Long bills**: Very long bills are chunked section-by-section; verified output is allowed only if extraction and traceability remain complete.
 
 ## Human Review Checklist (Risk: Yellow)
 - Confirm bill numbers and titles match official sources (legislature website).
 - Spot-check AI summary against actual bill text for accuracy.
-- Verify talking points are balanced and not one-sided.
 - Validate sponsor names and party affiliations.
 - Check status is current before using in external communications.
-- Review "Assumptions & Unknowns" section — do not present uncertain claims as facts.
+- For long bills, manually inspect any provisions that matter to the decision at hand.

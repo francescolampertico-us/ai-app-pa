@@ -15,4 +15,5 @@ python3 tools/legislative_tracker/execution/run.py \
 ## Expected behavior
 - Queries LegiScan `/search` endpoint for "artificial intelligence" in US Congress
 - Returns list of matching bills with metadata (number, title, status, sponsors)
+- Search results support direct `Preview`, `Detailed`, and `Track` actions in the app
 - Saves `search_results.json` and `report.md` to output directory

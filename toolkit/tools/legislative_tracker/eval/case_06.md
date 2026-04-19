@@ -9,6 +9,7 @@
 ## Acceptance Criteria
 - [ ] Search-path summarize renders visible summary output
 - [ ] Watchlist-path summarize renders visible summary output
+- [ ] Quick preview and detailed summary have distinct loading states
 - [ ] Summary download is available in both paths
 - [ ] Bill detail download is available in both paths
 - [ ] Coverage and caveat banners appear when present

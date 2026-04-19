@@ -58,7 +58,7 @@ def parse_args():
     parser.add_argument("--cache-dir", default=".cache", help="Cache directory (default: .cache)")
 
     # Options
-    parser.add_argument("--model", default=None, help="Model for summarization (default: ChangeAgent)")
+    parser.add_argument("--model", default=None, help="Model for summarization (default: configured runtime)")
     parser.add_argument("--json", action="store_true", dest="json_output",
                         help="Output results as JSON to stdout")
 
@@ -281,7 +281,7 @@ def cmd_bill_detail(client: LegiScanClient, args):
             print(f"State: {bill['state']} | Status: {bill['status']}")
             print(f"Last Action: {bill['last_action']} ({bill['last_action_date']})")
             print(f"Sponsors: {', '.join(s['name'] for s in bill.get('sponsors', []))}")
-            print(f"\nUse --summarize to generate an AI analysis.")
+            print(f"\nUse --summarize to generate a preview or verified summary.")
 
     return bill
 

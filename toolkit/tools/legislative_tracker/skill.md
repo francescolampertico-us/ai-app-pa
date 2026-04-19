@@ -1,73 +1,43 @@
-# Skill - Legislative Tracker (DOE-aligned)
+---
+name: legislative-tracker
+description: Search, track, preview, and summarize legislation with LegiScan. Use when the user wants to find bills, monitor a watchlist, generate a quick bill preview, or produce a verified bill summary grounded in official bill text.
+---
 
-Use the Directive -> Orchestration -> Execution pattern to run this tool reliably.
+# Legislative Tracker
 
-## Directive (what you must decide before running)
+## Goal
+Find legislation, monitor tracked bills, and generate either:
+- a quick metadata preview, or
+- a verified summary supported by official bill text.
 
-### Required
-- **Query**: search terms for bill discovery (e.g., `artificial intelligence`, `data privacy`).
+## Inputs
+- `query` for bill search
+- optional `state`
+- optional `year`
+- optional `bill_id`
+- optional `--summarize`
+- optional `--watchlist add|remove|list|refresh`
+- optional `--out`
 
-### Optional (common)
-- **State**: two-letter code, `US` for federal, `ALL` for all (`--state US`).
-- **Year**: legislative session year (`--year 2026`).
-- **Bill ID**: direct LegiScan bill ID for lookup (`--bill-id 1234567`).
-- **Summarize**: generate AI analysis (`--summarize`).
-- **Watchlist**: manage tracked bills (`--watchlist add|remove|list|refresh`).
-- **Output**: base output folder (`--out /path/to/output`).
+## Prereqs
+- `LEGISCAN_API_KEY` must be set.
+- The configured summarization API key must be set.
 
-### Prereqs
-- Set `LEGISCAN_API_KEY` environment variable (free from legiscan.com).
-- Set `CHANGE_AGENT_API_KEY` for bill summarization features.
+## Process
+1. Search bills with LegiScan and return bill metadata.
+2. For bill detail, fetch the bill record and available text versions.
+3. For preview mode, generate a fast metadata-only preview.
+4. For detailed summary mode, normalize bill text, extract directly supported facts, and compose a verified summary only if every displayed line is traceable to the source text.
+5. For watchlist actions, update the local tracked-bills store and refresh status snapshots as needed.
 
-## Orchestration (how the tool gathers and prepares information)
-1) Parse query and optional filters (state, year).
-2) Query LegiScan API `/search` endpoint; cache results.
-3) For bill detail: fetch `/getBill` and `/getBillText`; decode base64 text.
-4) For summarization: normalize bill text, extract directly supported facts with ChangeAgent, consolidate a traceable evidence index, then compose a verified source summary only if every displayed line can be traced back to the bill text.
-5) For watchlist: read/update local JSON; on refresh, re-fetch status for all tracked bills.
-6) Write output files (JSON, markdown) to output directory.
+## Output
+- `search_results.json` for bill searches
+- `bill_summary.md` for preview, verified summary, or refusal diagnostics
+- `watchlist.json` for tracked bills
+- `report.md` for combined export output
 
-## Execution (how to run)
-
-### Search for bills
-```bash
-python3 tools/legislative_tracker/execution/run.py \
-  --query "artificial intelligence" \
-  --state US \
-  --year 2026 \
-  --out "./output"
-```
-
-### Get bill detail and AI summary
-```bash
-python3 tools/legislative_tracker/execution/run.py \
-  --bill-id 1234567 \
-  --summarize \
-  --out "./output"
-```
-
-### Manage watchlist
-```bash
-# Add a bill
-python3 tools/legislative_tracker/execution/run.py --watchlist add --bill-id 1234567
-
-# List tracked bills
-python3 tools/legislative_tracker/execution/run.py --watchlist list
-
-# Check for status changes
-python3 tools/legislative_tracker/execution/run.py --watchlist refresh
-```
-
-## Output contract (format expectations)
-- `search_results.json` — bill search results with metadata.
-- `bill_summary.md` — verified source summary when full bill text is available and every displayed line is text-supported; otherwise a refusal report with diagnostics.
-- `watchlist.json` — persisted tracked bills with status history.
-- `report.md` — combined report for export.
-
-## Non-negotiables
-- Never fabricate bill numbers, sponsor names, vote counts, or status.
-- Never emit a normal summary unless the bill text is complete and the summary lines are traceable to it.
-- Never substitute a metadata-first prose summary for a verified legislative summary.
-- Flag any bill text that was unavailable or unusable and refuse the verified summary in that case.
-- Prefer refusal over approximation when traceability is weak.
-- Cache API responses to respect rate limits.
+## Rules
+- Never fabricate bill numbers, sponsors, status, dates, or provisions.
+- Never present a preview as if it were a verified summary.
+- Never emit a verified summary unless the bill text is usable and every displayed line is traceable.
+- Refuse the verified summary when source text is missing or traceability fails.

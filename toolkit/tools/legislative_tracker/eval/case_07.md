@@ -1,7 +1,7 @@
-# Eval Case 07: Malformed ChangeAgent output repair
+# Eval Case 07: Malformed summarization output repair
 
 ## Scenario
-- Simulate or capture a summarize run where ChangeAgent returns malformed JSON or tagged text during extraction
+- Simulate or capture a summarize run where the summarization runtime returns malformed JSON or tagged text during extraction
 - Re-run the summarize flow through the same bill
 
 ## Acceptance Criteria
