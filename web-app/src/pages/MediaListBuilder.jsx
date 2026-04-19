@@ -163,6 +163,8 @@ function PitchModal({ contact, issue, llmModel, onClose }) {
   );
 }
 
+const cleanField = (v) => (!v || (typeof v === 'string' && v.includes('<'))) ? '—' : v;
+
 export default function MediaListBuilder() {
   const { job, loading, submitJob, downloadArtifact, downloadJson, downloadText } = useFastApiJob('media_list_builder');
 
@@ -518,7 +520,7 @@ export default function MediaListBuilder() {
                         })()}
                       </td>
                       <td className="py-2 pr-3">
-                        <div>{contact.role || '—'}</div>
+                        <div>{cleanField(contact.role)}</div>
                         {(contact.contact_status === 'story_lead' || contact.contact_status === 'low_confidence_named' || contact.contact_status === 'show_only_verify_host') && (
                           <div className="mt-1 text-[11px] text-slate-500">Role inferred from story evidence</div>
                         )}
@@ -527,8 +529,8 @@ export default function MediaListBuilder() {
                         )}
                       </td>
                       <td className="py-2 pr-3">{MEDIA_TYPE_LABELS[contact.media_type] || contact.media_type || '—'}</td>
-                      <td className="py-2 pr-3">{contact.location || '—'}</td>
-                      <td className="py-2 pr-3">{contact.pitch_angle || '—'}</td>
+                      <td className="py-2 pr-3">{cleanField(contact.location)}</td>
+                      <td className="py-2 pr-3">{cleanField(contact.pitch_angle)}</td>
                       <td className="py-2 pr-3">
                         <div>{contact.email || '—'}</div>
                         {!contact.email && (
@@ -552,7 +554,7 @@ export default function MediaListBuilder() {
                               rel="noreferrer"
                               className="text-violet-300 underline"
                             >
-                              {contact.matched_title || contact.previous_story_title || 'View evidence'}
+                              {cleanField(contact.matched_title || contact.previous_story_title) || 'View evidence'}
                             </a>
                             {contact.media_type === 'podcast' && contact.matched_evidence_type && (
                               <div className="mt-1 text-[11px] text-slate-500">{contact.matched_evidence_type.replace('_', ' ')}</div>
