@@ -462,28 +462,28 @@ export default function MediaListBuilder() {
         {job?.status === 'completed' && contacts.length > 0 && (
           <div className="mt-10 space-y-6">
             <div className="glass-card p-6 overflow-x-auto">
-              <table className="w-full text-sm text-left text-slate-300">
-                <thead className="text-slate-500 uppercase tracking-wider text-xs border-b border-white/10">
+              <table className="w-full text-xs text-left text-slate-300">
+                <thead className="text-slate-500 uppercase tracking-wider text-[10px] border-b border-white/10">
                   <tr>
-                    <th className="py-3 pr-4">Name</th>
-                    <th className="py-3 pr-4">Confidence</th>
-                    <th className="py-3 pr-4">Outlet</th>
-                    <th className="py-3 pr-4">Role</th>
-                    <th className="py-3 pr-4">Media Type</th>
-                    <th className="py-3 pr-4">Location</th>
-                    <th className="py-3 pr-4">Pitch Angle</th>
-                    <th className="py-3 pr-4">Email</th>
-                    <th className="py-3 pr-4">Evidence</th>
-                    <th className="py-3 pr-4">Pitch</th>
+                    <th className="py-2 pr-3">Name</th>
+                    <th className="py-2 pr-3">Confidence</th>
+                    <th className="py-2 pr-3">Outlet</th>
+                    <th className="py-2 pr-3">Role</th>
+                    <th className="py-2 pr-3">Media Type</th>
+                    <th className="py-2 pr-3">Location</th>
+                    <th className="py-2 pr-3">Pitch Angle</th>
+                    <th className="py-2 pr-3">Email</th>
+                    <th className="py-2 pr-3">Evidence</th>
+                    <th className="py-2 pr-3">Pitch</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredContacts.map((contact, index) => (
                     <tr key={`${contact.outlet}-${index}`} className="border-b border-white/5 align-top">
-                      <td className="py-3 pr-4">
+                      <td className="py-2 pr-3">
                         {[contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.host_name || (contact.media_type === 'podcast' ? 'Host to verify' : '—')}
                       </td>
-                      <td className="py-3 pr-4">
+                      <td className="py-2 pr-3">
                         <span
                           className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
                             contact.contact_status === 'story_lead' || contact.contact_status === 'show_only_verify_host'
@@ -506,10 +506,18 @@ export default function MediaListBuilder() {
                               : 'Verified'}
                         </span>
                       </td>
-                      <td className="py-3 pr-4">
-                        {contact.outlet_website ? <a href={contact.outlet_website.startsWith('http') ? contact.outlet_website : `https://${contact.outlet_website}`} target="_blank" rel="noreferrer" className="text-violet-300 underline">{contact.outlet}</a> : (contact.outlet || '—')}
+                      <td className="py-2 pr-3">
+                        {(() => {
+                          const raw = contact.outlet || '';
+                          const label = (raw.includes('<') || raw.length > 80)
+                            ? (() => { try { return new URL(contact.outlet_website).hostname.replace(/^www\./, ''); } catch { return 'View outlet'; } })()
+                            : raw;
+                          return contact.outlet_website
+                            ? <a href={contact.outlet_website.startsWith('http') ? contact.outlet_website : `https://${contact.outlet_website}`} target="_blank" rel="noreferrer" className="text-violet-300 underline">{label || 'View outlet'}</a>
+                            : (label || '—');
+                        })()}
                       </td>
-                      <td className="py-3 pr-4">
+                      <td className="py-2 pr-3">
                         <div>{contact.role || '—'}</div>
                         {(contact.contact_status === 'story_lead' || contact.contact_status === 'low_confidence_named' || contact.contact_status === 'show_only_verify_host') && (
                           <div className="mt-1 text-[11px] text-slate-500">Role inferred from story evidence</div>
@@ -518,10 +526,10 @@ export default function MediaListBuilder() {
                           <div className="mt-1 text-[11px] text-slate-500">{contact.platform}</div>
                         )}
                       </td>
-                      <td className="py-3 pr-4">{MEDIA_TYPE_LABELS[contact.media_type] || contact.media_type || '—'}</td>
-                      <td className="py-3 pr-4">{contact.location || '—'}</td>
-                      <td className="py-3 pr-4">{contact.pitch_angle || '—'}</td>
-                      <td className="py-3 pr-4">
+                      <td className="py-2 pr-3">{MEDIA_TYPE_LABELS[contact.media_type] || contact.media_type || '—'}</td>
+                      <td className="py-2 pr-3">{contact.location || '—'}</td>
+                      <td className="py-2 pr-3">{contact.pitch_angle || '—'}</td>
+                      <td className="py-2 pr-3">
                         <div>{contact.email || '—'}</div>
                         {!contact.email && (
                           <div className="mt-1 text-[11px] text-slate-500">
@@ -535,7 +543,7 @@ export default function MediaListBuilder() {
                           </div>
                         )}
                       </td>
-                      <td className="py-3 pr-4">
+                      <td className="py-2 pr-3">
                         {(contact.matched_url || contact.previous_story_url) ? (
                           <div>
                             <a
@@ -552,7 +560,7 @@ export default function MediaListBuilder() {
                           </div>
                         ) : (contact.matched_title || contact.previous_story_title || '—')}
                       </td>
-                      <td className="py-3 pr-4">
+                      <td className="py-2 pr-3">
                         <button
                           data-testid={`open-media-list-pitch-${index}`}
                           onClick={() => setPitchContact(contact)}
