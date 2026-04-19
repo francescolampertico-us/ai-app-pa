@@ -1,6 +1,6 @@
 """
-Stakeholder Map Builder — Streamlit Page
-==========================================
+Stakeholder Map — Streamlit Page
+================================
 Discover and classify policy actors around a given issue.
 """
 
@@ -13,15 +13,15 @@ from pathlib import Path
 
 # Add tool + app paths
 TOOLKIT_ROOT = Path(__file__).resolve().parent.parent.parent
-TOOL_ROOT    = TOOLKIT_ROOT / "tools" / "stakeholder_map_builder"
+TOOL_ROOT    = TOOLKIT_ROOT / "tools" / "stakeholder_map"
 sys.path.insert(0, str(TOOL_ROOT / "execution"))
 sys.path.insert(0, str(TOOLKIT_ROOT / "app"))
 
-st.set_page_config(page_title="Stakeholder Map Builder", page_icon="🗺️", layout="wide")
+st.set_page_config(page_title="Stakeholder Map", page_icon="🗺️", layout="wide")
 
 from shared import page_header, demo_banner
 page_header(
-    title="Stakeholder Map Builder",
+    title="Stakeholder Map",
     icon="🗺️",
     version="0.1.0",
     risk="yellow",
@@ -53,7 +53,7 @@ policy_issue = st.text_input(
     help="Use 2-4 word phrases for best results. Avoid specific bill names.",
 )
 
-col1, col2, col3 = st.columns([2, 2, 2])
+col1, col2 = st.columns([2, 2])
 with col1:
     scope = st.selectbox("Scope", ["Federal", "State"], index=0)
 with col2:
@@ -62,16 +62,6 @@ with col2:
         placeholder="e.g., TX",
         disabled=(scope == "Federal"),
         help="Required when Scope = State.",
-    )
-with col3:
-    year_input = st.number_input(
-        "Year filter (optional)",
-        min_value=2015,
-        max_value=2026,
-        value=None,
-        step=1,
-        format="%d",
-        help="Filter LDA and LegiScan results to a specific year.",
     )
 
 include_types = st.multiselect(
@@ -93,7 +83,6 @@ if st.button("Build Stakeholder Map", type="primary", disabled=run_disabled):
     else:
         scope_val        = scope.lower()
         state_val        = state_input.strip().upper() if scope == "State" and state_input.strip() else "US"
-        year_val         = int(year_input) if year_input else None
         include_types_lc = [t.lower() for t in include_types] if include_types else None
 
         with st.spinner("Discovering actors and building map… this takes 30-60 seconds."):
@@ -114,7 +103,6 @@ if st.button("Build Stakeholder Map", type="primary", disabled=run_disabled):
                     policy_issue=policy_issue,
                     scope=scope_val,
                     state=state_val,
-                    year=year_val,
                     include_types=include_types_lc,
                 )
 

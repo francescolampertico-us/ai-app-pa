@@ -51,7 +51,7 @@ const TOOL_UI = {
     path: '/app/memos',
     section: 'intelligence',
   },
-  stakeholder_map_builder: {
+  stakeholder_map: {
     label: 'Stakeholder Map',
     desc: 'Policy actor discovery and network graph across LDA + press.',
     category: 'Stakeholder Mapping & Network Analysis',
@@ -99,7 +99,7 @@ const WORKFLOW_SECTIONS = [
     title: 'Stakeholder and Contact Preparation',
     description: 'Tools that organize actors, map relationships, and prepare the outreach surface around an issue.',
     toolIds: [
-      'stakeholder_map_builder',
+      'stakeholder_map',
       'stakeholder_briefing',
       'media_list_builder',
     ],

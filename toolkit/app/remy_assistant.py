@@ -61,7 +61,7 @@ TOOL_GUIDANCE = {
         "when_to_use": "Use for compact background memos on organizations, issues, clients, or individuals.",
         "notes": "Uploaded files can be merged into the text context before execution.",
     },
-    "stakeholder_map_builder": {
+    "stakeholder_map": {
         "when_to_use": "Use to identify and classify the policy ecosystem around an issue.",
         "notes": "Outputs can include network graph files; large runs may take longer than the other tools.",
     },
@@ -559,15 +559,14 @@ def _tool_schemas(catalog: list[dict[str, Any]]) -> list[dict[str, Any]]:
             {
                 "type": "function",
                 "function": {
-                    "name": "run_stakeholder_map_builder",
-                    "description": "Run the Stakeholder Map Builder tool.",
+                    "name": "run_stakeholder_map",
+                    "description": "Run the Stakeholder Map tool.",
                     "parameters": {
                         "type": "object",
                         "properties": {
                             "policy_issue": {"type": "string"},
                             "scope": {"type": "string", "enum": ["federal", "state"]},
                             "state": {"type": "string"},
-                            "year": {"type": "integer"},
                             "include_types": {
                                 "oneOf": [
                                     {"type": "string"},
@@ -629,7 +628,7 @@ def _dispatch_tool_call(
         "run_media_list_builder": "media_list_builder",
         "run_stakeholder_briefing": "stakeholder_briefing",
         "run_background_memo_generator": "background_memo_generator",
-        "run_stakeholder_map_builder": "stakeholder_map_builder",
+        "run_stakeholder_map": "stakeholder_map",
     }
     if name in tool_name_map:
         return _run_tool(tool_name_map[name], args, catalog, uploaded_files)
@@ -699,7 +698,7 @@ def _run_tool(
             return _run_stakeholder_briefing(arguments, uploaded_files)
         if tool_id == "background_memo_generator":
             return _run_background_memo(arguments, uploaded_files)
-        if tool_id == "stakeholder_map_builder":
+        if tool_id == "stakeholder_map":
             return _run_stakeholder_map(arguments)
     except Exception as exc:
         return {"ok": False, "tool_id": tool_id, "error": str(exc)}
@@ -1013,8 +1012,8 @@ def _run_background_memo(arguments: dict[str, Any], uploaded_files: list[dict[st
 
 def _run_stakeholder_map(arguments: dict[str, Any]) -> dict[str, Any]:
     policy_issue = _pick(arguments, ["policy_issue", "issue", "topic"], required=True)
-    outdir = _output_dir("stakeholder_map_builder", policy_issue)
-    script = TOOLKIT_ROOT / "tools" / "stakeholder_map_builder" / "execution" / "run.py"
+    outdir = _output_dir("stakeholder_map", policy_issue)
+    script = TOOLKIT_ROOT / "tools" / "stakeholder_map" / "execution" / "run.py"
     cmd = [
         sys.executable,
         str(script),
@@ -1025,14 +1024,13 @@ def _run_stakeholder_map(arguments: dict[str, Any]) -> dict[str, Any]:
     ]
     _optional_arg(cmd, "--scope", arguments.get("scope"))
     _optional_arg(cmd, "--state", arguments.get("state"))
-    _optional_arg(cmd, "--year", _stringify(arguments.get("year")))
     include_types = arguments.get("include_types")
     if include_types:
         cmd.extend(["--include_types", *_list_value(include_types)])
     if arguments.get("no_graph"):
         cmd.append("--no_graph")
 
-    return _execute_cli("stakeholder_map_builder", cmd, outdir, cwd=script.parent, timeout=300)
+    return _execute_cli("stakeholder_map", cmd, outdir, cwd=script.parent, timeout=300)
 
 
 def _execute_cli(

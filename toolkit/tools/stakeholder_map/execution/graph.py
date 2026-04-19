@@ -1,6 +1,6 @@
 """
-Stakeholder Map — Network Graph Builder
-=========================================
+Stakeholder Map — Network Graph
+===============================
 Builds an interactive Plotly network graph from classified actors and relationships.
 Node color = stance, node size = influence tier, node symbol = stakeholder type.
 Edge style = relationship type.
@@ -55,7 +55,7 @@ EDGE_COLOR = {
 }
 
 
-# ── Graph builder ────────────────────────────────────────────────────────────
+# ── Graph rendering ──────────────────────────────────────────────────────────
 
 def build_network_graph(
     actors: list[dict],

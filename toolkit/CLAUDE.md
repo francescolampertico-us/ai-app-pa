@@ -47,7 +47,7 @@ Pages:
 **Entry:** `python3 tools/<tool_id>/execution/run.py --help`
 
 ### Tools built (10)
-Media Clips, Media Clip Cleaner, Influence Disclosure Tracker, Hearing Memo, Legislative Tracker, Messaging Matrix, Stakeholder Briefing, Media List Builder, Stakeholder Map Builder, Background Memo
+Media Clips, Media Clip Cleaner, Influence Disclosure Tracker, Hearing Memo, Legislative Tracker, Messaging Matrix, Stakeholder Briefing, Media List Builder, Stakeholder Map, Background Memo
 
 ### Adding a new tool
 1. Copy `templates/tool/` to `tools/<new_tool_id>/`
@@ -111,7 +111,7 @@ Per-tool skills (canonical spec for each tool, not workspace-invocable):
 - Repo root moved from `toolkit/` to `capstone_project/` — web-app and fastapi-backend now tracked
 
 **Known issues:**
-- Stakeholder Map Builder: Network Analysis untested end-to-end
+- Stakeholder Map: Network Analysis untested end-to-end
 - IRS 990: empty for current year by design (1–3 year filing lag)
 - Hearing Memo: degrades gracefully (local extraction) if OpenAI key unavailable
 

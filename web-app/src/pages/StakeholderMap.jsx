@@ -294,10 +294,9 @@ function ActorModal({ actor, onClose }) {
 }
 
 export default function StakeholderMap() {
-  const { job, loading, submitJob, downloadArtifact, downloadJson, downloadText } = useFastApiJob('stakeholder_map_builder');
+  const { job, loading, submitJob, downloadArtifact, downloadJson, downloadText } = useFastApiJob('stakeholder_map');
 
   const [policyIssue, setPolicyIssue] = useState('');
-  const [year, setYear] = useState('');
   const [includeTypes, setIncludeTypes] = useState([...ACTOR_TYPES]);
   const [activeTab, setActiveTab] = useState('Network Analysis');
   const [llmModel, setLlmModel] = useState('ChangeAgent');
@@ -367,7 +366,6 @@ export default function StakeholderMap() {
     payload.append('policy_issue', policyIssue);
     payload.append('scope', 'federal');
     payload.append('state', 'US');
-    payload.append('year', year);
     payload.append('include_types', includeTypes.map((item) => item.toLowerCase()).join(','));
     payload.append('llm_model', llmModel);
     submitJob(payload);
@@ -383,7 +381,7 @@ export default function StakeholderMap() {
         <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
         </div>
-        <h1 data-testid="page-title-stakeholder-map" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Stakeholder Map Builder</h1>
+        <h1 data-testid="page-title-stakeholder-map" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Stakeholder Map</h1>
         <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '72ch', fontWeight: 300 }}>
           Discovers and classifies policy actors from lobbying filings, bill sponsorships, and supplemental web evidence, then returns an interactive graph and directional network analysis.
         </p>
@@ -401,12 +399,6 @@ export default function StakeholderMap() {
             <label className="field-label">Policy Issue</label>
             <input data-testid="input-stakeholder-map-policy-issue" value={policyIssue} onChange={(event) => setPolicyIssue(event.target.value)}
               className="field" placeholder="e.g. artificial intelligence regulation" required />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="field-label">Year</label>
-              <input data-testid="input-stakeholder-map-year" value={year} onChange={(event) => setYear(event.target.value)} className="field" placeholder="optional" />
-            </div>
           </div>
           <div>
             <label className="field-label">Actor Types To Include</label>

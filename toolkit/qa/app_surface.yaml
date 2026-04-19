@@ -208,13 +208,13 @@ surfaces:
       - tab_rendering
       - artifact_downloads
 
-  - id: stakeholder_map_builder
+  - id: stakeholder_map
     kind: tool
     route: /app/stakeholders
-    title: Stakeholder Map Builder
-    execute_endpoint: /api/tools/execute/stakeholder_map_builder
+    title: Stakeholder Map
+    execute_endpoint: /api/tools/execute/stakeholder_map
     live_case_id: SMB-SMK-01
-    test_case_path: toolkit/qa/test_cases/stakeholder_map_builder.md
+    test_case_path: toolkit/qa/test_cases/stakeholder_map.md
     helper_endpoints: []
     regressions: [REG-0002]
     test_ids:
@@ -223,7 +223,6 @@ surfaces:
       submit: submit-stakeholder-map
     option_partitions:
       - federal_only_scope
-      - year_filter
       - type_filters
       - actor_modal
       - analytics_tabs

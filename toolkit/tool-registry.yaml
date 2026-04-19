@@ -124,16 +124,16 @@ tools:
       format: docx + markdown
       artifacts: [background_memo.docx, background_memo.md]
 
-  - id: stakeholder_map_builder
-    name: Stakeholder Map Builder
+  - id: stakeholder_map
+    name: Stakeholder Map
     version: 0.1.0
     risk_level: yellow
-    path: tools/stakeholder_map_builder
+    path: tools/stakeholder_map
     frontend_path: /stakeholders
     description: "Discovers and classifies all policy actors on an issue from LDA filings, LegiScan sponsorships, and news. Classifies by stance, type, and influence tier. Exports interactive network graph, Excel, and DOCX."
     inputs:
       required: [policy_issue]
-      optional: [scope, state, year, include_types]
+      optional: [scope, state, include_types]
     outputs:
       format: excel + docx + html + json
       artifacts: [stakeholder_map.xlsx, stakeholder_map.docx, stakeholder_map.html, stakeholder_map.json]

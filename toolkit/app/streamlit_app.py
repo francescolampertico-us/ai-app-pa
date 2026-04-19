@@ -102,7 +102,7 @@ TOOL_PAGES = {
     "messaging_matrix": "pages/5_Messaging_Matrix.py",
     "stakeholder_briefing": "pages/6_Stakeholder_Briefing.py",
     "media_list_builder": "pages/7_Media_List_Builder.py",
-    "stakeholder_map_builder": "pages/8_Stakeholder_Map_Builder.py",
+    "stakeholder_map": "pages/8_Stakeholder_Map.py",
     "background_memo_generator": "pages/9_Background_Memo.py",
 }
 

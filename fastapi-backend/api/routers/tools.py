@@ -944,19 +944,18 @@ def _handle_media_list_builder(job_id: str, values: dict[str, list[str]], upload
     update_job(job_id, status="completed", progress=100, message="Media list generated.", result_data={**result, "markdown": markdown})
 
 
-def _handle_stakeholder_map_builder(job_id: str, values: dict[str, list[str]], uploads: list[dict[str, Any]]) -> None:
+def _handle_stakeholder_map(job_id: str, values: dict[str, list[str]], uploads: list[dict[str, Any]]) -> None:
     del uploads
     output_dir = _job_output_dir(job_id)
     llm_model = (values.get("llm_model") or ["ChangeAgent"])[0].strip() or "ChangeAgent"
     update_job(job_id, status="processing", progress=10, message="Building stakeholder map...")
 
-    generator = _load_module("smb_generator_fastapi", TOOLS_ROOT / "stakeholder_map_builder" / "execution" / "generator.py")
-    exporter = _load_module("smb_export_fastapi", TOOLS_ROOT / "stakeholder_map_builder" / "execution" / "export.py")
-    analytics_mod = _load_module("smb_analytics_fastapi", TOOLS_ROOT / "stakeholder_map_builder" / "execution" / "analytics.py")
+    generator = _load_module("smb_generator_fastapi", TOOLS_ROOT / "stakeholder_map" / "execution" / "generator.py")
+    exporter = _load_module("smb_export_fastapi", TOOLS_ROOT / "stakeholder_map" / "execution" / "export.py")
+    analytics_mod = _load_module("smb_analytics_fastapi", TOOLS_ROOT / "stakeholder_map" / "execution" / "analytics.py")
 
     scope = (values.get("scope") or ["federal"])[0].strip().lower() or "federal"
     state = (values.get("state") or ["US"])[0].strip().upper() or "US"
-    year_raw = (values.get("year") or [""])[0].strip()
     include_types_raw = (values.get("include_types") or [""])[0].strip()
     include_types = [item.strip().lower() for item in include_types_raw.split(",") if item.strip()] or None
 
@@ -965,7 +964,6 @@ def _handle_stakeholder_map_builder(job_id: str, values: dict[str, list[str]], u
             policy_issue=(values.get("policy_issue") or [""])[0],
             scope=scope,
             state=state,
-            year=int(year_raw) if year_raw else None,
             include_types=include_types,
         )
     markdown = generator.render_markdown(result)
@@ -987,7 +985,7 @@ def _handle_stakeholder_map_builder(job_id: str, values: dict[str, list[str]], u
     exporter.export_docx(result, str(docx_path))
 
     try:
-        graph_mod = _load_module("smb_graph_fastapi", TOOLS_ROOT / "stakeholder_map_builder" / "execution" / "graph.py")
+        graph_mod = _load_module("smb_graph_fastapi", TOOLS_ROOT / "stakeholder_map" / "execution" / "graph.py")
         fig = graph_mod.build_network_graph(
             actors=result.get("actors", []),
             relationships=result.get("relationships", []),
@@ -1256,7 +1254,7 @@ HANDLERS = {
     "messaging_matrix": _handle_messaging_matrix,
     "stakeholder_briefing": _handle_stakeholder_briefing,
     "media_list_builder": _handle_media_list_builder,
-    "stakeholder_map_builder": _handle_stakeholder_map_builder,
+    "stakeholder_map": _handle_stakeholder_map,
     "background_memo_generator": _handle_background_memo,
     "media_clips": _handle_media_clips,
     "media_clip_cleaner": _handle_media_clip_cleaner,

@@ -1,10 +1,10 @@
-# Stakeholder Map Builder — Canonical Manual Cases
+# Stakeholder Map — Canonical Manual Cases
 
 Use the web page at `/stakeholders`.
 
 ## SMB-SMK-01
 
-- Tool: Stakeholder Map Builder
+- Tool: Stakeholder Map
 - Goal: Validate the main issue-discovery workflow with table, summary, and exports.
 - Priority: P0
 - Scenario type: smoke
@@ -17,8 +17,6 @@ Use the web page at `/stakeholders`.
   `Federal`
 - State:
   leave blank
-- Year:
-  `2026`
 - Include Types:
   `Legislators`, `Lobbyists`, `Corporations`, `Nonprofits`
 
@@ -54,7 +52,7 @@ yes
 
 ## SMB-EDGE-01
 
-- Tool: Stakeholder Map Builder
+- Tool: Stakeholder Map
 - Goal: Check lower-signal federal issue handling and current UI filter behavior.
 - Priority: P1
 - Scenario type: edge
@@ -63,8 +61,6 @@ yes
 
 - Policy Issue:
   `data center water use`
-- Year:
-  `2026`
 - Include Types:
   `Legislators`, `Corporations`, `Nonprofits`
 

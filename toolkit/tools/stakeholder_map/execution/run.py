@@ -3,7 +3,7 @@ Stakeholder Map — CLI Entry Point
 =================================
 Usage:
   python3 execution/run.py --policy_issue "artificial intelligence regulation"
-  python3 execution/run.py --policy_issue "clean energy tax credits" --scope state --state TX
+    python3 execution/run.py --policy_issue "clean energy tax credits" --scope state --state TX
   python3 execution/run.py --help
 """
 

@@ -189,7 +189,7 @@ def generate_lda_queries(client: OpenAI, policy_issue: str) -> list[str]:
 
 
 def discover_lda_actors(
-    queries: list[str], year: int = None, max_results: int = 30
+    queries: list[str], max_results: int = 30
 ) -> tuple[list[dict], list[dict]]:
     """
     Search LDA filings using a list of targeted search phrases. Merges results
@@ -215,9 +215,6 @@ def discover_lda_actors(
             "ordering": "-dt_posted",
             "page_size": min(max_results, 25),
         }
-        if year:
-            params["filing_year"] = year
-
         try:
             resp = session.get(
                 "https://lda.gov/api/v1/filings/",
@@ -319,7 +316,7 @@ def discover_lda_actors(
 
 
 def discover_legislative_actors(
-    policy_issue: str, state: str = "US", year: int = None, max_bills: int = 5
+    policy_issue: str, state: str = "US", max_bills: int = 5
 ) -> tuple[list[dict], list[dict]]:
     """
     Search LegiScan for bills related to the policy issue. Extracts bill sponsors
@@ -340,7 +337,7 @@ def discover_legislative_actors(
         from legiscan_client import LegiScanClient
         lc = LegiScanClient()
 
-        bills = lc.search_bills(policy_issue, state=state, year=year)
+        bills = lc.search_bills(policy_issue, state=state)
         print(f"  LegiScan: {len(bills)} bills found", file=sys.stderr)
 
         for bill_summary in bills[:max_bills]:
@@ -1153,7 +1150,6 @@ def build_map(
     policy_issue: str,
     scope: str = "federal",
     state: str = "US",
-    year: int = None,
     include_types: list[str] = None,
 ) -> dict:
     """
@@ -1181,14 +1177,14 @@ def build_map(
     # Step 1: Discover actors from structured sources first
     print("Step 1a: Discovering legislative actors...", file=sys.stderr)
     leg_state = state if scope == "state" else "US"
-    leg_actors, leg_rels = discover_legislative_actors(policy_issue, state=leg_state, year=year)
+    leg_actors, leg_rels = discover_legislative_actors(policy_issue, state=leg_state)
 
     print("Step 1b: Generating LDA search queries...", file=sys.stderr)
     lda_queries = generate_lda_queries(client, policy_issue)
     print(f"  Queries: {lda_queries}", file=sys.stderr)
 
     print("Step 1c: Discovering LDA actors...", file=sys.stderr)
-    lda_actors, lda_rels = discover_lda_actors(lda_queries, year=year)
+    lda_actors, lda_rels = discover_lda_actors(lda_queries)
 
     print("Step 1d: Fetching news context...", file=sys.stderr)
     news_snippets = discover_news_snippets(policy_issue)
