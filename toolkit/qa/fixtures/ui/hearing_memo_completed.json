@@ -1,0 +1,42 @@
+{
+  "id": "qa-hearing-completed",
+  "status": "completed",
+  "progress": 100,
+  "message": "Memo complete.",
+  "download_url": "/api/jobs/qa-hearing-completed/artifacts/0",
+  "created_at": "2026-04-18T12:00:00",
+  "result_data": {
+    "verdict": "pass",
+    "flags": [],
+    "human_checks": [],
+    "memo_text": "# Hearing Memo\n\n## Overview\nMembers discussed AI testing and transparency requirements.",
+    "verification": {
+      "verdict": "pass"
+    },
+    "stdout": "Pipeline finished successfully.",
+    "stderr": ""
+  },
+  "artifacts": [
+    {
+      "name": "hearing_memo.docx",
+      "path": "/tmp/hearing_memo.docx",
+      "size_bytes": 4096,
+      "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "url": "/api/jobs/qa-hearing-completed/artifacts/0"
+    },
+    {
+      "name": "hearing_memo.txt",
+      "path": "/tmp/hearing_memo.txt",
+      "size_bytes": 512,
+      "media_type": "text/plain",
+      "url": "/api/jobs/qa-hearing-completed/artifacts/1"
+    },
+    {
+      "name": "hearing_memo_verification.json",
+      "path": "/tmp/hearing_memo_verification.json",
+      "size_bytes": 256,
+      "media_type": "application/json",
+      "url": "/api/jobs/qa-hearing-completed/artifacts/2"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "qa-media-clip-cleaner",
+  "status": "completed",
+  "progress": 100,
+  "message": "Cleaner complete.",
+  "download_url": null,
+  "created_at": "2026-04-18T12:00:00",
+  "result_data": {
+    "cleaned_text": "India trade negotiators said Monday they expect talks with U.S. counterparts to continue this month."
+  },
+  "artifacts": []
+}

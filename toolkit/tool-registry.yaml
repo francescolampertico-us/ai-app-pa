@@ -4,6 +4,7 @@ tools:
     version: 0.1.0
     risk_level: yellow
     path: tools/media_clips
+    frontend_path: /media-clips
     description: "Daily monitoring: Google News Boolean queries → filtered/deduped clips → .docx + optional Mail.app draft."
     inputs:
       required: [topic, queries]
@@ -17,7 +18,8 @@ tools:
     version: 0.3.0
     risk_level: green
     path: tools/media_clip_cleaner
-    description: "Cleans pasted article text for clips: removes headline/metadata/clutter, keeps italic subtitle + clean body."
+    frontend_path: null
+    description: "Cleans pasted article text for clips: removes headline/metadata/clutter, keeps italic subtitle + clean body. Embedded in the Media Clips UI (no standalone page)."
     inputs:
       required: [raw_text]
       optional: []
@@ -30,6 +32,7 @@ tools:
     version: 0.2.0
     risk_level: yellow
     path: tools/influence_disclosure_tracker
+    frontend_path: /influence
     description: "Collects LDA, FARA, and IRS 990 disclosure records, normalizes results into CSV tables, and generates a summary report. Deep mode adds XML parsing and LLM enrichment for nonprofit PA relevance."
     inputs:
       required: [entities, from, to]
@@ -42,6 +45,7 @@ tools:
     version: 1.0.0
     risk_level: yellow
     path: tools/hearing_memo_generator
+    frontend_path: /memos
     description: "Drafts house-style congressional hearing memos from transcripts with verification and DOCX export."
     inputs:
       required: [input]
@@ -55,6 +59,7 @@ tools:
     version: 0.1.0
     risk_level: yellow
     path: tools/legislative_tracker
+    frontend_path: /legislative
     description: "Searches, tracks, and summarizes legislation across federal and state jurisdictions via LegiScan API."
     inputs:
       required: [query]
@@ -68,6 +73,7 @@ tools:
     version: 0.1.0
     risk_level: yellow
     path: tools/messaging_matrix
+    frontend_path: /messaging
     description: "Generates a Message House and platform-specific deliverables (talking points, press statement, social posts, grassroots email, op-ed) from a core policy position."
     inputs:
       required: [position]
@@ -81,6 +87,7 @@ tools:
     version: 0.1.0
     risk_level: yellow
     path: tools/media_list_builder
+    frontend_path: /media-list
     description: "Targeted media pitch list: finds journalists covering an issue by location and media type, with pitch angles, previous coverage, and contact info."
     inputs:
       required: [issue]
@@ -94,6 +101,7 @@ tools:
     version: 0.1.0
     risk_level: yellow
     path: tools/stakeholder_briefing
+    frontend_path: /stakeholder-briefing
     description: "Pre-meeting one-pager: compiles stakeholder profile, policy positions, disclosure data (LDA/FARA/IRS 990), recent news, and suggested talking points."
     inputs:
       required: [stakeholder_name, meeting_purpose]
@@ -107,6 +115,7 @@ tools:
     version: 0.1.0
     risk_level: yellow
     path: tools/background_memo_generator
+    frontend_path: /background-memo
     description: "Generates a structured background memo on any client, organization, policy issue, or individual. Takes a subject and user-defined section headings; outputs Overview, Fast Facts, content sections, and links in house-style DOCX."
     inputs:
       required: [subject, sections]
@@ -120,6 +129,7 @@ tools:
     version: 0.1.0
     risk_level: yellow
     path: tools/stakeholder_map_builder
+    frontend_path: /stakeholders
     description: "Discovers and classifies all policy actors on an issue from LDA filings, LegiScan sponsorships, and news. Classifies by stance, type, and influence tier. Exports interactive network graph, Excel, and DOCX."
     inputs:
       required: [policy_issue]

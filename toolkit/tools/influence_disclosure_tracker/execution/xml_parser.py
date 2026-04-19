@@ -8,15 +8,21 @@ class IRS990XMLParser:
     Deterministic parser for IRS 990 XML filings.
     Extracts structured schedules and data bypassing an LLM.
     """
-    def __init__(self, object_id: str):
+    def __init__(self, object_id: str = "", xml_url: str = ""):
         self.object_id = object_id
-        self.xml_url = f"https://projects.propublica.org/nonprofits/download-xml?object_id={object_id}"
+        self.xml_url = xml_url or (
+            f"https://projects.propublica.org/nonprofits/download-xml?object_id={object_id}"
+            if object_id else ""
+        )
         self.namespace = {"irs": "http://www.irs.gov/efile"}
         self.root = None
         self._form = None  # Cached IRS990 form element
 
     def fetch_and_parse(self) -> bool:
         """Downloads and parses the XML. Returns True if successful."""
+        if not self.xml_url:
+            print("[WARNING] Failed to fetch/parse XML: missing xml_url/object_id")
+            return False
         try:
             req = urllib.request.Request(self.xml_url, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req, timeout=15) as response:

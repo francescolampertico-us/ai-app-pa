@@ -1,0 +1,43 @@
+{
+  "id": "qa-messaging-completed",
+  "status": "completed",
+  "progress": 100,
+  "message": "Messaging deliverables complete.",
+  "download_url": "/api/jobs/qa-messaging-completed/artifacts/0",
+  "created_at": "2026-04-18T12:00:00",
+  "result_data": {
+    "message_house": {
+      "target_audiences": [
+        "Senate Commerce Committee members"
+      ],
+      "overarching_message": "Targeted testing requirements protect consumers without blocking responsible AI development.",
+      "key_messages": [
+        {
+          "title": "Protect consumers",
+          "supporting_facts": [
+            "Testing applies only to frontier systems.",
+            "Compliance safe harbors reduce uncertainty."
+          ]
+        }
+      ],
+      "key_terms": [
+        "frontier systems",
+        "safe harbor"
+      ]
+    },
+    "variants": {
+      "talking_points": "### Hill Talking Points\n\n- Support targeted pre-deployment testing.",
+      "news_release": "### News Release\n\nThe coalition supports targeted AI safeguards."
+    },
+    "markdown": "# Messaging Deliverables\n\nRendered output."
+  },
+  "artifacts": [
+    {
+      "name": "messaging_matrix.docx",
+      "path": "/tmp/messaging_matrix.docx",
+      "size_bytes": 1024,
+      "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "url": "/api/jobs/qa-messaging-completed/artifacts/0"
+    }
+  ]
+}

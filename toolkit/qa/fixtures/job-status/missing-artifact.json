@@ -1,0 +1,14 @@
+{
+  "status": "completed",
+  "progress": 100,
+  "message": "Job completed but one artifact is no longer available on disk.",
+  "artifacts": [
+    {
+      "name": "missing.docx",
+      "path": "/tmp/missing.docx",
+      "size_bytes": 0,
+      "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "url": "/api/jobs/fixture-job/artifacts/99"
+    }
+  ]
+}

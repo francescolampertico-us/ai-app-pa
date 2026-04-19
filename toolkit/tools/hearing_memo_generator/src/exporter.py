@@ -132,6 +132,8 @@ def _collect_speaker_names(memo_output: dict) -> list:
             parts = re.sub(r"\s*\([^)]*\)\s*$", "", heading).strip().split()
             if parts:
                 last_name = parts[-1]
+                # Standalone last name
+                names.add(last_name)
                 # Build common short forms
                 for prefix in ["Chairman", "Chairwoman", "Ranking Member",
                                "Sen.", "Rep.", "Commissioner", "Hon.",

@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRightIcon as ArrowRight, DownloadSimpleIcon as DownloadSimple, SpinnerGapIcon as SpinnerGap } from '@phosphor-icons/react';
 import { useFastApiJob } from '../hooks/useFastApiJob';
+import ModelSelector from '../components/ModelSelector';
+import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 
 function DisclosureTable({ columns, rows }) {
   if (!rows?.length) return null;
@@ -42,10 +44,13 @@ export default function StakeholderBriefing() {
   const [includeDisclosures, setIncludeDisclosures] = useState(true);
   const [includeNews, setIncludeNews] = useState(true);
   const [activeTab, setActiveTab] = useState('Profile');
+  const [llmModel, setLlmModel] = useState('ChangeAgent');
 
-  const result = job?.result_data?.result;
-  const disclosures = result?.disclosures || {};
-  const profile = result?.profile || {};
+  const rd = job?.result_data;
+  const disclosures = rd?.disclosures || {};
+  const profile = rd?.profile || {};
+  const curatedDisclosures = rd?.curated_disclosures || [];
+  const evidenceFlags = rd?.evidence_flags || [];
   const artifactMap = useMemo(
     () => (job?.artifacts || []).reduce((acc, artifact) => ({ ...acc, [artifact.name]: artifact }), {}),
     [job?.artifacts],
@@ -59,7 +64,7 @@ export default function StakeholderBriefing() {
     (disclosures.irs990?.organizations && disclosures.irs990.organizations.length) ||
     (disclosures.irs990?.filings && disclosures.irs990.filings.length)
   );
-  const tabs = ['Profile', 'Policy Positions', 'Talking Points', ...(hasDisclosures ? ['Disclosures'] : []), ...(result?.news?.length ? ['News'] : [])];
+  const tabs = ['Profile', 'Policy Positions', 'Talking Points', ...(hasDisclosures ? ['Disclosures'] : []), ...(rd?.news?.length ? ['News'] : [])];
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -71,42 +76,49 @@ export default function StakeholderBriefing() {
     payload.append('context', context);
     payload.append('include_disclosures', String(includeDisclosures));
     payload.append('include_news', String(includeNews));
+    payload.append('llm_model', llmModel);
     uploadedFiles.forEach((file) => payload.append('file', file));
     submitJob(payload);
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-10 max-w-6xl mx-auto relative z-10">
+    <motion.div data-testid="tool-page-stakeholder-briefing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-10 max-w-6xl mx-auto relative z-10">
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
         <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
         </div>
-        <h1 className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Stakeholder Briefing</h1>
+        <h1 data-testid="page-title-stakeholder-briefing" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Stakeholder Briefing</h1>
         <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '70ch', fontWeight: 300 }}>
           Generates a pre-meeting briefing with bio, policy positions, suggested talking points, optional disclosure records, and optional recent news.
         </p>
+        <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
       </header>
+
+      <ResearchPrototypeNote
+        category="Stakeholder Mapping & Network Analysis"
+        message="This prototype module converts stakeholder research into a structured meeting brief. It supports preparation and synthesis, but positions, biographies, and disclosure references remain provisional until checked against primary material."
+      />
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="glass-card p-8 flex flex-col gap-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="field-label">Stakeholder Name</label>
-              <input value={stakeholderName} onChange={(event) => setStakeholderName(event.target.value)}
+              <input data-testid="input-stakeholder-name" value={stakeholderName} onChange={(event) => setStakeholderName(event.target.value)}
                 className="field" placeholder="e.g. Sen. Maria Cantwell" required />
             </div>
             <div>
               <label className="field-label">Organization</label>
-              <input value={organization} onChange={(event) => setOrganization(event.target.value)}
+              <input data-testid="input-stakeholder-organization" value={organization} onChange={(event) => setOrganization(event.target.value)}
                 className="field" placeholder="e.g. Senate Commerce Committee" />
             </div>
           </div>
 
           <div>
             <label className="field-label">Meeting Purpose</label>
-            <textarea value={meetingPurpose} onChange={(event) => setMeetingPurpose(event.target.value)}
+            <textarea data-testid="input-stakeholder-meeting-purpose" value={meetingPurpose} onChange={(event) => setMeetingPurpose(event.target.value)}
               className="field resize-none" rows={4}
               placeholder="e.g. Discuss support for the AI Safety Act and potential co-sponsorship" required />
           </div>
@@ -116,41 +128,41 @@ export default function StakeholderBriefing() {
             <div className="mt-5 flex flex-col gap-5">
               <div>
                 <label className="field-label">Your Organization</label>
-                <input value={yourOrg} onChange={(event) => setYourOrg(event.target.value)}
+                <input data-testid="input-stakeholder-your-org" value={yourOrg} onChange={(event) => setYourOrg(event.target.value)}
                   className="field" placeholder="e.g. TechForward Alliance" />
               </div>
               <div>
                 <label className="field-label">Additional Context</label>
-                <textarea value={context} onChange={(event) => setContext(event.target.value)}
+                <textarea data-testid="input-stakeholder-context" value={context} onChange={(event) => setContext(event.target.value)}
                   className="field resize-none" rows={5} placeholder="Paste relevant material, notes, or background here..." />
               </div>
               <div>
                 <label className="field-label">Context Document</label>
-                <input type="file" accept=".pdf,.docx,.txt" multiple
+                <input data-testid="input-stakeholder-files" type="file" accept=".pdf,.docx,.txt" multiple
                   onChange={(event) => setUploadedFiles(Array.from(event.target.files || []))}
                   className="field file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/20 file:text-violet-300" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label className="flex items-center gap-2 text-sm text-slate-300">
-                  <input type="checkbox" checked={includeDisclosures} onChange={() => setIncludeDisclosures((prev) => !prev)} className="accent-violet-500" />
+                  <input data-testid="toggle-stakeholder-disclosures" type="checkbox" checked={includeDisclosures} onChange={() => setIncludeDisclosures((prev) => !prev)} className="accent-violet-500" />
                   <span>Search disclosure records</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm text-slate-300">
-                  <input type="checkbox" checked={includeNews} onChange={() => setIncludeNews((prev) => !prev)} className="accent-violet-500" />
+                  <input data-testid="toggle-stakeholder-news" type="checkbox" checked={includeNews} onChange={() => setIncludeNews((prev) => !prev)} className="accent-violet-500" />
                   <span>Fetch recent news mentions</span>
                 </label>
               </div>
             </div>
           </details>
 
-          <button type="submit" disabled={loading || !stakeholderName.trim() || !meetingPurpose.trim()} className="btn-primary mt-auto">
+          <button data-testid="submit-stakeholder-briefing" type="submit" disabled={loading || !stakeholderName.trim() || !meetingPurpose.trim()} className="btn-primary mt-auto">
             {loading ? <><SpinnerGap size={18} className="animate-spin" /> Generating…</> : <>Generate Briefing <ArrowRight size={18} /></>}
           </button>
         </div>
 
         <div className="glass-card p-8 flex flex-col gap-5">
           {job ? (
-            <div className="rounded-xl border border-white/10 bg-black/20 p-5">
+            <div data-testid="status-stakeholder-briefing" className="rounded-xl border border-white/10 bg-black/20 p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="font-mono text-xs text-purple-300">{job.id.slice(0, 8).toUpperCase()}</span>
                 <span className={job.status === 'completed' ? 'badge-complete' : job.status === 'failed' ? 'badge-failed' : 'badge-processing'}>{job.status}</span>
@@ -172,11 +184,11 @@ export default function StakeholderBriefing() {
         </div>
       </form>
 
-      {job?.status === 'completed' && result && (
+      {job?.status === 'completed' && rd && (
         <div className="mt-10 space-y-6">
           <div className="flex flex-wrap gap-3">
             {tabs.map((tab) => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
+              <button data-testid={`tab-stakeholder-${tab.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} key={tab} onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 rounded-lg border text-sm ${activeTab === tab ? 'bg-violet-500/20 border-violet-400/40 text-violet-200' : 'bg-white/5 border-white/10 text-slate-300'}`}>
                 {tab}
               </button>
@@ -184,21 +196,46 @@ export default function StakeholderBriefing() {
           </div>
 
           <div className="glass-card p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
+                Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
+              </div>
+              <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+              <span className="font-serif text-lg text-slate-200">Stakeholder Briefing</span>
+            </div>
             {activeTab === 'Profile' && (
               <div className="space-y-5">
                 <div>
-                  <h2 className="display" style={{ fontSize: 28, color: '#fff' }}>{result.header?.stakeholder_name}</h2>
-                  {result.header?.organization && <p className="text-slate-400 mt-2">{result.header.organization}</p>}
+                  <h2 className="display" style={{ fontSize: 28, color: '#A78BFA' }}>{rd.header?.stakeholder_name}</h2>
+                  {rd.header?.organization && <p className="text-slate-400 mt-2">{rd.header.organization}</p>}
+                </div>
+                <div className="flex flex-wrap gap-3 text-xs uppercase tracking-wider">
+                  <span className={`px-3 py-1 rounded-full border ${rd.briefing_quality === 'complete' ? 'border-emerald-500/30 text-emerald-300 bg-emerald-500/10' : 'border-amber-500/30 text-amber-200 bg-amber-500/10'}`}>
+                    {rd.briefing_quality || 'partial'}
+                  </span>
+                  <span className="px-3 py-1 rounded-full border border-white/10 text-slate-300 bg-black/20">
+                    disclosure: {rd.disclosure_mode || 'none'}
+                  </span>
                 </div>
                 {profile.summary && <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-5 py-4 text-violet-100">{profile.summary}</div>}
                 {profile.current_role && <p className="text-slate-300"><strong className="text-white">Current Role:</strong> {profile.current_role}</p>}
                 {profile.key_areas?.length > 0 && <p className="text-slate-300"><strong className="text-white">Key Policy Areas:</strong> {profile.key_areas.join(', ')}</p>}
                 {profile.notable_positions && <p className="text-slate-300"><strong className="text-white">Notable Positions:</strong> {profile.notable_positions}</p>}
-                {result.key_questions?.length > 0 && (
+                {evidenceFlags.length > 0 && (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4">
+                    <h3 className="text-amber-200 font-semibold mb-2">Needs Verification</h3>
+                    <div className="space-y-1">
+                      {evidenceFlags.map((flag, index) => (
+                        <p key={index} className="text-amber-100 text-sm">{flag}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {rd.key_questions?.length > 0 && (
                   <div>
-                    <h3 className="text-white text-lg font-semibold mb-3">Key Questions To Ask</h3>
+                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: '#c4b5fd', marginBottom: 12 }}>Key Questions To Ask</h3>
                     <div className="space-y-3">
-                      {result.key_questions.map((question, index) => (
+                      {rd.key_questions.map((question, index) => (
                         <div key={index} className="rounded-xl border border-white/10 bg-black/20 px-5 py-4">
                           <p className="text-slate-100 font-medium">{question.question}</p>
                           {question.purpose && <p className="text-slate-400 text-sm mt-2">Purpose: {question.purpose}</p>}
@@ -212,7 +249,7 @@ export default function StakeholderBriefing() {
 
             {activeTab === 'Policy Positions' && (
               <div className="space-y-5">
-                {(result.policy_positions || []).length > 0 ? result.policy_positions.map((position, index) => (
+                {(rd.policy_positions || []).length > 0 ? rd.policy_positions.map((position, index) => (
                   <div key={index} className="rounded-xl border border-white/10 bg-black/20 px-5 py-4">
                     <p className="text-white font-medium">{position.position}</p>
                     {position.evidence && <p className="text-slate-400 text-sm mt-2">Evidence: {position.evidence}</p>}
@@ -224,7 +261,7 @@ export default function StakeholderBriefing() {
 
             {activeTab === 'Talking Points' && (
               <div className="space-y-4">
-                {(result.talking_points || []).length > 0 ? result.talking_points.map((point, index) => (
+                {(rd.talking_points || []).length > 0 ? rd.talking_points.map((point, index) => (
                   <div key={index} className="rounded-xl border border-white/10 bg-black/20 px-5 py-4">
                     <p className="text-white font-medium">{index + 1}. {point.point}</p>
                     {point.rationale && <p className="text-slate-400 text-sm mt-2">{point.rationale}</p>}
@@ -235,9 +272,23 @@ export default function StakeholderBriefing() {
 
             {activeTab === 'Disclosures' && (
               <div className="space-y-6 text-sm text-slate-300">
+                {curatedDisclosures.length > 0 && (
+                  <div>
+                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 12 }}>Curated Disclosure Intelligence</h3>
+                    <div className="space-y-3">
+                      {curatedDisclosures.map((item, index) => (
+                        <div key={index} className="rounded-xl border border-white/10 bg-black/20 px-5 py-4">
+                          <p className="text-white font-medium">{item.who}</p>
+                          <p className="text-slate-300 mt-1">{item.what}</p>
+                          <p className="text-slate-400 text-sm mt-2">Why it matters: {item.why_it_matters}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {disclosures.lda_entity?.length > 0 && (
                   <div>
-                    <h3 className="text-white font-semibold mb-3">LDA Lobbying (Stakeholder Activity)</h3>
+                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 12 }}>LDA Lobbying (Stakeholder Activity)</h3>
                     <DisclosureTable
                       columns={[
                         { key: 'registrant_name', label: 'Registrant' },
@@ -251,7 +302,7 @@ export default function StakeholderBriefing() {
                 )}
                 {disclosures.lda_topic?.length > 0 && (
                   <div>
-                    <h3 className="text-white font-semibold mb-3">Lobbying Activity On Meeting Topic</h3>
+                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 12 }}>Lobbying Activity On Meeting Topic</h3>
                     <p className="text-slate-400 text-sm mb-3">Organizations actively lobbying on the issue you&apos;re meeting about.</p>
                     <DisclosureTable
                       columns={[
@@ -267,7 +318,7 @@ export default function StakeholderBriefing() {
                 )}
                 {(disclosures.fara?.registrants?.length > 0 || disclosures.fara?.foreign_principals?.length > 0) && (
                   <div>
-                    <h3 className="text-white font-semibold mb-3">FARA Records</h3>
+                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 12 }}>FARA Records</h3>
                     {disclosures.fara?.registrants?.length > 0 && (
                       <div className="space-y-3 mb-5">
                         <p className="text-slate-400 text-sm">Registrants</p>
@@ -290,7 +341,7 @@ export default function StakeholderBriefing() {
                 )}
                 {(disclosures.irs990?.organizations?.length > 0 || disclosures.irs990?.filings?.length > 0) && (
                   <div>
-                    <h3 className="text-white font-semibold mb-3">IRS 990 Records</h3>
+                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 12 }}>IRS 990 Records</h3>
                     {disclosures.irs990?.organizations?.length > 0 && (
                       <div className="space-y-3 mb-5">
                         <p className="text-slate-400 text-sm">Organizations</p>
@@ -316,7 +367,7 @@ export default function StakeholderBriefing() {
 
             {activeTab === 'News' && (
               <div className="space-y-5">
-                {(result.news || []).map((item, index) => (
+                {(rd.news || []).map((item, index) => (
                   <div key={index} className="rounded-xl border border-white/10 bg-black/20 px-5 py-4">
                     <p className="text-white font-medium">{item.title}</p>
                     <p className="text-slate-400 text-sm mt-1">{item.source} {item.date ? `— ${item.date}` : ''}</p>
@@ -328,15 +379,15 @@ export default function StakeholderBriefing() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button onClick={() => downloadText(job?.result_data?.markdown || '', 'stakeholder_briefing.md')}
+            <button data-testid="download-stakeholder-markdown" onClick={() => downloadText(job?.result_data?.markdown || '', 'stakeholder_briefing.md')}
               className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
               <DownloadSimple size={18} /> Download Markdown
             </button>
-            <button onClick={() => downloadArtifact(artifactMap['stakeholder_briefing.docx'])}
+            <button data-testid="download-stakeholder-docx" onClick={() => downloadArtifact(artifactMap['stakeholder_briefing.docx'])}
               className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-purple-200 transition-colors">
               <DownloadSimple size={18} /> Download DOCX
             </button>
-            <button onClick={() => downloadJson(result || {}, 'stakeholder_briefing.json')}
+            <button data-testid="download-stakeholder-json" onClick={() => downloadJson(rd || {}, 'stakeholder_briefing.json')}
               className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
               <DownloadSimple size={18} /> Download JSON
             </button>

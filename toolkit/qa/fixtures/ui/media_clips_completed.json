@@ -1,0 +1,23 @@
+{
+  "id": "qa-media-clips-generate",
+  "status": "completed",
+  "progress": 100,
+  "message": "Media clips gathered.",
+  "download_url": null,
+  "created_at": "2026-04-18T12:00:00",
+  "result_data": {
+    "clips_data": [
+      {
+        "source": "Policy Daily",
+        "title": "AI safety rules advance",
+        "author": "Staff Reporter",
+        "date": "2026-04-13",
+        "url": "https://example.com/ai-safety-rules",
+        "has_full_text": false,
+        "extracted_text": ""
+      }
+    ],
+    "email_body": "Daily clips draft body."
+  },
+  "artifacts": []
+}

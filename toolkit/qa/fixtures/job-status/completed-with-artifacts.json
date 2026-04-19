@@ -1,0 +1,14 @@
+{
+  "status": "completed",
+  "progress": 100,
+  "message": "Job completed.",
+  "artifacts": [
+    {
+      "name": "artifact.txt",
+      "path": "/tmp/artifact.txt",
+      "size_bytes": 32,
+      "media_type": "text/plain",
+      "url": "/api/jobs/fixture-job/artifacts/0"
+    }
+  ]
+}

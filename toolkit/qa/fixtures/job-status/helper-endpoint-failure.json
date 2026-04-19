@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "progress": 100,
+  "message": "Helper endpoint returned a validation error.",
+  "artifacts": []
+}

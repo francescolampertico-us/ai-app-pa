@@ -41,14 +41,16 @@ OUTPUT_SCHEMAS = {
         "total_functional_expenses", "net_assets", "pdf_url", "xml_url"
     ],
     "irs990_deep_profile": [
-        "ein", "organization_name", "object_id", "website", "formation_year",
+        "ein", "organization_name", "object_id", "source_type", "source_url",
+        "parse_status", "parse_reason", "website", "formation_year",
         "state_of_domicile", "total_employees", "total_volunteers",
         "flag_lobbying", "flag_political_campaign", "flag_grants_to_orgs",
         "voting_board_members", "independent_board_members",
         "total_revenue", "contributions_and_grants", "program_service_revenue",
         "investment_income", "government_grants",
         "total_expenses", "program_service_expenses", "management_expenses",
-        "fundraising_expenses", "net_assets", "foreign_spending"
+        "fundraising_expenses", "net_assets", "foreign_spending",
+        "mission_excerpt", "program_excerpt", "schedule_mentions"
     ],
     "irs990_deep_lobbying": [
         "ein", "organization_name", "object_id", "total_lobbying", "grassroots_lobbying",
@@ -71,6 +73,10 @@ OUTPUT_SCHEMAS = {
         "ein", "object_id", "pa_relevance_score", "one_sentence_org_profile",
         "issue_area_tags", "top_influence_signals", "top_risk_flags",
         "likely_advocacy_tactics_named", "likely_target_institutions_named"
+    ],
+    "irs990_deep_sources": [
+        "ein", "organization_name", "tax_year", "source_type", "source_url",
+        "object_id", "parse_status", "parse_reason"
     ]
 }
 
@@ -121,7 +127,8 @@ class IOUtils:
             "irs990_deep_grants": [],
             "irs990_deep_compensation": [],
             "irs990_deep_related": [],
-            "irs990_deep_enrichments": []
+            "irs990_deep_enrichments": [],
+            "irs990_deep_sources": []
         }
 
     def log(self, message: str, level: str = "INFO"):

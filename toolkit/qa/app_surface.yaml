@@ -1,0 +1,298 @@
+version: 1
+generated_for: strategitect_full_app_qa
+surfaces:
+  - id: background_memo_generator
+    kind: tool
+    route: /app/background-memo
+    title: Background Memo
+    execute_endpoint: /api/tools/execute/background_memo_generator
+    live_case_id: BM-SMK-01
+    test_case_path: toolkit/qa/test_cases/background_memo_generator.md
+    helper_endpoints: []
+    regressions: [REG-0003, REG-0005]
+    test_ids:
+      root: tool-page-background-memo
+      title: page-title-background-memo
+      submit: submit-background-memo
+    option_partitions:
+      - subject_only
+      - file_grounded
+      - disclosure_source_combinations
+      - disclosure_entity_override
+      - research_drawer
+      - disclosure_drawer
+      - artifact_downloads
+
+  - id: hearing_memo_generator
+    kind: tool
+    route: /app/memos
+    title: Hearing Memo
+    execute_endpoint: /api/tools/execute/hearing_memo_generator
+    live_case_id: HM-SMK-01
+    test_case_path: toolkit/qa/test_cases/hearing_memo_generator.md
+    helper_endpoints: []
+    regressions: [REG-0001]
+    test_ids:
+      root: tool-page-hearing-memo
+      title: page-title-hearing-memo
+      submit: submit-hearing-memo
+    option_partitions:
+      - transcript_upload
+      - youtube_transcript
+      - metadata_overrides_off
+      - metadata_overrides_on
+      - confidentiality_footer
+      - verification_output
+      - artifact_downloads
+
+  - id: influence_disclosure_tracker
+    kind: tool
+    route: /app/influence
+    title: Influence Disclosure Tracker
+    execute_endpoint: /api/tools/execute/influence_disclosure_tracker
+    live_case_id: IDT-SMK-01
+    test_case_path: toolkit/qa/test_cases/influence_disclosure_tracker.md
+    helper_endpoints: []
+    regressions: []
+    test_ids:
+      root: tool-page-influence-tracker
+      title: page-title-influence-tracker
+      submit: submit-influence-tracker
+    option_partitions:
+      - search_field_variants
+      - selected_years
+      - all_years
+      - source_combinations
+      - dry_run
+      - deep_irs990_followup
+      - filtered_downloads
+      - sparse_results
+
+  - id: legislative_tracker
+    kind: tool
+    route: /app/legislative
+    title: Legislative Tracker
+    execute_endpoint: /api/tools/execute/legislative_tracker
+    live_case_id: LT-SMK-01
+    test_case_path: toolkit/qa/test_cases/legislative_tracker.md
+    helper_endpoints: []
+    regressions: [REG-0004]
+    test_ids:
+      root: tool-page-legislative-tracker
+      title: page-title-legislative-tracker
+      submit: submit-legislative-search
+    option_partitions:
+      - broad_search
+      - exact_search
+      - federal_scope
+      - state_scope
+      - result_count_variants
+      - preview_summary
+      - detailed_summary
+      - watchlist_list_add_refresh
+      - artifact_downloads
+
+  - id: media_clips
+    kind: tool
+    route: /app/media-clips
+    title: Media Clips
+    execute_endpoint: /api/tools/execute/media_clips
+    live_case_id: MC-SMK-01
+    test_case_path: toolkit/qa/test_cases/media_clips.md
+    helper_endpoints:
+      - /api/tools/open-email-draft
+      - /api/tools/execute/media_clip_cleaner
+    regressions: []
+    test_ids:
+      root: tool-page-media-clips
+      title: page-title-media-clips
+      submit: submit-media-clips
+    option_partitions:
+      - simple_query_mode
+      - advanced_boolean_mode
+      - source_filter_mainstream
+      - source_filter_all
+      - source_filter_custom
+      - saved_searches
+      - build_report
+      - missing_text_repair
+      - artifact_downloads
+      - mail_draft_helper
+
+  - id: media_clip_cleaner
+    kind: embedded_tool
+    route: /app/media-clips
+    title: Media Clip Cleaner
+    execute_endpoint: /api/tools/execute/media_clip_cleaner
+    live_case_id: MCC-SMK-01
+    test_case_path: toolkit/qa/test_cases/media_clip_cleaner.md
+    helper_endpoints: []
+    regressions: []
+    test_ids:
+      root: media-clip-cleaner-panel
+      title: standalone-clip-cleaner-title
+      submit: submit-standalone-clip-cleaner
+    option_partitions:
+      - standalone_llm
+      - standalone_local
+      - embedded_llm
+      - embedded_local
+      - empty_input_guard
+      - rebuild_after_clean
+
+  - id: media_list_builder
+    kind: tool
+    route: /app/media-list
+    title: Media List
+    execute_endpoint: /api/tools/execute/media_list_builder
+    live_case_id: MLB-SMK-01
+    test_case_path: toolkit/qa/test_cases/media_list_builder.md
+    helper_endpoints:
+      - /api/tools/pitch-draft
+    regressions: [REG-0006, REG-0007]
+    test_ids:
+      root: tool-page-media-list
+      title: page-title-media-list
+      submit: submit-media-list
+    option_partitions:
+      - specific_topic_mode
+      - broad_topic_mode
+      - national_scope
+      - state_scope
+      - metro_scope
+      - media_type_filtering
+      - empty_results
+      - artifact_downloads
+      - pitch_modal
+
+  - id: messaging_matrix
+    kind: tool
+    route: /app/messaging
+    title: Messaging Deliverables
+    execute_endpoint: /api/tools/execute/messaging_matrix
+    live_case_id: MM-SMK-01
+    test_case_path: toolkit/qa/test_cases/messaging_matrix.md
+    helper_endpoints: []
+    regressions: []
+    test_ids:
+      root: tool-page-messaging-matrix
+      title: page-title-messaging-matrix
+      submit: submit-messaging-matrix
+    option_partitions:
+      - full_variant_default
+      - reduced_variant_set
+      - uploaded_files
+      - pasted_context
+      - thin_context
+      - artifact_downloads
+
+  - id: stakeholder_briefing
+    kind: tool
+    route: /app/stakeholder-briefing
+    title: Stakeholder Briefing
+    execute_endpoint: /api/tools/execute/stakeholder_briefing
+    live_case_id: SB-SMK-01
+    test_case_path: toolkit/qa/test_cases/stakeholder_briefing.md
+    helper_endpoints: []
+    regressions: [REG-0008]
+    test_ids:
+      root: tool-page-stakeholder-briefing
+      title: page-title-stakeholder-briefing
+      submit: submit-stakeholder-briefing
+    option_partitions:
+      - disclosures_on
+      - disclosures_off
+      - news_on
+      - news_off
+      - uploaded_files
+      - tab_rendering
+      - artifact_downloads
+
+  - id: stakeholder_map_builder
+    kind: tool
+    route: /app/stakeholders
+    title: Stakeholder Map Builder
+    execute_endpoint: /api/tools/execute/stakeholder_map_builder
+    live_case_id: SMB-SMK-01
+    test_case_path: toolkit/qa/test_cases/stakeholder_map_builder.md
+    helper_endpoints: []
+    regressions: [REG-0002]
+    test_ids:
+      root: tool-page-stakeholder-map
+      title: page-title-stakeholder-map
+      submit: submit-stakeholder-map
+    option_partitions:
+      - federal_only_scope
+      - year_filter
+      - type_filters
+      - actor_modal
+      - analytics_tabs
+      - artifact_downloads
+
+  - id: remy
+    kind: assistant
+    route: /app/remy
+    title: Remy
+    execute_endpoint: /api/remy/chat
+    live_case_id: REMY-SMK-01
+    test_case_path: toolkit/qa/test_cases/remy.md
+    helper_endpoints: []
+    regressions: []
+    test_ids:
+      root: tool-page-remy
+      title: page-title-remy
+      submit: submit-remy
+    option_partitions:
+      - route_only_answer
+      - clarification_turn
+      - tool_events
+      - artifact_links
+      - upstream_failure
+      - model_selector
+
+  - id: helper_flows
+    kind: helper
+    route: /app/media-clips
+    title: Helper Flows
+    execute_endpoint: /api/tools/open-email-draft
+    live_case_id: HELP-SMK-01
+    test_case_path: toolkit/qa/test_cases/helper_flows.md
+    helper_endpoints:
+      - /api/tools/open-email-draft
+      - /api/tools/pitch-draft
+    regressions: []
+    test_ids:
+      root: tool-page-media-clips
+      title: page-title-media-clips
+      submit: submit-open-email-draft
+    option_partitions:
+      - open_email_draft_success
+      - open_email_draft_validation
+      - pitch_draft_success
+      - pitch_draft_validation
+
+  - id: api_jobs
+    kind: api
+    route: null
+    title: API and Jobs
+    execute_endpoint: /health
+    live_case_id: API-SMK-01
+    test_case_path: toolkit/qa/test_cases/api_jobs.md
+    helper_endpoints:
+      - /health
+      - /api/tools
+      - /api/tools/execute/{tool_id}
+      - /api/jobs/{job_id}/status
+      - /api/jobs/{job_id}/artifacts/{artifact_index}
+    regressions: []
+    test_ids:
+      root: api-surface
+      title: api-surface-title
+      submit: null
+    option_partitions:
+      - health
+      - tool_registry
+      - unknown_tool_404
+      - invalid_job_404
+      - invalid_artifact_404
+      - recovered_completion_polling

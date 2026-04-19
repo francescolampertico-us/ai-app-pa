@@ -11,6 +11,7 @@ import os
 import json
 import sys
 import tempfile
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from openai import OpenAI
@@ -23,7 +24,43 @@ except ImportError:
     HAS_GNEWS = False
 
 
-MODEL = "gpt-4.1"
+MODEL = "ChangeAgent"
+
+def _active_model(default: str) -> str:
+    import os
+    return os.environ.get("LLM_MODEL_OVERRIDE") or default
+
+def _response_format_kwarg() -> dict:
+    import os
+    if os.environ.get("LLM_MODEL_OVERRIDE"):
+        return {}
+    return {"response_format": {"type": "json_object"}}
+
+def _max_tokens_kwarg(default: int) -> dict:
+    import os
+    if os.environ.get("LLM_MODEL_OVERRIDE"):
+        return {}
+    return {"max_tokens": default}
+
+def _parse_json_content(content: "str | None") -> dict:
+    import re
+    if not content:
+        return {}
+    text = content.strip()
+    m = re.search(r"```(?:json)?\s*([\s\S]+?)```", text)
+    if m:
+        text = m.group(1).strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    last = text.rfind("}")
+    if last != -1:
+        try:
+            return json.loads(text[: last + 1])
+        except json.JSONDecodeError:
+            pass
+    return {}
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +129,11 @@ def _lda_topic_search(meeting_purpose: str, max_results: int = 15) -> list[dict]
     from urllib3.util.retry import Retry
 
     # Extract policy topic keywords from the meeting purpose.
-    # We use the LLM-free approach: strip procedural words, keep policy substance.
+    # We use the LLM-free approach: strip procedural and generic policy-process words,
+    # keeping only terms specific enough to anchor a targeted LDA search.
+    # Generic words like "transparency" or "accountability" are deliberately excluded —
+    # they appear across hundreds of unrelated filings (voting rights, civil rights, etc.)
+    # and produce noisy, topic-adjacent results that hurt briefing quality.
     skip_words = {
         "discuss", "support", "oppose", "review", "co-sponsorship", "co-sponsor",
         "cosponsorship", "cosponsor", "the", "and", "for", "of", "on", "in", "to",
@@ -100,11 +141,15 @@ def _lda_topic_search(meeting_purpose: str, max_results: int = 15) -> list[dict]
         "mandatory", "understand", "meet", "meeting", "explore", "regarding",
         "concerning", "related", "engagement", "briefing", "prepare", "pre-deployment",
         "testing", "framework", "legislation", "bill", "act", "federal", "state",
+        # Generic policy-process words — too broad for targeted LDA queries:
+        "transparency", "accountability", "oversight", "governance", "reform",
+        "standards", "policy", "access", "protection", "rights", "equity",
+        "safety", "security", "privacy", "innovation", "initiative", "commission",
     }
     topic_words = [
         w.strip(".,;:()")
         for w in meeting_purpose.split()
-        if w.lower().strip(".,;:()") not in skip_words and len(w.strip(".,;:()")) > 1
+        if w.lower().strip(".,;:()") not in skip_words and len(w.strip(".,;:()")) > 2
     ]
 
     # Build search query: use the core policy topic (2-3 words max for LDA API)
@@ -166,11 +211,92 @@ def _lda_topic_search(meeting_purpose: str, max_results: int = 15) -> list[dict]
             if len(results) >= max_results:
                 break
 
+        # Post-filter: only keep filings whose issues text actually contains
+        # at least one core topic word. This removes entries that matched the
+        # query on a generic term (e.g. "transparency") but are about an
+        # unrelated domain (voting rights, civil rights, etc.).
+        if topic_words and results:
+            core = [w.lower() for w in topic_words]
+            filtered = [
+                f for f in results
+                if any(
+                    word in " ".join(str(i) for i in f.get("issues", [])).lower()
+                    for word in core
+                )
+            ]
+            # Only apply the filter if it leaves at least some results.
+            # If it would wipe everything (query was very generic), keep the originals.
+            if filtered:
+                results = filtered
+            else:
+                print(
+                    "  LDA topic post-filter removed all results — keeping originals",
+                    file=sys.stderr,
+                )
+
         return results
 
     except Exception as e:
         print(f"  LDA topic search error: {e}", file=sys.stderr)
         return []
+
+
+def _meeting_terms(meeting_purpose: str) -> list[str]:
+    """Extract meeting-topic terms for disclosure relevance scoring."""
+    import re
+
+    stop_words = {
+        "the", "and", "for", "with", "that", "this", "from", "into", "your", "our",
+        "their", "about", "support", "oppose", "discuss", "explore", "meeting",
+        "framework", "policy", "federal", "state", "bill", "act", "standards",
+        "testing", "transparency", "innovation", "practical", "clear",
+    }
+    raw_terms = re.findall(r"[A-Za-z0-9][A-Za-z0-9&-]+", meeting_purpose.lower())
+    terms = []
+    for term in raw_terms:
+        if term in stop_words:
+            continue
+        if len(term) <= 2 and term != "ai":
+            continue
+        terms.append(term)
+    return list(dict.fromkeys(terms))
+
+
+def _score_topic_disclosure(record: dict, meeting_terms: list[str]) -> int:
+    """Score how directly an LDA topic filing helps with the actual meeting topic."""
+    haystack = " ".join([
+        str(record.get("client_name", "")),
+        str(record.get("registrant_name", "")),
+        " ".join(str(i) for i in record.get("issues", [])),
+    ]).lower()
+
+    score = 0
+    for term in meeting_terms:
+        if term in haystack:
+            score += 2 if len(term) > 4 else 1
+    if "artificial intelligence" in haystack or " ai " in f" {haystack} ":
+        score += 3
+    if "machine learning" in haystack or "model" in haystack or "algorithm" in haystack:
+        score += 2
+    return score
+
+
+def _filter_topic_disclosures(disclosures: list[dict], meeting_purpose: str, max_items: int = 5) -> list[dict]:
+    """Keep the most meeting-relevant LDA topic disclosures without wiping the section entirely."""
+    if not disclosures:
+        return []
+    terms = _meeting_terms(meeting_purpose)
+    scored = []
+    for item in disclosures:
+        enriched = dict(item)
+        enriched["_topic_score"] = _score_topic_disclosure(item, terms)
+        scored.append(enriched)
+
+    scored.sort(key=lambda item: item.get("_topic_score", 0), reverse=True)
+    filtered = [item for item in scored if item.get("_topic_score", 0) >= 1]
+    if len(filtered) < min(2, len(scored)):
+        filtered = scored[: min(max_items, max(3, len(filtered)))]
+    return filtered[:max_items]
 
 
 def fetch_disclosures(stakeholder_name: str, organization: str = "",
@@ -212,7 +338,7 @@ def fetch_disclosures(stakeholder_name: str, organization: str = "",
         print(f"  Could not init IOUtils: {e}", file=sys.stderr)
         # Still try topic search even if entity search fails
         if meeting_purpose:
-            result["lda_topic"] = _lda_topic_search(meeting_purpose)
+            result["lda_topic"] = _filter_topic_disclosures(_lda_topic_search(meeting_purpose), meeting_purpose)
             print(f"  LDA topic: {len(result['lda_topic'])} actors found", file=sys.stderr)
         return result
 
@@ -243,7 +369,7 @@ def fetch_disclosures(stakeholder_name: str, organization: str = "",
 
     # --- LDA Topic Search (by meeting purpose) ---
     if meeting_purpose:
-        result["lda_topic"] = _lda_topic_search(meeting_purpose)
+        result["lda_topic"] = _filter_topic_disclosures(_lda_topic_search(meeting_purpose), meeting_purpose)
         print(f"  LDA topic: {len(result['lda_topic'])} actors found", file=sys.stderr)
 
     # --- FARA ---
@@ -292,11 +418,14 @@ that a PA professional can review in 5 minutes before walking into the meeting.
 
 RULES:
 - Be SPECIFIC and FACTUAL. Use concrete details — names, titles, dates, bill numbers, committee names.
-- When you are uncertain about a fact, mark it with [VERIFY].
+- Do NOT place [VERIFY] markers or unresolved uncertainty tokens in the final prose.
+- If a fact is too uncertain to state cleanly, omit it rather than hedging inline.
 - Do NOT fabricate specific statistics, quotes, or dates.
 - Use the news articles and disclosure data provided to ground your analysis.
+- Use disclosure material selectively. Topic lobbying activity can be included as directional intelligence when it materially informs the meeting objective, but do not dump a long unrelated filing list.
 - If the stakeholder is a legislator, mention committee assignments, caucus memberships, and recent legislative actions.
 - If the stakeholder is an organization, mention leadership, budget/revenue, and key programs.
+- Do not make speculative local-benefit or constituency inferences unless supported by explicit evidence in the source material.
 
 QUANTITY REQUIREMENTS:
 - profile.key_areas: EXACTLY 5 policy areas, ordered by relevance to the meeting
@@ -375,7 +504,7 @@ def _format_disclosures_for_prompt(disclosures: dict) -> str:
                 line += f" — {issues[0][:150]}"
             topic_lines.append(line)
         parts.append(
-            "KEY INTELLIGENCE — Organizations actively lobbying on the meeting topic:\n"
+            "SELECTED DISCLOSURE INTELLIGENCE — organizations most relevant to the meeting topic:\n"
             + "\n".join(topic_lines)
         )
 
@@ -417,6 +546,96 @@ def _format_disclosures_for_prompt(disclosures: dict) -> str:
     return "\n\n".join(parts)
 
 
+def _scrub_verify_markers(value):
+    if isinstance(value, str):
+        cleaned = re.sub(r"\s*\[VERIFY[^\]]*\]", "", value).strip()
+        cleaned = re.sub(r"\s{2,}", " ", cleaned)
+        return cleaned
+    if isinstance(value, list):
+        return [_scrub_verify_markers(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _scrub_verify_markers(val) for key, val in value.items()}
+    return value
+
+
+def _collect_verify_markers(value, flags: list[str], prefix: str = ""):
+    if isinstance(value, str):
+        for match in re.findall(r"\[VERIFY([^\]]*)\]", value):
+            note = match.strip(" :.-")
+            label = prefix or "briefing"
+            flags.append(f"{label}: {note}" if note else f"{label}: requires verification")
+    elif isinstance(value, list):
+        for index, item in enumerate(value, 1):
+            _collect_verify_markers(item, flags, f"{prefix}[{index}]" if prefix else f"item {index}")
+    elif isinstance(value, dict):
+        for key, val in value.items():
+            next_prefix = f"{prefix}.{key}" if prefix else key
+            _collect_verify_markers(val, flags, next_prefix)
+
+
+def _derive_disclosure_mode(disclosures: dict) -> str:
+    if disclosures.get("lda_entity"):
+        return "stakeholder_specific"
+    if disclosures.get("lda_topic") or disclosures.get("fara", {}).get("registrants") or disclosures.get("fara", {}).get("foreign_principals"):
+        return "topic_context"
+    return "none"
+
+
+def _curate_disclosure_brief(disclosures: dict) -> list[dict]:
+    curated = []
+    for record in disclosures.get("lda_entity", [])[:3]:
+        issues = record.get("issues", [])
+        curated.append({
+            "who": record.get("client_name") or record.get("registrant_name") or "Unknown actor",
+            "what": issues[0][:160] if issues else "Direct lobbying activity tied to the stakeholder",
+            "why_it_matters": "Directly relevant to the stakeholder's disclosure footprint.",
+        })
+    if not curated:
+        for record in disclosures.get("lda_topic", [])[:3]:
+            issues = record.get("issues", [])
+            curated.append({
+                "who": record.get("client_name") or "Unknown actor",
+                "what": issues[0][:160] if issues else "Lobbying activity tied to the meeting topic",
+                "why_it_matters": "Shows which outside organizations are actively engaging on the meeting topic.",
+            })
+    return curated[:3]
+
+
+def _clean_synthesis_output(synthesis: dict, disclosures: dict) -> dict:
+    evidence_flags: list[str] = []
+    _collect_verify_markers(synthesis, evidence_flags)
+    cleaned = _scrub_verify_markers(synthesis)
+    evidence_flags = list(dict.fromkeys(flag for flag in evidence_flags if flag))
+
+    profile = cleaned.get("profile", {}) or {}
+    policy_positions = []
+    for item in cleaned.get("policy_positions", []) or []:
+        if not item.get("position") or not item.get("evidence"):
+            evidence_flags.append("policy_positions: dropped item missing evidence or position.")
+            continue
+        policy_positions.append(item)
+
+    talking_points = [item for item in (cleaned.get("talking_points", []) or []) if item.get("point")]
+    key_questions = [item for item in (cleaned.get("key_questions", []) or []) if item.get("question")]
+
+    disclosure_mode = _derive_disclosure_mode(disclosures)
+    curated_brief = _curate_disclosure_brief(disclosures)
+    briefing_quality = "complete"
+    if evidence_flags or not policy_positions or (disclosure_mode != "none" and not curated_brief):
+        briefing_quality = "partial"
+
+    return {
+        "profile": profile,
+        "policy_positions": policy_positions[:4],
+        "talking_points": talking_points[:4],
+        "key_questions": key_questions[:3],
+        "evidence_flags": list(dict.fromkeys(evidence_flags)),
+        "briefing_quality": briefing_quality,
+        "disclosure_mode": disclosure_mode,
+        "curated_disclosures": curated_brief,
+    }
+
+
 def synthesize_briefing(client: OpenAI, stakeholder_name: str,
                         meeting_purpose: str, organization: str = "",
                         your_organization: str = "", context: str = "",
@@ -455,17 +674,17 @@ def synthesize_briefing(client: OpenAI, stakeholder_name: str,
     prompt = "\n".join(parts)
 
     response = client.chat.completions.create(
-        model=MODEL,
+        model=_active_model(MODEL),
         messages=[
             {"role": "system", "content": BRIEFING_SYSTEM},
             {"role": "user", "content": prompt},
         ],
         temperature=0.3,
-        max_tokens=4000,
-        response_format={"type": "json_object"},
+        **_max_tokens_kwarg(4000),
+        **_response_format_kwarg(),
     )
 
-    return json.loads(response.choices[0].message.content)
+    return _parse_json_content(response.choices[0].message.content)
 
 
 # ---------------------------------------------------------------------------
@@ -513,11 +732,12 @@ def generate_briefing(stakeholder_name: str, meeting_purpose: str,
 
     # Step 2: LLM synthesis
     print("Step 2: Synthesizing briefing...", file=sys.stderr)
-    synthesis = synthesize_briefing(
+    raw_synthesis = synthesize_briefing(
         client, stakeholder_name, meeting_purpose,
         organization, your_organization, context,
         news, disclosures,
     )
+    synthesis = _clean_synthesis_output(raw_synthesis, disclosures)
 
     # Step 3: Assemble result
     header = {
@@ -534,6 +754,10 @@ def generate_briefing(stakeholder_name: str, meeting_purpose: str,
         "policy_positions": synthesis.get("policy_positions", []),
         "news": news[:5],
         "disclosures": disclosures,
+        "curated_disclosures": synthesis.get("curated_disclosures", []),
+        "briefing_quality": synthesis.get("briefing_quality", "partial"),
+        "evidence_flags": synthesis.get("evidence_flags", []),
+        "disclosure_mode": synthesis.get("disclosure_mode", "none"),
         "talking_points": synthesis.get("talking_points", []),
         "key_questions": synthesis.get("key_questions", []),
     }
@@ -591,8 +815,17 @@ def render_markdown(result: dict) -> str:
     irs = disclosures.get("irs990", {})
     has_irs = bool(irs.get("organizations") if isinstance(irs, dict) else irs)
 
-    if has_lda_entity or has_lda_topic or has_fara or has_irs:
+    curated_disclosures = result.get("curated_disclosures", [])
+    if curated_disclosures or has_lda_entity or has_lda_topic or has_fara or has_irs:
         sections.append("## Disclosure Data")
+
+        if curated_disclosures:
+            sections.append("### Curated Disclosure Intelligence")
+            for item in curated_disclosures:
+                sections.append(
+                    f"- **{item.get('who', 'Unknown actor')}** — {item.get('what', '')} "
+                    f"*Why it matters:* {item.get('why_it_matters', '')}"
+                )
 
         if has_lda_entity:
             sections.append("### LDA Lobbying (Stakeholder Activity)")
@@ -612,8 +845,8 @@ def render_markdown(result: dict) -> str:
                 )
 
         if has_lda_topic:
-            sections.append("### Lobbying Activity on Meeting Topic")
-            for r in disclosures["lda_topic"][:8]:
+            sections.append("### Selected Lobbying Activity on Meeting Topic")
+            for r in disclosures["lda_topic"][:5]:
                 amount = r.get("amount_reported", "")
                 try:
                     amount_str = f" (${float(amount):,.0f})" if amount and amount != "N/A" else ""

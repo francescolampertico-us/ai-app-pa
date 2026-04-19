@@ -1,0 +1,56 @@
+{
+  "id": "qa-background-completed",
+  "status": "completed",
+  "progress": 100,
+  "message": "Job completed.",
+  "download_url": "/api/jobs/qa-background-completed/artifacts/0",
+  "created_at": "2026-04-18T12:00:00",
+  "result_data": {
+    "subject": "Jagello 2000",
+    "memo_date": "April 13, 2026",
+    "overview": "Jagello 2000 is a Czech security policy organization focused on NATO awareness and transatlantic defense cooperation.",
+    "fast_facts": [
+      "Founded in Ostrava in 2000.",
+      "Known for NATO Days in Ostrava.",
+      "Works on public-facing security policy education."
+    ],
+    "sections": [
+      {
+        "heading": "Overview of Activities",
+        "subsections": [
+          {
+            "heading": "",
+            "paragraphs": [
+              "The organization combines public programming, conference convening, and expert commentary around transatlantic security."
+            ]
+          }
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Official site",
+        "url": "https://example.com/jagello-2000"
+      }
+    ],
+    "markdown": "# Background Memo\n\n## Overview\nJagello 2000 overview text.",
+    "research_md": "- [Example article](https://example.com/jagello-2000)",
+    "disclosure_md": "| Source | Result |\n| --- | --- |\n| LDA | No direct filing match |"
+  },
+  "artifacts": [
+    {
+      "name": "background_memo.docx",
+      "path": "/tmp/background_memo.docx",
+      "size_bytes": 2048,
+      "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "url": "/api/jobs/qa-background-completed/artifacts/0"
+    },
+    {
+      "name": "report.md",
+      "path": "/tmp/report.md",
+      "size_bytes": 256,
+      "media_type": "text/markdown",
+      "url": "/api/jobs/qa-background-completed/artifacts/1"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "id": "qa-influence-completed",
+  "status": "completed",
+  "progress": 100,
+  "message": "Disclosure search complete.",
+  "download_url": null,
+  "created_at": "2026-04-18T12:00:00",
+  "result_data": {
+    "report": "# Disclosure Report\n\nOne matched LDA filing and one IRS 990 filing were found.",
+    "csv_data": {
+      "lda_filings": [
+        {
+          "registrant": "Policy Advocates LLC",
+          "client": "OpenAI",
+          "filing_year": "2025",
+          "filing_period": "Q1",
+          "income": "120000"
+        }
+      ],
+      "lda_issues": [
+        {
+          "registrant": "Policy Advocates LLC",
+          "client": "OpenAI",
+          "issue_area": "SCI",
+          "description": "AI safety legislation",
+          "government_entities": "Senate Commerce Committee"
+        }
+      ],
+      "lda_lobbyists": [
+        {
+          "lobbyist_name": "Jordan Smith",
+          "registrant": "Policy Advocates LLC",
+          "client": "OpenAI",
+          "covered_position": "Former Senate staff"
+        }
+      ],
+      "fara_foreign_principals": [
+        {
+          "foreign_principal_name": "Example Ministry",
+          "state_or_country": "Exampleland",
+          "registrant_name": "Global Advisors",
+          "foreign_principal_date": "2025-01-03",
+          "foreign_principal_term_date": ""
+        }
+      ],
+      "fara_documents": [
+        {
+          "document_date": "2025-02-01",
+          "document_type": "Supplemental statement",
+          "registrant_name": "Global Advisors",
+          "foreign_principal_name": "Example Ministry",
+          "document_url": "https://example.com/fara-doc"
+        }
+      ],
+      "irs990_filings": [
+        {
+          "organization_name": "OpenAI Nonprofit",
+          "tax_year": "2024",
+          "form_type": "990",
+          "total_revenue": "1000000",
+          "total_functional_expenses": "900000",
+          "net_assets": "250000",
+          "pdf_url": "https://example.com/990.pdf",
+          "xml_url": ""
+        }
+      ]
+    },
+    "stdout": "Disclosure tracker fixture output",
+    "stderr": ""
+  },
+  "artifacts": []
+}

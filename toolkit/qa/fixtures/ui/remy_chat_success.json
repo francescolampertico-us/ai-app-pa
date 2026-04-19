@@ -1,0 +1,16 @@
+{
+  "text": "I routed this to Background Memo and the tool completed successfully.",
+  "tool_events": [
+    {
+      "tool_id": "background_memo_generator",
+      "ok": true,
+      "frontend_path": "/background-memo",
+      "artifacts": [
+        {
+          "name": "background_memo.docx",
+          "url": "/api/jobs/qa-background-completed/artifacts/0"
+        }
+      ]
+    }
+  ]
+}

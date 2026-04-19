@@ -414,11 +414,11 @@ if st.session_state.get("clips_data"):
                         st.success("Cleaned with LLM.")
                     except Exception as llm_err:
                         st.warning(f"LLM failed ({llm_err}), falling back to local cleaner.")
-                        cleaned = _cc.clean_clip(raw_paste)
+                        cleaned = _cc.clean_clip(raw_paste, title=article_title)
             else:
-                cleaned = _cc.clean_clip(raw_paste)
+                cleaned = _cc.clean_clip(raw_paste, title=article_title)
 
-            ok, issues = _cc.validate_output(cleaned)
+            ok, issues = _cc.validate_output(cleaned, title=article_title)
             if not ok:
                 st.warning("Cleaned text has minor issues:")
                 for issue in issues:
@@ -659,11 +659,11 @@ if standalone_paste and st.button("Clean Article", key="standalone_clean_btn"):
                     st.success("Cleaned with LLM.")
                 except Exception as llm_err:
                     st.warning(f"LLM failed ({llm_err}), falling back to local cleaner.")
-                    cleaned = _cc.clean_clip(standalone_paste)
+                    cleaned = _cc.clean_clip(standalone_paste, title=standalone_title or None)
         else:
-            cleaned = _cc.clean_clip(standalone_paste)
+            cleaned = _cc.clean_clip(standalone_paste, title=standalone_title or None)
 
-        ok, issues = _cc.validate_output(cleaned)
+        ok, issues = _cc.validate_output(cleaned, title=standalone_title or None)
         if not ok:
             st.warning("Cleaned text has minor issues:")
             for issue in issues:

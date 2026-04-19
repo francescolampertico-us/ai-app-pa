@@ -16,7 +16,7 @@ TOOLKIT_APP = ROOT / "toolkit" / "app"
 class RemyChatRequest(BaseModel):
     message: str
     history: list[dict] = []
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4.1-mini"
 
 
 @router.post("/chat")

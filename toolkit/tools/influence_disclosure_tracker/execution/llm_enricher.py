@@ -1,16 +1,51 @@
 import os
 import json
+import re
 try:
     import openai
 except ImportError:
     openai = None
 
+_DEFAULT_MODEL = "ChangeAgent"
+
+
+def _active_model() -> str:
+    return os.environ.get("LLM_MODEL_OVERRIDE") or _DEFAULT_MODEL
+
+
+def _response_format_kwarg() -> dict:
+    # Skip JSON mode when a model override is active (e.g. ChangeAgent may not support it)
+    if os.environ.get("LLM_MODEL_OVERRIDE"):
+        return {}
+    return {"response_format": {"type": "json_object"}}
+
+
+def _parse_json_content(content: str) -> dict:
+    if not content:
+        return {}
+    text = content.strip()
+    m = re.search(r"```(?:json)?\s*([\s\S]+?)```", text)
+    if m:
+        text = m.group(1).strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    last = text.rfind("}")
+    if last != -1:
+        try:
+            return json.loads(text[: last + 1])
+        except json.JSONDecodeError:
+            pass
+    return {}
+
 
 class IRS990LLMEnricher:
     """
     Phase 3: Selective LLM Enrichment.
-    Uses GPT-4o-mini to read deterministic data + narratives and output
-    subjective PA relevance fields.
+    Reads deterministic 990 data + narratives and outputs subjective PA relevance fields.
+    Respects LLM_MODEL_OVERRIDE and OPENAI_BASE_URL env vars so it works with
+    any model including ChangeAgent.
     """
     def __init__(self, api_key: str = None):
         if not openai:
@@ -20,11 +55,16 @@ class IRS990LLMEnricher:
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY is required for deep mode.")
 
-        self.client = openai.OpenAI(api_key=self.api_key)
+        # Respect OPENAI_BASE_URL so ChangeAgent and other compatible endpoints work
+        base_url = os.environ.get("OPENAI_BASE_URL")
+        client_kwargs: dict = {"api_key": self.api_key}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+        self.client = openai.OpenAI(**client_kwargs)
 
     def extract_insights(self, org_name: str, narrative_blocks: str, structured_data: dict) -> dict:
         """
-        Calls GPT-4o-mini to derive subjective tags and summaries
+        Calls the active LLM to derive subjective tags and summaries
         based on raw 990 segments.
         """
         system_prompt = """You are a senior Public Affairs and Compliance analyst.
@@ -49,17 +89,20 @@ Narrative Blocks (Mission, Programs, Schedule O explanations):
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4.1-mini",
+                model=_active_model(),
                 temperature=0.1,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={"type": "json_object"},
+                **_response_format_kwarg(),
             )
 
-            content = response.choices[0].message.content.strip()
-            return json.loads(content)
+            content = response.choices[0].message.content or ""
+            result = _parse_json_content(content)
+            if not result:
+                print(f"[WARNING] LLM Enrichment: could not parse JSON response for {org_name}")
+            return result
 
         except Exception as e:
             print(f"[WARNING] LLM Enrichment Error for {org_name}: {e}")

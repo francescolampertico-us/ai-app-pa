@@ -1,0 +1,49 @@
+{
+  "id": "qa-legislative-summary",
+  "status": "completed",
+  "progress": 100,
+  "message": "Summary complete.",
+  "download_url": "/api/jobs/qa-legislative-summary/artifacts/0",
+  "created_at": "2026-04-18T12:00:00",
+  "result_data": {
+    "action": "summarize",
+    "summary": "This bill establishes pre-deployment testing requirements for frontier AI systems.",
+    "caveats": [],
+    "bill": {
+      "bill_id": "123",
+      "number": "SB 101",
+      "title": "Artificial Intelligence Safety Act",
+      "state": "US",
+      "status": "Introduced",
+      "last_action_date": "2026-02-15",
+      "last_action": "Referred to committee"
+    },
+    "summary_status": "verified",
+    "source_text_status": "available",
+    "source_status": "official_text",
+    "extraction_status": "complete",
+    "verification_status": "passed",
+    "extraction_coverage": {
+      "extracted_sections": 5,
+      "total_sections": 5
+    },
+    "coverage_mode": "full_text",
+    "evidence_coverage": {
+      "supported_lines": 4,
+      "total_lines": 4
+    },
+    "validation_flags": [],
+    "unsupported_claims": [],
+    "summary_level": "detailed",
+    "report_markdown": "# Verified Summary\n\nVerified legislative summary text."
+  },
+  "artifacts": [
+    {
+      "name": "bill_summary.md",
+      "path": "/tmp/bill_summary.md",
+      "size_bytes": 512,
+      "media_type": "text/markdown",
+      "url": "/api/jobs/qa-legislative-summary/artifacts/0"
+    }
+  ]
+}

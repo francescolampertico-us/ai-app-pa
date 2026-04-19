@@ -12,7 +12,6 @@ Usage:
 """
 
 import argparse
-import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -21,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from generator import generate_memo, render_markdown
 from export import export_docx
+from schema import BackgroundMemoResult
 
 
 def main():
@@ -51,19 +51,20 @@ def main():
 
     memo_date = args.date or date.today().strftime("%B %d, %Y")
 
-    # Generate
-    result = generate_memo(
+    # Generate → validate → render/export
+    raw = generate_memo(
         subject=args.subject,
         sections=args.sections,
         context=args.context,
     )
+    memo = BackgroundMemoResult(**raw)  # explicit schema construction before render/export
 
     # Export DOCX
-    export_docx(result, str(out_path), memo_date=memo_date)
+    export_docx(memo, str(out_path), memo_date=memo_date)
     print(f"DOCX saved: {out_path}")
 
     # Export markdown
-    md_text = render_markdown(result, memo_date=memo_date)
+    md_text = render_markdown(memo, memo_date=memo_date)
     if args.md_out:
         md_path = Path(args.md_out)
     else:

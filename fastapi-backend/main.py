@@ -11,12 +11,17 @@ from api.routers import jobs, tools, remy
 
 app = FastAPI(title="PA AI Toolkit Backend API")
 
-# Setup CORS for Vite React frontend
-origins = [
-    "http://localhost:5173", # Vite default port
+# CORS origins: always allow common localhost dev ports; extend via CORS_ORIGINS env var (comma-separated).
+_extra = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+_default_origins = {
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
-    # Add production URL here later
-]
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+    "http://localhost:4175",
+    "http://127.0.0.1:4175",
+}
+origins = list(_default_origins | set(_extra))
 
 app.add_middleware(
     CORSMiddleware,

@@ -34,6 +34,16 @@ page_header(
     ),
 )
 
+METRIC_HELP = {
+    "Bridge Role": "How much this actor connects otherwise separate parts of the current stakeholder map.",
+    "Connection Reach": "How many direct links this actor has inside the current stakeholder map.",
+    "Strategic Relevance": "A blended directional indicator based on the generated map and available signals. Useful for prioritization, not a definitive real-world power score.",
+    "Estimated Influence Tier": "A qualitative estimate of likely influence on this issue based on the current map and available evidence.",
+}
+def _source_summary(actor: dict) -> str:
+    labels = actor.get("source_labels") or actor.get("source_types") or []
+    return " + ".join(labels) if labels else actor.get("source", "")
+
 
 # ─── Inputs ──────────────────────────────────────────────────────────────────
 
@@ -232,6 +242,9 @@ if "smb_result" in st.session_state:
         else:
             import pandas as pd
 
+            if result.get("methodology_note"):
+                st.caption(result["methodology_note"])
+
             # Key metrics row
             an1, an2, an3, an4 = st.columns(4)
             an1.metric("Network Density",       f"{analytics['network_density']:.3f}")
@@ -250,10 +263,8 @@ if "smb_result" in st.session_state:
             # Bridge actors
             st.markdown("### Bridge Actors")
             st.caption(
-                "Bridge actors sit between the proponent and opponent coalitions. "
-                "Per Varone, Ingold & Jourdain (2016), betweenness centrality predicts "
-                "advocacy access — these actors are the highest-value engagement targets. "
-                "They appear with a **gold border** on the network graph."
+                f"{METRIC_HELP['Bridge Role']} "
+                "They appear with a gold border on the network graph."
             )
             brokers = analytics.get("brokers", [])
             if brokers:
@@ -261,14 +272,14 @@ if "smb_result" in st.session_state:
                     "Name":          b["name"],
                     "Type":          b.get("stakeholder_type", "").title(),
                     "Stance":        b.get("stance", "").title(),
-                    "Betweenness":   round(b["betweenness_centrality"], 3),
-                    "Degree":        round(b["degree_centrality"], 3),
+                    "Bridge Role":   round(b["betweenness_centrality"], 2),
+                    "Connection Reach": round(b["degree_centrality"], 2),
                     "Organization":  b.get("organization", ""),
                 } for b in brokers])
                 st.dataframe(broker_df, use_container_width=True, hide_index=True)
             else:
                 if not analytics.get("has_edges"):
-                    st.info("No relationships detected — betweenness centrality requires at least one lobbying or co-sponsorship edge.")
+                    st.info("No relationships detected — Bridge Role requires at least one lobbying or co-sponsorship edge.")
                 elif not analytics.get("has_both_sides"):
                     st.info("Bridge actor detection requires both proponent and opponent actors. Check stance classifications in the Proponents / Opponents tabs.")
                 else:
@@ -281,22 +292,22 @@ if "smb_result" in st.session_state:
             cr_left, cr_right = st.columns(2)
 
             with cr_left:
-                st.markdown("**Top by Betweenness** (brokerage power)")
-                st.caption("How often this actor lies on the shortest path between others.")
+                st.markdown("**Top by Bridge Role**")
+                st.caption(METRIC_HELP["Bridge Role"])
                 bw_df = pd.DataFrame([{
-                    "Name":        a.get("name", ""),
-                    "Betweenness": round(a.get("betweenness_centrality", 0), 3),
-                    "Stance":      a.get("stance", "").title(),
+                    "Name":         a.get("name", ""),
+                    "Bridge Role":  round(a.get("betweenness_centrality", 0), 2),
+                    "Stance":       a.get("stance", "").title(),
                 } for a in analytics["top_by_betweenness"]])
                 st.dataframe(bw_df, use_container_width=True, hide_index=True)
 
             with cr_right:
-                st.markdown("**Top by Degree** (coalition reach)")
-                st.caption("Number of direct connections — reflects breadth of engagement.")
+                st.markdown("**Top by Connection Reach**")
+                st.caption(METRIC_HELP["Connection Reach"])
                 deg_df = pd.DataFrame([{
-                    "Name":   a.get("name", ""),
-                    "Degree": round(a.get("degree_centrality", 0), 3),
-                    "Stance": a.get("stance", "").title(),
+                    "Name":              a.get("name", ""),
+                    "Connection Reach":  round(a.get("degree_centrality", 0), 2),
+                    "Stance":            a.get("stance", "").title(),
                 } for a in analytics["top_by_degree"]])
                 st.dataframe(deg_df, use_container_width=True, hide_index=True)
 
@@ -352,8 +363,9 @@ if "smb_result" in st.session_state:
                 "Name":           a.get("name", ""),
                 "Type":           a.get("stakeholder_type", "").title(),
                 "Organization":   a.get("organization", ""),
-                "Influence":      a.get("influence_tier", "").title(),
-                "Betweenness":    round(a.get("betweenness_centrality", 0), 3) if analytics else "—",
+                "Estimated Influence Tier": a.get("influence_tier", "").title(),
+                "Bridge Role":    round(a.get("betweenness_centrality", 0), 2) if analytics else "—",
+                "Source Type":    _source_summary(a),
                 "Evidence":       a.get("evidence", ""),
                 "LDA Amount ($)": (
                     f"${float(a['lda_amount']):,.0f}"
@@ -374,8 +386,9 @@ if "smb_result" in st.session_state:
                 "Name":           a.get("name", ""),
                 "Type":           a.get("stakeholder_type", "").title(),
                 "Organization":   a.get("organization", ""),
-                "Influence":      a.get("influence_tier", "").title(),
-                "Betweenness":    round(a.get("betweenness_centrality", 0), 3) if analytics else "—",
+                "Estimated Influence Tier": a.get("influence_tier", "").title(),
+                "Bridge Role":    round(a.get("betweenness_centrality", 0), 2) if analytics else "—",
+                "Source Type":    _source_summary(a),
                 "Evidence":       a.get("evidence", ""),
                 "LDA Amount ($)": (
                     f"${float(a['lda_amount']):,.0f}"
@@ -393,9 +406,10 @@ if "smb_result" in st.session_state:
             "Name":           a.get("name", ""),
             "Type":           a.get("stakeholder_type", "").title(),
             "Stance":         a.get("stance", "").title(),
-            "Influence":      a.get("influence_tier", "").title(),
-            "Betweenness":    round(a.get("betweenness_centrality", 0), 3) if analytics else "—",
-            "Degree":         round(a.get("degree_centrality", 0), 3) if analytics else "—",
+            "Estimated Influence Tier": a.get("influence_tier", "").title(),
+            "Strategic Relevance": a.get("composite_score", "—"),
+            "Bridge Role":    round(a.get("betweenness_centrality", 0), 2) if analytics else "—",
+            "Connection Reach": round(a.get("degree_centrality", 0), 2) if analytics else "—",
             "Community":      f"C{a.get('community_id', 0) + 1}" if analytics else "—",
             "Organization":   a.get("organization", ""),
             "Evidence":       a.get("evidence", ""),
@@ -403,7 +417,8 @@ if "smb_result" in st.session_state:
                 f"${float(a['lda_amount']):,.0f}"
                 if a.get("lda_amount") else ""
             ),
-            "Source":         a.get("source", ""),
+            "Source Type":    _source_summary(a),
+            "Source Backbone": a.get("source", ""),
         } for a in actors])
         st.dataframe(df_all, use_container_width=True, hide_index=True)
 
@@ -435,8 +450,8 @@ if "smb_result" in st.session_state:
             st.markdown(result["strategic_notes"])
 
         st.caption(
-            "Stance classifications are LLM-inferred from public data (LDA, LegiScan, news) — "
-            "verify before strategic use. Network metrics computed via Varone, Ingold & Jourdain (2016) framework."
+            result.get("methodology_note")
+            or "Actors may come from structured sources, web discovery, or model inference. Some labels and relationships are inferred. Network indicators are calculated within the generated map. Scores are directional and require analyst review before strategic use."
         )
 
     # ── Downloads ─────────────────────────────────────────────────────────────

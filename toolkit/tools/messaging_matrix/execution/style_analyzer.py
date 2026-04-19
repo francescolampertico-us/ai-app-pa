@@ -14,7 +14,7 @@ from openai import OpenAI
 from context_reader import read_directory
 
 
-MODEL = "gpt-4.1-mini"
+MODEL = "ChangeAgent"
 
 # Document types and their folder names
 DOC_TYPES = {

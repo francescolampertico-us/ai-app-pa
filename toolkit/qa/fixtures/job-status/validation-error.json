@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "progress": 100,
+  "message": "Validation failed for one or more required inputs.",
+  "artifacts": []
+}

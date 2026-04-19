@@ -17,9 +17,52 @@ import os
 import json
 import sys
 from datetime import date
+from pathlib import Path
 from openai import OpenAI
 
-MODEL = "gpt-4.1"
+# Schema is in the same directory; add it to path for importability both via CLI and FastAPI.
+sys.path.insert(0, str(Path(__file__).parent))
+from schema import BackgroundMemoResult  # noqa: E402
+
+MODEL = "ChangeAgent"
+
+def _active_model(default: str) -> str:
+    import os
+    return os.environ.get("LLM_MODEL_OVERRIDE") or default
+
+def _response_format_kwarg() -> dict:
+    import os
+    if os.environ.get("LLM_MODEL_OVERRIDE"):
+        return {}
+    return {"response_format": {"type": "json_object"}}
+
+def _max_tokens_kwarg(default: int) -> dict:
+    import os
+    if os.environ.get("LLM_MODEL_OVERRIDE"):
+        return {}
+    return {"max_tokens": default}
+
+def _parse_json_content(content: "str | None") -> dict:
+    import re
+    if not content:
+        return {}
+    text = content.strip()
+    m = re.search(r"```(?:json)?\s*([\s\S]+?)```", text)
+    if m:
+        text = m.group(1).strip()
+    # Try full parse first
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    # Repair truncated JSON: trim to last complete closing brace
+    last = text.rfind("}")
+    if last != -1:
+        try:
+            return json.loads(text[: last + 1])
+        except json.JSONDecodeError:
+            pass
+    return {}
 
 SYSTEM_PROMPT = """You are a senior public affairs research analyst writing professional background memos
 for pre-meeting preparation, congressional briefings, and strategy sessions.
@@ -41,6 +84,7 @@ WRITING STYLE:
 - Short paragraphs: 3-6 sentences. No walls of text.
 - No marketing language, no adjectives that aren't backed by facts ("leading", "innovative", "premier")
 - No opinions, predictions, or recommendations
+- Distinguish hard facts from interpretation. If a sentence goes beyond a directly sourced fact, signal it with phrasing like "This suggests..." or "This may indicate..."
 - Third-person throughout
 - Never mention any consulting firm, PA firm, or intermediary preparing this memo
 
@@ -63,23 +107,30 @@ SECTION RULES:
 - If a section covers a policy issue: what it is, regulatory actors, current legislative status,
   industry/stakeholder positions
 
-DISCLOSURE SECTION RULES (apply only when disclosure data is provided):
-- If the disclosure data contains filings (LDA, FARA, or IRS 990), append one additional section
-  AFTER the user-specified sections. Title it based on content:
-    • "U.S. Lobbying Activity" — if only LDA filings with U.S. lobbying spend
-    • "FARA Registration" — if only foreign agent activity
-    • "U.S. Lobbying and Advisory Work" — if both LDA + FARA are present
-    • "Lobbying and Disclosure Activity" — if mixed or unclear
-- Write 1-3 paragraphs in the same memo prose style:
-    • Named the lobbying firm hired and its registration date
-    • Report exact dollar amounts ("$90,000 in lobbying expenditures")
-    • Name specific government targets (agencies, committees, chambers)
-    • Name the issues lobbied (use the filing's issue area descriptions)
-    • If FARA: note the foreign principal relationship and registration date
-    • If IRS 990: note revenue, assets, and mission description if relevant
+RESEARCH SYNTHESIS RULES (apply when research articles are provided):
+- Research articles are raw material — not a script. The memo is not a recap of them.
+- Synthesize across the full article set to build a complete picture of the subject.
+- Priority order for what to surface: mission/purpose → structure and scale → key figures
+  → policy relevance → U.S./international angle → funding → controversies → recent news.
+- Recent news should fill in current status, not define the entire framing of a section.
+- If the same event appears in multiple articles, treat it as a single data point — one
+  supporting sentence at most.
+- Never include operational minutiae: logistical disruptions, scheduling notes, venue
+  changes, and event-management details have no place in a strategic background memo.
+- If articles are thin or repetitive, rely on the subject's documented background,
+  structure, and policy footprint, and flag currency limits with "as of [date]" language.
+
+DISCLOSURE DATA RULES (apply only when disclosure data is provided):
+- Use disclosure data (LDA, FARA, IRS 990) solely to enrich the content of the user-specified sections.
+- Do NOT add any new top-level section that the user did not request, regardless of what filings are present.
+- Weave disclosure facts naturally into whichever user-requested section is most relevant
+  (e.g., lobbying spend into "Funding and Membership", foreign agent relationships into
+  "U.S. and NATO Relations", revenue/assets into "Overview of Activities").
 - Use attribution language: "Official disclosures report...", "According to LDA filings...",
   "FARA registration documents indicate..."
-- If the disclosure data contains NO filings, do NOT add this section.
+- Report exact figures: dollar amounts, registration dates, named firms, government targets, issue areas.
+- If sources conflict or the record is incomplete, preserve that nuance rather than smoothing it over.
+- The overview must list only the sections the user requested — never mention disclosure-derived sections.
 
 LINKS RULES:
 - 4-6 links only
@@ -130,6 +181,7 @@ def generate_memo(
     context: str = "",
     disclosure_context: str = "",
     research_context: str = "",
+    suppress_disclosures: bool = False,
 ) -> dict:
     """
     Generate a full background memo via gpt-4.1.
@@ -146,9 +198,9 @@ def generate_memo(
     """
     api_key = os.getenv("OPENAI_API_KEY", "")
     if not api_key:
-        raise ValueError("OPENAI_API_KEY is required.")
+        raise ValueError("OPENAI_API_KEY is required. Check that toolkit/.env is set and loaded.")
 
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(api_key=api_key, timeout=120)
 
     sections_list = "\n".join(f"- {s}" for s in sections)
 
@@ -162,16 +214,20 @@ def generate_memo(
 
     if research_context:
         user_prompt += (
-            f"\n---\n{research_context[:10000]}\n---\n"
+            f"\n---\n{research_context[:24000]}\n---\n"
         )
 
     if disclosure_context:
         user_prompt += (
             f"\n---\nDISCLOSURE DATA (LDA/FARA/IRS 990 filings from official U.S. databases):\n"
             f"{disclosure_context[:8000]}\n"
-            "Follow the DISCLOSURE SECTION RULES in the system prompt: if filings are present, "
-            "append a dedicated prose section after the user-specified sections. "
-            "If no filings are found in the data, do not add the section.\n---\n"
+            "Use this data to enrich the content of the user-specified sections only. "
+            "Do NOT add any new top-level section. The memo must contain exactly the sections listed above.\n---\n"
+        )
+    elif suppress_disclosures:
+        user_prompt += (
+            "\nDo not mention lobbying disclosures, LDA filings, FARA registrations, or IRS 990 filings "
+            "in any form. Do not note their absence or presence.\n"
         )
 
     user_prompt += (
@@ -181,63 +237,72 @@ def generate_memo(
 
     print(f"Generating background memo for: {subject}", file=sys.stderr)
     response = client.chat.completions.create(
-        model=MODEL,
+        model=_active_model(MODEL),
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ],
         temperature=0.2,
-        max_tokens=5000,
-        response_format={"type": "json_object"},
+        **_max_tokens_kwarg(5000),
+        **_response_format_kwarg(),
     )
 
-    raw = json.loads(response.choices[0].message.content)
+    raw = _parse_json_content(response.choices[0].message.content)
 
-    return {
-        "subject": subject,
-        "sections_requested": sections,
-        "overview": raw.get("overview", ""),
-        "fast_facts": raw.get("fast_facts", []),
-        "sections": raw.get("sections", []),
-        "links": raw.get("links", []),
-    }
+    # Validate through the typed contract — catches malformed LLM output early.
+    validated = BackgroundMemoResult(
+        subject=subject,
+        sections_requested=sections,
+        overview=raw.get("overview", ""),
+        fast_facts=raw.get("fast_facts", []),
+        sections=raw.get("sections", []),
+        links=raw.get("links", []),
+    )
+    return validated.model_dump()
 
 
-def render_markdown(result: dict, memo_date: str = "") -> str:
-    """Render the memo as plain markdown."""
+def render_markdown(result: "BackgroundMemoResult | dict", memo_date: str = "") -> str:
+    """Render the memo as plain markdown.
+
+    Accepts either a BackgroundMemoResult model or a plain dict (e.g. from model_dump()).
+    Normalizes to BackgroundMemoResult so internal access is always typed.
+    """
+    if isinstance(result, dict):
+        result = BackgroundMemoResult(**result)
+
     lines = []
     d = memo_date or date.today().strftime("%B %d, %Y")
 
     lines.append(f"**DATE:** {d}")
-    lines.append(f"**SUBJECT:** {result['subject']} Background Memo")
+    lines.append(f"**SUBJECT:** {result.subject} Background Memo")
     lines.append("")
     lines.append("---")
     lines.append("")
     lines.append("## Overview")
     lines.append("")
-    lines.append(result["overview"])
+    lines.append(result.overview)
     lines.append("")
     lines.append("## Fast Facts")
     lines.append("")
-    for fact in result["fast_facts"]:
+    for fact in result.fast_facts:
         lines.append(f"- **{fact}**")
     lines.append("")
 
-    for section in result["sections"]:
-        lines.append(f"## {section['heading']}")
+    for section in result.sections:
+        lines.append(f"## {section.heading}")
         lines.append("")
-        for sub in section.get("subsections", []):
-            if sub.get("heading"):
-                lines.append(f"**{sub['heading']}**")
+        for sub in section.subsections:
+            if sub.heading:
+                lines.append(f"**{sub.heading}**")
                 lines.append("")
-            for para in sub.get("paragraphs", []):
+            for para in sub.paragraphs:
                 lines.append(para)
                 lines.append("")
 
     lines.append("## Links")
     lines.append("")
-    for link in result["links"]:
-        lines.append(f"- [{link['label']}]({link['url']})")
+    for link in result.links:
+        lines.append(f"- [{link.label}]({link.url})")
     lines.append("")
     lines.append("---")
     lines.append("*FOR INTERNAL USE ONLY — Verify all facts before distribution.*")

@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DownloadSimpleIcon as DownloadSimple, ArrowRightIcon as ArrowRight, SpinnerGapIcon as SpinnerGap, CaretDownIcon as CaretDown, WarningIcon as Warning, CheckCircleIcon as CheckCircle, UploadSimpleIcon as UploadSimple, LinkIcon } from '@phosphor-icons/react';
 import { useFastApiJob } from '../hooks/useFastApiJob';
+import ModelSelector from '../components/ModelSelector';
+import StyledMarkdown from '../components/StyledMarkdown';
+import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 
 export default function HearingMemo() {
   const { job, loading, submitJob, downloadArtifact, downloadJson, downloadText } = useFastApiJob("hearing_memo_generator");
@@ -20,6 +23,7 @@ export default function HearingMemo() {
   });
   const [file, setFile] = useState(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [llmModel, setLlmModel] = useState('ChangeAgent');
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -27,7 +31,7 @@ export default function HearingMemo() {
 
   const handleExecute = (e) => {
     e.preventDefault();
-    submitJob(formData, file);
+    submitJob({ ...formData, llm_model: llmModel }, file);
   }
 
   // Derived parsed outputs
@@ -35,6 +39,8 @@ export default function HearingMemo() {
   const flags = job?.result_data?.flags || [];
   const checks = job?.result_data?.human_checks || [];
   const memoText = job?.result_data?.memo_text || "";
+  const pipelineStdout = job?.result_data?.stdout || "";
+  const pipelineStderr = job?.result_data?.stderr || "";
   const artifactMap = (job?.artifacts || []).reduce((acc, artifact) => ({ ...acc, [artifact.name]: artifact }), {});
   const downloadNamedArtifact = (name, fallbackAction) => {
     if (artifactMap[name]) {
@@ -46,17 +52,28 @@ export default function HearingMemo() {
 
   return (
     <motion.div 
+      data-testid="tool-page-hearing-memo"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="p-12 max-w-6xl mx-auto relative z-10"
     >
-      <header className="mb-12 border-b border-white/10 pb-8 relative">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/10 blur-[100px] pointer-events-none rounded-full" />
-        <h1 className="display-hero text-5xl mb-4 text-white">Congressional Hearing Memo Generator <span className="text-3xl">📝</span></h1>
-        <p className="text-slate-400 text-lg font-light leading-relaxed max-w-[80ch]">
-          Converts congressional hearing transcripts into professional hearing memos with structured extraction, house-style composition, and automated verification.
+      <header className="page-header relative">
+        <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
+        <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
+          Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
+        </div>
+        <h1 data-testid="page-title-hearing-memo" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Hearing Memo</h1>
+        <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '70ch', fontWeight: 300 }}>
+          Generates a structured first-draft hearing memo from congressional transcripts with extraction, house-style composition, and automated verification.
         </p>
+        <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
       </header>
+
+      <ResearchPrototypeNote
+        category="Policy Monitoring & Legislative Tracking"
+        message="This module demonstrates bounded AI use on a structured drafting task. It produces a house-style draft and verification outputs, but the final memo still depends on human review, contextual interpretation, and editorial judgment."
+      />
 
       <form onSubmit={handleExecute} className="space-y-8 relative z-20">
         
@@ -71,6 +88,7 @@ export default function HearingMemo() {
               <label className="text-sm font-medium tracking-wide text-slate-300">Upload hearing transcript (PDF or TXT)</label>
               <div className="relative border border-dashed border-white/20 rounded-xl p-4 hover:border-purple-500/50 transition-colors bg-black/20 focus-within:ring-1 focus-within:ring-purple-400">
                 <input 
+                  data-testid="input-hearing-file"
                   type="file" 
                   accept=".pdf,.txt"
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -94,6 +112,7 @@ export default function HearingMemo() {
               <div className="relative">
                 <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input 
+                  data-testid="input-hearing-youtube-url"
                   type="text" 
                   name="youtube_url"
                   placeholder="e.g., https://www.youtube.com/watch?v=..."
@@ -111,17 +130,17 @@ export default function HearingMemo() {
              
              <div className="flex flex-col gap-2">
                <label className="text-sm font-medium tracking-wide text-slate-300">FROM Field</label>
-               <input type="text" name="memo_from" placeholder="e.g., Your Organization" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
+               <input data-testid="input-hearing-memo-from" type="text" name="memo_from" placeholder="e.g., Your Organization" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
              </div>
 
              <div className="flex flex-col gap-2">
                <label className="text-sm font-medium tracking-wide text-slate-300">Memo Date</label>
-               <input type="text" name="memo_date" placeholder="e.g., Thursday, March 13, 2026" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
+               <input data-testid="input-hearing-memo-date" type="text" name="memo_date" placeholder="e.g., Thursday, March 13, 2026" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
              </div>
 
              <div className="flex flex-col gap-2">
                <label className="text-sm font-medium tracking-wide text-slate-300">Subject Override</label>
-               <input type="text" name="subject_override" placeholder="Auto-detected if blank" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
+               <input data-testid="input-hearing-subject-override" type="text" name="subject_override" placeholder="Auto-detected if blank" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
              </div>
           </div>
         </div>
@@ -129,6 +148,7 @@ export default function HearingMemo() {
         {/* Advanced Options Expander */}
         <div className="glass-card rounded-2xl overflow-hidden border border-white/10">
           <button 
+            data-testid="toggle-hearing-advanced"
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)} 
             className="w-full flex items-center justify-between p-6 bg-white/5 hover:bg-white/10 transition-colors"
@@ -146,18 +166,19 @@ export default function HearingMemo() {
                 className="px-6 pb-6 pt-2"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <input type="text" name="hearing_title" placeholder="Override hearing title" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
-                  <input type="text" name="committee" placeholder="Override committee name" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
-                  <input type="text" name="hearing_date" placeholder="Override hearing date" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
-                  <input type="text" name="hearing_time" placeholder="Override hearing time" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
+                  <input data-testid="input-hearing-title-override" type="text" name="hearing_title" placeholder="Override hearing title" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
+                  <input data-testid="input-hearing-committee-override" type="text" name="committee" placeholder="Override committee name" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
+                  <input data-testid="input-hearing-date-override" type="text" name="hearing_date" placeholder="Override hearing date" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
+                  <input data-testid="input-hearing-time-override" type="text" name="hearing_time" placeholder="Override hearing time" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
                 </div>
-                <input type="text" name="confidentiality" placeholder="Footer Default: Confidential - Not for Public Consumption" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
+                <input data-testid="input-hearing-confidentiality" type="text" name="confidentiality" placeholder="Footer Default: Confidential - Not for Public Consumption" onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-purple-400 font-light placeholder:text-slate-600" />
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
         <button 
+           data-testid="submit-hearing-memo"
            type="submit" 
            disabled={loading || (!file && !formData.youtube_url)}
            className="w-full py-5 rounded-2xl bg-white text-black font-semibold text-lg tracking-wide flex items-center justify-center gap-3 hover:bg-slate-200 transition-colors disabled:opacity-50 interactive-button"
@@ -181,7 +202,7 @@ export default function HearingMemo() {
             <h2 className="display-hero text-4xl mb-8">Generated Memo</h2>
             
             {/* Status Panel */}
-            <div className="glass-card p-6 mb-8 relative overflow-hidden">
+            <div data-testid="status-hearing-memo" className="glass-card p-6 mb-8 relative overflow-hidden">
                {job.status !== "completed" ? (
                  <div className="flex flex-col gap-4">
                    <div className="flex justify-between items-center mb-2">
@@ -234,11 +255,15 @@ export default function HearingMemo() {
             {/* Markdown Preview */}
             {job.status === "completed" && memoText && (
                <div className="glass-card mb-8 rounded-2xl overflow-hidden border border-white/10 bg-black/40">
-                  <div className="bg-white/5 border-b border-white/10 p-4">
-                    <span className="font-serif text-lg text-slate-200">Memo Preview (Markdown)</span>
+                  <div className="bg-white/5 border-b border-white/10 p-4 flex items-center gap-3">
+                    <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
+                      Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
+                    </div>
+                    <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+                    <span className="font-serif text-lg text-slate-200">Memo Preview</span>
                   </div>
-                  <div className="p-8 prose prose-invert prose-purple max-w-none">
-                    <pre className="text-slate-300 bg-transparent whitespace-pre-wrap font-sans text-base leading-relaxed">{memoText}</pre>
+                  <div className="p-8 max-w-none">
+                    <StyledMarkdown>{memoText}</StyledMarkdown>
                   </div>
                </div>
             )}
@@ -248,17 +273,31 @@ export default function HearingMemo() {
               <div>
                 <h3 className="font-serif text-2xl mb-4">Downloads</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <button onClick={() => downloadNamedArtifact("hearing_memo.docx")} className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-purple-200 transition-colors">
+                  <button data-testid="download-hearing-docx" onClick={() => downloadNamedArtifact("hearing_memo.docx")} className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-purple-200 transition-colors">
                     <DownloadSimple size={20} /> Download .docx
                   </button>
-                  <button onClick={() => downloadNamedArtifact("hearing_memo.txt", () => downloadText(memoText, "hearing_memo.txt"))} className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
+                  <button data-testid="download-hearing-text" onClick={() => downloadNamedArtifact("hearing_memo.txt", () => downloadText(memoText, "hearing_memo.txt"))} className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
                     <DownloadSimple size={20} /> Download .txt
                   </button>
-                  <button onClick={() => downloadNamedArtifact("hearing_memo_verification.json", () => downloadJson(job.result_data?.verification || {}, "hearing_memo_verification.json"))} className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
+                  <button data-testid="download-hearing-verification-json" onClick={() => downloadNamedArtifact("hearing_memo_verification.json", () => downloadJson(job.result_data?.verification || {}, "hearing_memo_verification.json"))} className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
                     <DownloadSimple size={20} /> Download verification.json
                   </button>
                 </div>
               </div>
+            )}
+
+            {/* Pipeline logs */}
+            {pipelineStdout && (
+              <details className="glass-card p-5 mt-6">
+                <summary className="cursor-pointer text-slate-300 text-sm font-medium">Pipeline Log</summary>
+                <pre className="mt-3 whitespace-pre-wrap text-xs text-slate-400 leading-relaxed">{pipelineStdout}</pre>
+              </details>
+            )}
+            {pipelineStderr && (
+              <details className="glass-card p-5 mt-4">
+                <summary className="cursor-pointer text-amber-300 text-sm font-medium">Errors / Warnings</summary>
+                <pre className="mt-3 whitespace-pre-wrap text-xs text-amber-200/70 leading-relaxed">{pipelineStderr}</pre>
+              </details>
             )}
 
           </motion.div>

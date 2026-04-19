@@ -18,6 +18,7 @@ This repo packages public affairs AI tools as maintainable “tool packages”:
 - Don’t change output contracts casually; bump tool version in tool.yaml when behavior changes.
 - Respect risk levels (green/yellow/red) and review checklists.
 - Prefer small commits and keep docs consistent with code.
+- For manual QA, use the central system in `toolkit/qa/` and the `manual-qa-orchestrator` skill; do not invent ad hoc test tracking in chat.
 
 ## Suggested commands
 - Python help checks: `python3 tools/<tool_id>/execution/*.py --help`

@@ -38,9 +38,21 @@ except ImportError:
     HAS_REQUESTS = False
 
 
-MAX_ARTICLES = 8          # search results to attempt
-MAX_EXTRACTED = 5         # articles to actually include
-CHARS_PER_ARTICLE = 3000  # text truncation per article
+MAX_ARTICLES = 15         # candidates to fetch per query
+MAX_EXTRACTED = 10        # articles to include in the final package
+CHARS_PER_ARTICLE = 2500  # text truncation per article
+MAX_PER_DOMAIN = 2        # max articles from any single publisher domain
+
+
+def _domain_of(url: str) -> str:
+    """Extract the registered domain from a URL (for source deduplication)."""
+    try:
+        from urllib.parse import urlparse
+        host = urlparse(url).hostname or ""
+        parts = host.lstrip("www.").split(".")
+        return ".".join(parts[-2:]) if len(parts) >= 2 else host
+    except Exception:
+        return url
 
 
 def _decode_url(url: str) -> str:
@@ -96,8 +108,15 @@ def _fetch_article(item: dict) -> dict:
 
 def research_subject(subject: str, context: str = "") -> str:
     """
-    Search for recent articles about the subject and return a research
-    package as a markdown string for injection into the LLM prompt.
+    Search for articles about the subject and return a research package as a
+    markdown string for injection into the LLM prompt.
+
+    Strategy:
+    - Runs two queries (precise + broad) to widen coverage and reduce
+      single-cluster bias.
+    - Deduplicates candidates by URL across both queries.
+    - Fetches all candidates in parallel, then selects the most substantive
+      articles by preferring longer text and capping per-domain representation.
 
     Returns empty string if GNews or extraction is unavailable.
     """
@@ -105,61 +124,107 @@ def research_subject(subject: str, context: str = "") -> str:
         print("GNews not available — skipping web research.", file=sys.stderr)
         return ""
 
-    # Build search query — quoted for precision, context adds scope
-    query = f'"{subject}"'
+    # Query A: precise — subject + first line of context (if any)
+    query_precise = f'"{subject}"'
     if context:
-        # Extract first meaningful phrase from context as an extra keyword
         first_line = context.strip().splitlines()[0][:60].strip()
         if first_line:
-            query = f'{query} {first_line}'
+            query_precise = f'{query_precise} {first_line}'
 
-    print(f"Researching: {query}", file=sys.stderr)
+    # Query B: broad — subject only (different result cluster from A)
+    query_broad = f'"{subject}"'
+
+    queries = [query_precise]
+    if query_broad != query_precise:
+        queries.append(query_broad)
 
     gn = GNews(language="en", max_results=MAX_ARTICLES, period="2y")
-    try:
-        articles = gn.get_news(query)
-    except Exception as e:
-        print(f"GNews search failed: {e}", file=sys.stderr)
-        return ""
 
-    if not articles:
-        # Fallback: try without quotes
+    # Collect candidates from all queries, deduplicating by URL
+    candidates = []
+    seen_urls: set = set()
+    for query in queries:
+        print(f"Researching: {query}", file=sys.stderr)
         try:
-            articles = gn.get_news(subject)
+            results = gn.get_news(query)
+        except Exception as e:
+            print(f"GNews query failed ({query!r}): {e}", file=sys.stderr)
+            results = []
+        for item in (results or []):
+            url = item.get("url", "")
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                candidates.append(item)
+
+    # Fallback: unquoted subject search
+    if not candidates:
+        try:
+            candidates = gn.get_news(subject) or []
         except Exception:
             return ""
 
-    if not articles:
+    if not candidates:
         return ""
 
-    # Fetch article texts in parallel
+    # Fetch article texts in parallel across all candidates
     extracted = []
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        futures = {pool.submit(_fetch_article, a): a for a in articles[:MAX_ARTICLES]}
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        futures = {pool.submit(_fetch_article, a): a for a in candidates}
         for future in as_completed(futures):
             result = future.result()
             if result:
                 extracted.append(result)
-            if len(extracted) >= MAX_EXTRACTED:
-                break
 
     if not extracted:
         return ""
 
+    # Sort by text length descending — longer articles are generally more substantive
+    extracted.sort(key=lambda a: len(a["text"]), reverse=True)
+
+    # Domain cap: at most MAX_PER_DOMAIN articles per publisher domain so one
+    # news outlet or news cluster cannot dominate the research pool.
+    domain_counts: dict = {}
+    diverse = []
+    for art in extracted:
+        domain = _domain_of(art["url"])
+        if domain_counts.get(domain, 0) < MAX_PER_DOMAIN:
+            domain_counts[domain] = domain_counts.get(domain, 0) + 1
+            diverse.append(art)
+        if len(diverse) >= MAX_EXTRACTED:
+            break
+
+    # If the domain cap was too strict, fill remaining slots from leftovers
+    if len(diverse) < MAX_EXTRACTED:
+        in_diverse = {a["url"] for a in diverse}
+        for art in extracted:
+            if art["url"] not in in_diverse:
+                diverse.append(art)
+            if len(diverse) >= MAX_EXTRACTED:
+                break
+
+    n_domains = len({_domain_of(a["url"]) for a in diverse})
+    print(
+        f"Research complete: {len(diverse)} articles from {n_domains} sources.",
+        file=sys.stderr,
+    )
+
     # Format as research package
     lines = [
-        f"RESEARCH MATERIAL — {len(extracted)} articles found about '{subject}':",
+        f"RESEARCH MATERIAL — {len(diverse)} articles about '{subject}' "
+        f"from {n_domains} sources:",
         "",
-        "Use these articles to write specific, accurate content. "
-        "Cite figures, names, and facts that appear in the articles. "
-        "Do not repeat generic information that does not come from this research.",
+        "These are raw sources. Synthesize across ALL of them — do not recap "
+        "any single article or event. "
+        "Prioritize: mission/purpose, structure, key figures, scale, policy relevance, "
+        "funding, U.S./international angle, and controversy. "
+        "Exclude: logistics, operational disruptions, scheduling details, and event minutiae. "
+        "If multiple articles cover the same event, treat it as one data point.",
         "",
     ]
-    for i, art in enumerate(extracted, 1):
+    for i, art in enumerate(diverse, 1):
         lines.append(f"--- Article {i}: {art['title']} ({art['source']}) ---")
         lines.append(art["text"])
         lines.append(f"[Source: {art['url']}]")
         lines.append("")
 
-    print(f"Research complete: {len(extracted)} articles extracted.", file=sys.stderr)
     return "\n".join(lines)

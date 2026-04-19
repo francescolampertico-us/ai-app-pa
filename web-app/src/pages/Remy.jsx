@@ -1,30 +1,27 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PaperPlaneTiltIcon as PaperPlaneTilt, SpinnerGapIcon as SpinnerGap, ArrowSquareOutIcon as ArrowSquareOut, DownloadSimpleIcon as DownloadSimple, WarningIcon as Warning } from '@phosphor-icons/react';
+import { API } from '../hooks/useFastApiJob';
+import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
+import { Link } from 'react-router-dom';
 
-const API = 'http://localhost:8000';
-
-const TOOL_ROUTES = {
-  hearing_memo_generator:       '/memos',
-  media_clips:                  '/media-clips',
-  influence_disclosure_tracker: '/influence',
-  legislative_tracker:          '/legislative',
-  messaging_matrix:             '/messaging',
-  stakeholder_briefing:         '/stakeholder-briefing',
-  media_list_builder:           '/media-list',
-  stakeholder_map_builder:      '/stakeholders',
-  background_memo_generator:    '/background-memo',
-};
 const MotionDiv = motion.div;
 
+function normalizeFrontendPath(route) {
+  if (!route) return null;
+  if (route.startsWith('/app')) return route;
+  if (route.startsWith('/')) return `/app${route}`;
+  return `/app/${route}`;
+}
+
 function ToolEvent({ event }) {
-  const ok     = event.ok !== false;
-  const label  = event.tool_id || 'tool';
-  const route  = TOOL_ROUTES[event.tool_id];
+  const ok        = event.ok !== false;
+  const label     = event.tool_id || 'tool';
+  const route     = normalizeFrontendPath(event.frontend_path || null);
   const artifacts = event.artifacts || [];
 
   return (
-    <details className="mt-2 rounded-xl overflow-hidden border border-white/8" open={!ok}>
+    <details data-testid={`remy-tool-event-${label}`} className="mt-2 rounded-xl overflow-hidden border border-white/8" open={!ok}>
       <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer select-none"
                style={{ background: ok ? 'rgba(74,222,128,0.06)' : 'rgba(248,113,113,0.06)' }}>
         <span className={`w-1.5 h-1.5 rounded-full ${ok ? 'bg-emerald-400' : 'bg-red-400'}`} />
@@ -34,16 +31,16 @@ function ToolEvent({ event }) {
       </summary>
       <div className="px-4 pb-4 pt-2 bg-black/20 flex flex-col gap-2">
         {route && (
-          <a href={route} className="flex items-center gap-1.5 text-violet-400 hover:text-violet-300 transition-colors"
+          <Link data-testid={`remy-tool-event-open-${label}`} to={route} className="flex items-center gap-1.5 text-violet-400 hover:text-violet-300 transition-colors"
              style={{ fontFamily: 'Inter', fontSize: 12 }}>
             <ArrowSquareOut size={13} /> Open tool page
-          </a>
+          </Link>
         )}
         {event.error && (
           <p style={{ fontFamily: 'monospace', fontSize: 11, color: '#fca5a5' }}>{event.error}</p>
         )}
         {artifacts.map((a, i) => (
-          <a key={i} href={`${API}${a.url || ''}`} download={a.name}
+          <a data-testid={`remy-tool-event-artifact-${label}-${i}`} key={i} href={`${API}${a.url || ''}`} download={a.name}
              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-300 hover:bg-violet-500/20 transition-colors"
              style={{ fontFamily: 'Inter', fontSize: 12, textDecoration: 'none' }}>
             <DownloadSimple size={14} /> {a.name}
@@ -81,12 +78,13 @@ function Message({ msg }) {
 export default function Remy() {
   const [messages, setMessages] = useState([{
     role: 'assistant',
-    content: "Hi — I'm Remy. Tell me the objective and I'll route you to the right tool, collect any missing inputs, and run it when ready.\n\nTry: *\"Run a background memo on Jagello 2000 with sections: Corporate Overview, Leadership, U.S. Presence, Policy Positions.\"*",
+    content: "Hi — I'm Remy. Tell me the objective and I'll route you to the right tool, collect any missing inputs, and run it when ready.\n\nTry: \"Run a background memo on Jagello 2000 with sections: Corporate Overview, Leadership, U.S. Presence, Policy Positions.\"",
     tool_events: [],
   }]);
   const [input, setInput]     = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState(null);
+  const [model, setModel]     = useState('gpt-4.1-mini');
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
 
@@ -111,7 +109,7 @@ export default function Remy() {
       const res  = await fetch(`${API}/api/remy/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history }),
+        body: JSON.stringify({ message: text, history, model }),
       });
       const data = await res.json();
       setMessages(prev => [...prev, {
@@ -128,7 +126,7 @@ export default function Remy() {
   };
 
   return (
-    <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+    <MotionDiv data-testid="tool-page-remy" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       className="flex flex-col h-full max-h-[100dvh]" style={{ height: 'calc(100dvh - 0px)' }}>
 
       {/* Header */}
@@ -136,10 +134,34 @@ export default function Remy() {
         <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 6 }}>
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect &nbsp;·&nbsp; ASSISTANT
         </div>
-        <h1 className="display" style={{ fontSize: 36, color: '#fff' }}>Remy</h1>
-        <p style={{ fontFamily: 'Inter', fontSize: 13, color: '#71717A', marginTop: 4, fontWeight: 300 }}>
-          Tool-aware PA assistant — routes work, collects inputs, and executes toolkit tools.
-        </p>
+        <h1 data-testid="page-title-remy" className="display" style={{ fontSize: 36, color: '#fff' }}>Remy</h1>
+        <div className="flex items-center gap-3 mt-3">
+          <p style={{ fontFamily: 'Inter', fontSize: 13, color: '#71717A', fontWeight: 300 }}>
+            Tool-aware PA assistant — routes work, collects inputs, and executes toolkit tools.
+          </p>
+          <select
+            data-testid="select-remy-model"
+            value={model}
+            onChange={e => setModel(e.target.value)}
+            style={{
+              marginLeft: 'auto', fontFamily: 'Inter', fontSize: 12,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8, color: '#A78BFA', padding: '4px 10px', cursor: 'pointer',
+            }}
+          >
+            <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+            <option value="gpt-4.1">gpt-4.1</option>
+            <option value="ChangeAgent">ChangeAgent</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="px-8 pt-6">
+        <ResearchPrototypeNote
+          category="Strategic Planning & Decision Support"
+          secondaryLabel="Secondary Orchestration Layer"
+          message="Remy routes work across the toolkit and helps users move through the prototype, but it is not the core research claim of the project. The primary contribution remains the module-based system and the workflow logic beneath it."
+        />
       </div>
 
       {/* Messages */}
@@ -172,6 +194,7 @@ export default function Remy() {
       <div className="shrink-0 px-8 py-5 border-t border-white/5">
         <div className="flex gap-3 items-end">
           <textarea
+            data-testid="input-remy-message"
             ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -182,7 +205,7 @@ export default function Remy() {
             className="field flex-1 resize-none"
             style={{ fontFamily: 'Inter', fontSize: 14, lineHeight: 1.5 }}
           />
-          <button onClick={send} disabled={loading || !input.trim()}
+          <button data-testid="submit-remy" onClick={send} disabled={loading || !input.trim()}
             aria-label="Send message"
             className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all disabled:opacity-40"
             style={{ background: '#6D28D9', boxShadow: '0 0 20px rgba(109,40,217,0.4)' }}>

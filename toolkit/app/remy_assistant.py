@@ -1,5 +1,5 @@
 """
-Remy assistant backend for the Streamlit app.
+Remy assistant backend (FastAPI).
 
 Remy is a tool-aware public affairs assistant that can explain, recommend,
 and execute the toolkit's existing tools through their CLI entry points.
@@ -23,17 +23,6 @@ TOOLKIT_ROOT = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = TOOLKIT_ROOT / "tool-registry.yaml"
 OUTPUT_ROOT = TOOLKIT_ROOT / "output" / "remy"
 
-TOOL_PAGES = {
-    "hearing_memo_generator": "pages/1_Hearing_Memo.py",
-    "media_clips": "pages/2_Media_Clips.py",
-    "influence_disclosure_tracker": "pages/3_Disclosure_Tracker.py",
-    "legislative_tracker": "pages/4_Legislative_Tracker.py",
-    "messaging_matrix": "pages/5_Messaging_Matrix.py",
-    "stakeholder_briefing": "pages/6_Stakeholder_Briefing.py",
-    "media_list_builder": "pages/7_Media_List_Builder.py",
-    "stakeholder_map_builder": "pages/8_Stakeholder_Map_Builder.py",
-    "background_memo_generator": "pages/9_Background_Memo.py",
-}
 
 TOOL_GUIDANCE = {
     "hearing_memo_generator": {
@@ -92,7 +81,7 @@ def load_tool_catalog() -> list[dict[str, Any]]:
         catalog.append(
             {
                 **tool,
-                "page_path": TOOL_PAGES.get(tool_id),
+                "frontend_path": tool.get("frontend_path"),
                 "spec_path": str(spec_path),
                 "spec_summary": _read_spec_summary(spec_path),
                 "assistant_guidance": TOOL_GUIDANCE.get(tool_id, {}),
@@ -107,7 +96,7 @@ def build_system_prompt(catalog: list[dict[str, Any]], uploaded_files: list[dict
     for tool in catalog:
         inputs = ", ".join(tool.get("inputs", {}).get("required", []))
         optional = ", ".join(tool.get("inputs", {}).get("optional", []))
-        page_path = tool.get("page_path") or "not available"
+        frontend_path = tool.get("frontend_path") or "not available"
         guidance = tool.get("assistant_guidance", {})
         tool_lines.append(
             "\n".join(
@@ -117,7 +106,7 @@ def build_system_prompt(catalog: list[dict[str, Any]], uploaded_files: list[dict
                     f"  Required inputs: {inputs or 'none listed'}",
                     f"  Optional inputs: {optional or 'none listed'}",
                     f"  Output artifacts: {', '.join(tool.get('outputs', {}).get('artifacts', [])) or 'n/a'}",
-                    f"  App page: {page_path}",
+                    f"  App page: {frontend_path}",
                     f"  When to use: {guidance.get('when_to_use') or tool.get('description', '')}",
                     f"  Notes: {guidance.get('notes') or tool.get('spec_summary') or 'No extra notes.'}",
                 ]
@@ -173,11 +162,36 @@ def default_greeting() -> str:
     )
 
 
+def _make_client(model: str):
+    """Return the right OpenAI-compatible client for the given model name."""
+    from openai import OpenAI
+
+    if model == "ChangeAgent":
+        return OpenAI(
+            api_key=os.environ.get("CHANGE_AGENT_API_KEY"),
+            base_url="https://runpod-proxy-956966668285.us-central1.run.app/v1/",
+        )
+    return OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+
+def _chat_change_agent(
+    client,
+    messages: list[dict[str, Any]],
+) -> str:
+    """Call ChangeAgent and return the response content."""
+    response = client.chat.completions.create(
+        model="ChangeAgent",
+        messages=messages,
+        temperature=0.4,
+    )
+    return response.choices[0].message.content or "No response returned."
+
+
 def chat_with_remy(
     user_message: str,
     history: list[dict[str, Any]] | None = None,
     uploaded_files: list[dict[str, Any]] | None = None,
-    model: str = "gpt-4o-mini",
+    model: str = "gpt-4.1-mini",
 ) -> dict[str, Any]:
     """Run one assistant turn, allowing tool calls against the toolkit."""
     history = history or []
@@ -188,9 +202,17 @@ def chat_with_remy(
     if fast_path:
         return fast_path
 
-    from openai import OpenAI
+    client = _make_client(model)
 
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    # ChangeAgent: streaming path, no tool calls
+    if model == "ChangeAgent":
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": build_system_prompt(catalog, uploaded_files)}
+        ]
+        messages.extend(_normalize_history(history))
+        messages.append({"role": "user", "content": user_message})
+        text = _chat_change_agent(client, messages)
+        return {"text": text, "tool_events": []}
 
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": build_system_prompt(catalog, uploaded_files)}
@@ -578,7 +600,7 @@ def _dispatch_tool_call(
                     "id": tool["id"],
                     "name": tool["name"],
                     "risk_level": tool.get("risk_level"),
-                    "page_path": tool.get("page_path"),
+                    "frontend_path": tool.get("frontend_path"),
                     "description": tool.get("description"),
                 }
                 for tool in catalog
@@ -588,7 +610,7 @@ def _dispatch_tool_call(
                     "id": "media_clip_cleaner",
                     "name": "Media Clip Cleaner",
                     "risk_level": "green",
-                    "page_path": "pages/2_Media_Clips.py",
+                    "frontend_path": "/media-clips",
                     "description": "Clean pasted article text into clip-ready markdown.",
                 }
             ],
@@ -623,7 +645,7 @@ def _get_tool_details(tool_id: str, catalog: list[dict[str, Any]]) -> dict[str, 
                 "id": "media_clip_cleaner",
                 "name": "Media Clip Cleaner",
                 "risk_level": "green",
-                "page_path": "pages/2_Media_Clips.py",
+                "frontend_path": "/media-clips",
                 "required_inputs": ["raw_text or input_file_name"],
                 "optional_inputs": ["mode", "llm_model", "fallback_local"],
                 "when_to_use": TOOL_GUIDANCE["media_clip_cleaner"]["when_to_use"],
@@ -639,7 +661,7 @@ def _get_tool_details(tool_id: str, catalog: list[dict[str, Any]]) -> dict[str, 
                     "id": tool["id"],
                     "name": tool["name"],
                     "risk_level": tool.get("risk_level"),
-                    "page_path": tool.get("page_path"),
+                    "frontend_path": tool.get("frontend_path"),
                     "description": tool.get("description"),
                     "required_inputs": tool.get("inputs", {}).get("required", []),
                     "optional_inputs": tool.get("inputs", {}).get("optional", []),
@@ -747,6 +769,7 @@ def _run_media_clip_cleaner(arguments: dict[str, Any], uploaded_files: list[dict
         "--mode",
         str(arguments.get("mode") or "local"),
     ]
+    _optional_arg(cmd, "--title", arguments.get("title"))
     if raw_text:
         cmd.extend(["--raw-text", raw_text])
     else:
@@ -1042,7 +1065,7 @@ def _execute_cli(
         "stderr": _truncate(result.stderr),
         "artifacts": artifacts,
         "artifact_previews": _artifact_previews(artifacts),
-        "page_path": TOOL_PAGES.get(tool_id) or ("pages/2_Media_Clips.py" if tool_id == "media_clip_cleaner" else None),
+        "frontend_path": next((t.get("frontend_path") for t in catalog if t["id"] == tool_id), "/media-clips" if tool_id == "media_clip_cleaner" else None),
     }
     if not payload["ok"] and not payload["stderr"]:
         payload["error"] = "Tool exited with a non-zero status."

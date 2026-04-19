@@ -7,7 +7,8 @@ digiacomo_process: "#5 Media Relations"
 description: >
   Generates a targeted media list for pitching based on a policy issue,
   geographic scope, and media type filter. Finds journalists and outlets
-  covering the beat via Google News research and LLM synthesis, then
+  covering the beat via tiered discovery: fast Google News retrieval,
+  broader web/news fallback when needed, and LLM synthesis, then
   produces a downloadable Excel table with contact details, pitch angles,
   and links to previous coverage.
 
@@ -31,8 +32,10 @@ execution:
     - openai
     - openpyxl
     - gnews
+    - requests
   environment:
     - "OPENAI_API_KEY: Required for journalist research and angle generation"
+    - "BRAVE_SEARCH_API_KEY: Optional broad-web fallback for layered discovery"
   models:
     - "gpt-4o: Journalist identification, pitch angle generation"
 
@@ -40,4 +43,5 @@ risk_notes:
   - "Journalist names, roles, and outlets are LLM-generated — verify against current mastheads."
   - "Email addresses are pattern-guessed and MUST be verified before sending."
   - "Beat assignments change frequently — confirm coverage area is current."
-  - "Previous story links come from Google News and may not be comprehensive."
+  - "Previous story links come from validated retrieval layers and may still be incomplete."
+  - "Broad-web fallback depends on search-provider coverage and byline extraction quality."

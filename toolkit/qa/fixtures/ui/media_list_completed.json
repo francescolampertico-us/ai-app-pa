@@ -1,0 +1,54 @@
+{
+  "id": "qa-media-list-completed",
+  "status": "completed",
+  "progress": 100,
+  "message": "Media list ready.",
+  "download_url": "/api/jobs/qa-media-list-completed/artifacts/0",
+  "created_at": "2026-04-18T12:00:00",
+  "result_data": {
+    "requested_contacts": 20,
+    "returned_contacts": 1,
+    "coverage_by_media_type": {
+      "trade": 1
+    },
+    "result_quality": "complete",
+    "pitch_timing": "Best pitched this week while the committee is marking up the bill.",
+    "coverage_notes": [
+      "Coverage is concentrated in specialized policy outlets."
+    ],
+    "news_research": [
+      {
+        "title": "Reporter tracks AI compliance debate",
+        "url": "https://example.com/reporter-ai-story",
+        "source": "Policy Wire",
+        "relevance_score": 0.92
+      }
+    ],
+    "contacts": [
+      {
+        "first_name": "Jane",
+        "last_name": "Doe",
+        "contact_status": "verified",
+        "outlet": "Policy Wire",
+        "outlet_website": "https://example.com",
+        "role": "Senior Reporter",
+        "media_type": "trade",
+        "location": "Washington, DC",
+        "pitch_angle": "New compliance deadline for frontier model testing",
+        "email": "jane@example.com",
+        "matched_url": "https://example.com/reporter-ai-story",
+        "matched_title": "Reporter tracks AI compliance debate"
+      }
+    ],
+    "markdown": "# Media List\n\nOne policy reporter identified."
+  },
+  "artifacts": [
+    {
+      "name": "media_list.xlsx",
+      "path": "/tmp/media_list.xlsx",
+      "size_bytes": 1024,
+      "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "url": "/api/jobs/qa-media-list-completed/artifacts/0"
+    }
+  ]
+}

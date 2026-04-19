@@ -50,8 +50,9 @@ def verify(memo_output: dict, hearing_record: dict) -> dict:
     human_checks: List[str] = []
 
     # ===== 1. Metadata block completeness =====
+    # FROM is optional — users may intentionally leave it blank.
     mb = memo_output.get("metadata_block", {})
-    for field in ["from", "date", "subject"]:
+    for field in ["date", "subject"]:
         if not mb.get(field):
             flags.append(f"MISSING_METADATA: '{field.upper()}' field is empty")
 

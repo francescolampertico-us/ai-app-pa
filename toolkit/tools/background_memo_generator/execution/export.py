@@ -22,8 +22,15 @@ Structure:
   • Label — URL         ← List Paragraph style, plain
 """
 
+import sys
 from datetime import date
+from pathlib import Path
+
 from docx import Document
+
+# Schema is in the same directory; ensure it's importable both via CLI and FastAPI.
+sys.path.insert(0, str(Path(__file__).parent))
+from schema import BackgroundMemoResult  # noqa: E402
 
 
 def _add_normal(doc: Document, text: str, bold: bool = False) -> None:
@@ -44,63 +51,54 @@ def _add_blank(doc: Document) -> None:
     doc.add_paragraph(style="Normal")
 
 
-def export_docx(result: dict, output_path: str, memo_date: str = "") -> None:
+def export_docx(result: "BackgroundMemoResult | dict", output_path: str, memo_date: str = "") -> None:
     """
     Write a background memo DOCX to output_path.
 
+    Accepts either a BackgroundMemoResult model or a plain dict (e.g. from model_dump()).
+    Normalizes to BackgroundMemoResult so field access is always typed and explicit.
+
     Args:
-        result:      Output from generator.generate_memo()
-        output_path: Full path to write the .docx file
-        memo_date:   Date string (default: today formatted as "Month DD, YYYY")
+        result:      Output from generator.generate_memo() or a BackgroundMemoResult instance.
+        output_path: Full path to write the .docx file.
+        memo_date:   Date string (default: today formatted as "Month DD, YYYY").
     """
+    if isinstance(result, dict):
+        result = BackgroundMemoResult(**result)
+
     doc = Document()
 
-    # Remove default top margin on first paragraph to match tight header style
-    # (keep default Normal style otherwise)
-
     d = memo_date or date.today().strftime("%B %d, %Y")
-    subject = result["subject"]
 
     # ── Header block ─────────────────────────────────────────────────────────
     _add_normal(doc, f"DATE:\t\t{d}")
-    _add_normal(doc, f"SUBJECT:\t{subject} Background Memo")
+    _add_normal(doc, f"SUBJECT:\t{result.subject} Background Memo")
     _add_blank(doc)
 
     # ── Overview ─────────────────────────────────────────────────────────────
     _add_normal(doc, "Overview")
-    _add_normal(doc, result["overview"])
+    _add_normal(doc, result.overview)
     _add_blank(doc)
 
     # ── Fast Facts ───────────────────────────────────────────────────────────
     _add_normal(doc, "Fast Facts")
-    for fact in result["fast_facts"]:
+    for fact in result.fast_facts:
         _add_list_paragraph(doc, fact, bold=True)
     _add_blank(doc)
 
     # ── Content sections ─────────────────────────────────────────────────────
-    for section in result["sections"]:
-        heading = section.get("heading", "")
-        subsections = section.get("subsections", [])
-
-        _add_normal(doc, heading)
-
-        for sub in subsections:
-            sub_heading = sub.get("heading")
-            paragraphs = sub.get("paragraphs", [])
-
-            if sub_heading:
-                _add_normal(doc, sub_heading, bold=True)
-
-            for para_text in paragraphs:
-                _add_normal(doc, para_text)
-
+    for section in result.sections:
+        _add_normal(doc, section.heading)
+        for sub in section.subsections:
+            if sub.heading:
+                _add_normal(doc, sub.heading, bold=True)
+            for para in sub.paragraphs:
+                _add_normal(doc, para)
         _add_blank(doc)
 
     # ── Links ─────────────────────────────────────────────────────────────────
     _add_normal(doc, "Links")
-    for link in result["links"]:
-        label = link.get("label", "")
-        url = link.get("url", "")
-        _add_list_paragraph(doc, f"{label} — {url}")
+    for link in result.links:
+        _add_list_paragraph(doc, f"{link.label} — {link.url}")
 
     doc.save(output_path)

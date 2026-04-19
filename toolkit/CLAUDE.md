@@ -70,11 +70,26 @@ Media Clips, Media Clip Cleaner, Influence Disclosure Tracker, Hearing Memo Gene
 4. `RISK_POLICY.md` — risk levels and review requirements
 5. The specific tool's `spec.md` and `skill.md` before modifying it
 
+## QA Bug Shortcuts
+- If the user says `Fix BUG-XXXX`, treat `toolkit/qa/bugs/BUG-XXXX.md` as the canonical fix brief.
+- Before editing code for that request, also read any linked files in the brief, especially:
+  - `toolkit/qa/test_cases/<tool>.md`
+  - `toolkit/qa/regressions/regression_suite.md`
+  - relevant tool `spec.md` / `skill.md`
+- Scope the fix to the bug brief unless the user explicitly broadens it.
+- After making the fix, report:
+  - what changed
+  - which files changed
+  - which QA case(s) and regression(s) should be rerun
+- The same rule applies to `Fix BUG-0001 and BUG-0002`: read each bug brief first, then implement the requested fixes.
+
 ## Claude Code Skills
-Skills in `.claude/skills/`. Available:
-- `hearing-memo`, `media-clips`, `clip-cleaner`, `disclosure-tracker`
-- `messaging-matrix`, `background-memo`, `legislative-tracker`
-- `add-tool`, `eval-tool`, `handoff`
+Workspace skills (`.claude/skills/`, Claude Code-invocable):
+- `background-memo` — generate a background memo DOCX via the toolkit pipeline
+- `handoff` — generate a session handoff prompt and update CLAUDE.md Project State
+
+Per-tool skills (canonical spec for each tool, not workspace-invocable):
+- `toolkit/tools/<tool_id>/skill.md` — one per tool, used by Claude as tool context
 
 ## Commit conventions
 - Small, focused commits — `<verb> <what>`

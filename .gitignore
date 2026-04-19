@@ -13,6 +13,7 @@ web-app/dist/
 # ── FastAPI runtime ───────────────────────────────────────────────────────────
 fastapi-backend/jobs_output/
 fastapi-backend/.venv/
+fastapi-backend/jobs.db
 
 # ── Tool caches & temp output ─────────────────────────────────────────────────
 .cache/

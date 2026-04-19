@@ -1,0 +1,170 @@
+{
+  "id": "qa-stakeholder-map-completed",
+  "status": "completed",
+  "progress": 100,
+  "message": "Stakeholder map complete.",
+  "download_url": "/api/jobs/qa-stakeholder-map-completed/artifacts/0",
+  "created_at": "2026-04-18T12:00:00",
+  "result_data": {
+    "markdown": "# Stakeholder Map\n\nMap content.",
+    "methodology_note": "Federal scope only in the current UI.",
+    "issue_summary": "AI regulation has an active coalition split between safety advocates and major deployers.",
+    "key_coalitions": [
+      "Safety-first coalition"
+    ],
+    "proponent_summary": "Public interest organizations and some lawmakers support stronger testing rules.",
+    "opponent_summary": "Some firms prefer narrower standards and voluntary compliance.",
+    "actors": [
+      {
+        "id": "actor-1",
+        "name": "TechForward Alliance",
+        "stakeholder_type": "corporations",
+        "stance": "proponent",
+        "confidence_label": "confirmed",
+        "influence_tier": "high",
+        "source_summary": "Structured source",
+        "source": "lda",
+        "composite_score": 72,
+        "lda_amount": 120000,
+        "organization": "TechForward Alliance",
+        "betweenness_centrality": 0.42,
+        "degree_centrality": 0.65,
+        "community_id": 0,
+        "bill_numbers": ["SB 101"]
+      },
+      {
+        "id": "actor-2",
+        "name": "Open Markets Group",
+        "stakeholder_type": "nonprofits",
+        "stance": "opponent",
+        "confidence_label": "likely",
+        "influence_tier": "medium",
+        "source_summary": "Web source",
+        "source": "news",
+        "composite_score": 38,
+        "lda_amount": 0,
+        "organization": "Open Markets Group",
+        "betweenness_centrality": 0.15,
+        "degree_centrality": 0.41,
+        "community_id": 1,
+        "bill_numbers": []
+      }
+    ],
+    "relationships": [
+      {
+        "from_id": "actor-1",
+        "to_id": "actor-2",
+        "type": "issue_overlap",
+        "label": "Competing public positions",
+        "source": "inferred"
+      }
+    ],
+    "analytics": {
+      "strategic_summary": "The map shows one highly central proponent and a smaller but visible opposition cluster.",
+      "top_opponents": [
+        {
+          "name": "Open Markets Group",
+          "composite_score": 38,
+          "lda_amount": 0
+        }
+      ],
+      "top_proponents": [
+        {
+          "name": "TechForward Alliance",
+          "composite_score": 72,
+          "lda_amount": 120000
+        }
+      ],
+      "top_persuadables": [],
+      "brokers": [
+        {
+          "name": "TechForward Alliance",
+          "stakeholder_type": "corporations",
+          "stance": "proponent",
+          "betweenness_centrality": 0.42,
+          "degree_centrality": 0.65,
+          "organization": "TechForward Alliance"
+        }
+      ],
+      "top_by_betweenness": [
+        {
+          "name": "TechForward Alliance",
+          "betweenness_centrality": 0.42,
+          "stance": "proponent"
+        }
+      ],
+      "top_by_degree": [
+        {
+          "name": "TechForward Alliance",
+          "degree_centrality": 0.65,
+          "stance": "proponent"
+        }
+      ],
+      "has_edges": true,
+      "has_both_sides": true,
+      "network_density": 0.33,
+      "communities": 2,
+      "multi_venue_actors": [
+        {
+          "name": "TechForward Alliance",
+          "stakeholder_type": "corporations",
+          "stance": "proponent",
+          "lda_amount": 120000,
+          "bill_numbers": ["SB 101"]
+        }
+      ]
+    },
+    "strategic_analysis": {
+      "landscape": "A small number of actors dominate the current federal debate.",
+      "dynamics": "Supporters emphasize targeted guardrails while opponents warn against overbreadth.",
+      "immediate_actions": [
+        {
+          "actor": "TechForward Alliance",
+          "action": "Reinforce coalition message discipline",
+          "why": "Most central actor in the supportive coalition",
+          "support": ["Top composite score"],
+          "metrics": ["Bridge role 0.42"],
+          "confidence": "confirmed"
+        }
+      ],
+      "coalition_opportunities": [
+        {
+          "opportunity": "Coordinate around compliance certainty messaging.",
+          "support": ["Shared safe-harbor emphasis"],
+          "metrics": ["High centrality overlap"],
+          "confidence": "likely"
+        }
+      ],
+      "risks": [
+        {
+          "risk": "Opponents may frame the bill as too broad.",
+          "support": ["Competing public positions"],
+          "metrics": ["Visible opposition cluster"],
+          "confidence": "possible"
+        }
+      ],
+      "swing_actor_strategy": {
+        "summary": "Recruit neutral technical validators who can support targeted testing language.",
+        "support": ["Need broader validator set"],
+        "metrics": ["Limited persuadable pool"],
+        "confidence": "likely"
+      }
+    }
+  },
+  "artifacts": [
+    {
+      "name": "stakeholder_map.xlsx",
+      "path": "/tmp/stakeholder_map.xlsx",
+      "size_bytes": 2048,
+      "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "url": "/api/jobs/qa-stakeholder-map-completed/artifacts/0"
+    },
+    {
+      "name": "stakeholder_map.docx",
+      "path": "/tmp/stakeholder_map.docx",
+      "size_bytes": 1024,
+      "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "url": "/api/jobs/qa-stakeholder-map-completed/artifacts/1"
+    }
+  ]
+}

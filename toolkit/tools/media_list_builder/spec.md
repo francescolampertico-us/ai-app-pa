@@ -3,7 +3,7 @@
 ## Purpose
 Generate a targeted media list for pitching a policy issue. Maps to DiGiacomo Process #5 (Media Relations) — the step between "we have a message" and "we pitch it to reporters."
 
-PA professionals spend significant time manually researching journalists, checking beats, and building pitch lists. This tool automates the research phase, producing a structured list of contacts with suggested pitch angles tailored to each journalist's coverage history.
+PA professionals spend significant time manually researching journalists, checking beats, and building pitch lists. This tool automates the research phase through a tiered retrieval pipeline: fast news discovery first, broader web/news fallback second, and controlled expansion from validated outlets/reporters only when needed.
 
 ## When to use
 - Launching a media campaign around a policy issue and need to identify target journalists.
@@ -53,13 +53,16 @@ Each row represents one media contact with these columns:
 - Total contacts by media type
 - Top outlets represented
 - Suggested pitch timing notes
+- Requested vs returned contact count
+- Coverage notes when the run is constrained
 
 ## Limitations / Failure Modes
 - **Contact accuracy**: Journalist names and beats are based on LLM knowledge and recent news — reporters change beats frequently.
 - **Email addresses**: Pattern-guessed from outlet conventions (firstname.lastname@outlet.com) — ALWAYS verify before sending.
-- **Coverage gaps**: Google News may not surface all relevant journalists, especially at smaller outlets.
+- **Coverage gaps**: broad-web fallback improves discovery, but the tool still depends on journalism pages, byline extraction, and source quality.
 - **Recency**: LLM knowledge has a cutoff — very new hires or beat changes won't be reflected.
 - **Trade media**: Niche publications are harder to identify accurately.
+- **Search provider dependency**: broad-web fallback only activates when a supported search API is configured.
 
 ## Human Review Checklist (Risk: Yellow)
 - Verify each journalist is still at the listed outlet and covering the listed beat.

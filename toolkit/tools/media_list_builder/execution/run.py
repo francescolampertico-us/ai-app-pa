@@ -3,9 +3,13 @@ Media List Builder — CLI Entry Point
 ======================================
 Usage:
   python3 run.py --issue "AI safety regulation" [options]
+  python3 run.py --broad-topic "health" --coverage-desk "health" --topic-mode broad [options]
 
 Options:
-  --issue TEXT           Policy issue to pitch (required)
+  --issue TEXT           Policy issue to pitch
+  --broad-topic TEXT     Broad topic to search across a desk or beat
+  --coverage-desk TEXT   Desk or beat to emphasize (e.g. health, technology)
+  --topic-mode TEXT      specific or broad (default: specific)
   --location TEXT        Geographic scope: US, state, city (default: US)
   --media-types TEXT     Comma-separated: mainstream,print,broadcast,digital,trade,podcast
   --num-contacts INT     Target number of contacts (default: 20)
@@ -26,7 +30,10 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate a targeted media pitch list for a policy issue."
     )
-    parser.add_argument("--issue", required=True, help="Policy issue to pitch")
+    parser.add_argument("--issue", default="", help="Policy issue to pitch")
+    parser.add_argument("--broad-topic", default="", dest="broad_topic", help="Broad topic to search")
+    parser.add_argument("--coverage-desk", default="", dest="coverage_desk", help="Desk or beat to emphasize")
+    parser.add_argument("--topic-mode", default="specific", dest="topic_mode", help="specific or broad")
     parser.add_argument("--location", default="US", help="Geographic scope (default: US)")
     parser.add_argument("--media-types", default=None, dest="media_types",
                         help="Comma-separated media types: mainstream,print,broadcast,digital,trade,podcast")
@@ -49,6 +56,9 @@ def main():
         location=args.location,
         media_types=media_types,
         num_contacts=args.num_contacts,
+        broad_topic=args.broad_topic,
+        coverage_desk=args.coverage_desk,
+        topic_mode=args.topic_mode,
     )
 
     # Output

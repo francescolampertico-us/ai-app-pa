@@ -141,10 +141,10 @@ def _compose_overview(record: dict) -> dict:
     - Do NOT mention individual speakers
     """
     meta = record["metadata"]
-    committee = meta.get("committee_name", "The committee")
-    title = meta.get("hearing_title", "the hearing")
-    date = meta.get("hearing_date", "")
-    time = meta.get("hearing_time", "")
+    committee = meta.get("committee_name") or "The committee"
+    title = meta.get("hearing_title") or "the hearing"
+    date = meta.get("hearing_date") or ""
+    time = meta.get("hearing_time") or ""
 
     # Always build the metadata opening sentence
     opening = f'The {committee} held a hearing titled "{title}"'
@@ -373,8 +373,8 @@ def _compose_metadata_block(record: dict, overrides: dict) -> dict:
         memo_date = datetime.now().strftime("%A, %B %d, %Y")
 
     # Build long-form subject line
-    committee = meta.get("committee_name", "Committee")
-    title = meta.get("hearing_title", "Hearing")
+    committee = meta.get("committee_name") or "Committee"
+    title = meta.get("hearing_title") or "Hearing"
     subject = overrides.get("subject_line")
     if not subject:
         subject = f'{committee} Hearing, "{title}"'
@@ -478,41 +478,73 @@ def compose(record_dict: dict,
     return memo_output
 
 
+def _collect_speaker_names(memo_output: dict) -> list[str]:
+    """Collect all speaker names from subsection headings for bolding in body text."""
+    names: list[str] = []
+    for section in memo_output.get("sections", []):
+        if not section:
+            continue
+        for sub in section.get("subsections", []):
+            heading = sub.get("heading", "")
+            clean = re.sub(r"\s*\([RD]-[A-Za-z.]+\)\s*$", "", heading).strip()
+            if "," in clean:
+                clean = clean.split(",")[0].strip()
+            if clean:
+                names.append(clean)
+                parts = clean.split()
+                if len(parts) >= 2:
+                    names.append(parts[-1])
+    names.sort(key=len, reverse=True)
+    return names
+
+
+def _bold_names_in_text(text: str, names: list[str]) -> str:
+    """Wrap known speaker names in markdown bold markers."""
+    for name in names:
+        pattern = re.compile(r'(?<!\*\*)(?<!\w)(' + re.escape(name) + r')(?!\w)(?!\*\*)')
+        text = pattern.sub(r'**\1**', text)
+    text = re.sub(r'\*{4,}', '**', text)
+    return text
+
+
 def render_memo_text(memo_output: dict) -> str:
-    """Render the memo output as formatted plain text / markdown.
+    """Render the memo output as styled markdown.
 
     This is the human-readable version of the memo.
     """
+    names = _collect_speaker_names(memo_output)
     lines = []
 
     # Metadata block
     mb = memo_output["metadata_block"]
-    lines.append(f"FROM:\t\t{mb['from']}")
-    lines.append(f"DATE:\t\t{mb['date']}")
-    lines.append(f"SUBJECT:\t{mb['subject']}")
-    lines.append("")
+    lines.append(f"**FROM:** {mb['from']}  ")
+    lines.append(f"**DATE:** {mb['date']}  ")
+    lines.append(f"**SUBJECT:** {mb['subject']}")
     lines.append("")
 
-    # Display title (centered)
-    lines.append(memo_output["display_title"])
-    lines.append("")
+    # Display title
+    if memo_output.get("display_title"):
+        lines.append(f'# {memo_output["display_title"]}')
+        lines.append("")
 
     # Sections
     for section in memo_output["sections"]:
         if not section:
             continue
-        lines.append(section["heading"])
+        lines.append(f"## {section['heading']}")
+        lines.append("")
         if section.get("body"):
-            lines.append(section["body"])
+            lines.append(_bold_names_in_text(section["body"], names))
             lines.append("")
 
         for sub in section.get("subsections", []):
-            lines.append(sub["heading"])
-            lines.append(sub["body"])
+            lines.append(f"### {sub['heading']}")
+            lines.append("")
+            lines.append(_bold_names_in_text(sub["body"], names))
             lines.append("")
 
     # Footer
-    lines.append("")
-    lines.append(memo_output["footer"]["text"])
+    lines.append("---")
+    lines.append(f"*{memo_output['footer']['text']}*")
 
     return "\n".join(lines)

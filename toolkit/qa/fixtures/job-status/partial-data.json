@@ -1,0 +1,14 @@
+{
+  "status": "completed",
+  "progress": 100,
+  "message": "Completed with limited data.",
+  "artifacts": [
+    {
+      "name": "partial.md",
+      "path": "/tmp/partial.md",
+      "size_bytes": 48,
+      "media_type": "text/markdown",
+      "url": "/api/jobs/fixture-job/artifacts/0"
+    }
+  ]
+}

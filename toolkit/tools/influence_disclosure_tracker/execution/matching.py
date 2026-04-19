@@ -1,6 +1,20 @@
 import re
 from rapidfuzz import fuzz
 
+# Words that are generic in diplomatic/government entity names and should not
+# be used as distinguishing identifiers when matching.
+DIPLOMATIC_GENERIC = {
+    "embassy", "embassies", "state", "states", "government", "governments",
+    "royal", "nation", "national", "republic", "kingdom", "ministry", "mission",
+    "consulate", "permanent", "through", "via", "including", "behalf",
+    "of", "the", "on", "by", "for", "and", "in", "an", "a",
+    "islamic", "plurinational", "democratic", "peoples", "federal", "united",
+}
+
+def get_content_tokens(norm_name: str) -> set:
+    """Return the non-generic tokens from a normalized name."""
+    return set(norm_name.split()) - DIPLOMATIC_GENERIC
+
 # Common legal suffixes to remove during normalization
 LEGAL_SUFFIXES = [
     r'\binc\b\.?', r'\bincorporated\b',
@@ -48,26 +62,26 @@ def match_entity(query_name: str, target_name: str, fuzzy_threshold: float = 85.
     if not q_norm or not t_norm:
         return {"match": False, "match_type": "none", "confidence": 0.0}
 
-    # Also create space-stripped versions for comparison
-    q_compact = q_norm.replace(" ", "")
-    t_compact = t_norm.replace(" ", "")
-
-    # 1. Exact Normal Match (also check compact forms)
-    if q_norm == t_norm or q_compact == t_compact:
+    # 1. Exact Match
+    if q_norm == t_norm:
         return {"match": True, "match_type": "exact", "confidence": 100.0}
 
-    # 2. Contains Match — check both normal and compact forms
-    # e.g., "open ai" in "openai opco" fails, but "openai" in "openaiopco" succeeds
-    if (q_norm in t_norm or t_norm in q_norm or
-            q_compact in t_compact or t_compact in q_compact):
-        len_diff = abs(len(q_compact) - len(t_compact))
-        confidence = max(90.0, 99.0 - (len_diff * 0.5))
+    # 2. Content token match — handles diplomatic name variations
+    # "Embassy of the State of Qatar", "State of Qatar", "Qatar" all → {"qatar"}
+    # "Embassy of Kuwait" → {"kuwait"} — correctly does NOT match Qatar
+    q_content = get_content_tokens(q_norm)
+    t_content = get_content_tokens(t_norm)
+    if q_content and t_content and (q_content == t_content or
+                                     q_content.issubset(t_content) or
+                                     t_content.issubset(q_content)):
+        len_diff = abs(len(q_content) - len(t_content))
+        confidence = max(85.0, 95.0 - (len_diff * 5.0))
         return {"match": True, "match_type": "contains", "confidence": round(confidence, 1)}
-        
+
     # 3. Fuzzy Ratio
-    # token_set_ratio ignores word order and duplicated words
-    score = fuzz.token_set_ratio(q_norm, t_norm)
-    
+    # token_sort_ratio requires all tokens to be present (stricter than token_set_ratio)
+    score = fuzz.token_sort_ratio(q_norm, t_norm)
+
     if score >= fuzzy_threshold:
         return {"match": True, "match_type": "fuzzy", "confidence": round(score, 1)}
         

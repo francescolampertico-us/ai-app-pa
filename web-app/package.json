@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:api": "PLAYWRIGHT_SKIP_FRONTEND=1 playwright test tests/api/api-contract.spec.js",
+    "test:ui-fixture": "playwright test tests/ui/ui-fixtures.spec.js",
+    "test:ui-live": "playwright test tests/ui/live-smoke.spec.js",
+    "test:regression": "playwright test tests/ui/regression.spec.js",
+    "test:qa": "npm run lint && npm run build && python3 -m compileall ../fastapi-backend ../toolkit && npm run test:api && npm run test:ui-fixture && npm run test:regression && npm run test:ui-live"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -21,6 +26,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.59.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
@@ -31,6 +37,7 @@
     "globals": "^17.4.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^3.4.19",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "yaml": "^2.8.3"
   }
 }

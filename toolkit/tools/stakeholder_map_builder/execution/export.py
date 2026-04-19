@@ -25,11 +25,15 @@ ACTOR_COLUMNS = [
     ("Organization",   24),
     ("Type",           14),
     ("Stance",         14),
-    ("Influence Tier", 14),
+    ("Estimated Influence Tier", 18),
+    ("Strategic Relevance", 18),
+    ("Bridge Role", 14),
+    ("Connection Reach", 16),
     ("Evidence",       50),
     ("Issue Areas",    40),
     ("LDA Amount ($)", 16),
-    ("Source",         12),
+    ("Source Type",    18),
+    ("Source Backbone", 20),
     ("Notes",          30),
 ]
 
@@ -101,9 +105,13 @@ def export_xlsx(result: dict, output_path: str):
             actor.get("stakeholder_type", "").title(),
             stance.title(),
             actor.get("influence_tier", "").title(),
+            actor.get("composite_score", ""),
+            actor.get("betweenness_centrality", ""),
+            actor.get("degree_centrality", ""),
             actor.get("evidence", ""),
             issue_str,
             lda_val,
+            actor.get("source_summary", ""),
             actor.get("source", ""),
             actor.get("notes", ""),
         ]
@@ -165,6 +173,7 @@ def export_xlsx(result: dict, output_path: str):
         ("Proponents", str(sum(1 for a in actors if a.get("stance") == "proponent"))),
         ("Opponents",  str(sum(1 for a in actors if a.get("stance") == "opponent"))),
         ("Relationships", str(len(relationships))),
+        ("Methodology And Limitations", result.get("methodology_note", "")),
     ]
     for row_idx, (k, v) in enumerate(meta_rows, 1):
         ws_meta.cell(row=row_idx, column=1, value=k).font = Font(name="Calibri", bold=(row_idx == 1))

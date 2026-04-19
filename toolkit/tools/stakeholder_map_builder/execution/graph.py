@@ -186,11 +186,18 @@ def build_network_graph(
             hover_lines.append(f"Org: {org}")
         hover_lines += [
             f"Stance: {stance.title()}",
-            f"Influence: {tier.title()}",
+            f"Estimated Influence Tier: {tier.title()}",
             f"LDA Spend: {lda_str}",
         ]
+        if actor.get("composite_score") is not None:
+            hover_lines.append(f"Strategic Relevance: {actor.get('composite_score')}")
+        if actor.get("source_summary"):
+            hover_lines.append(f"Source Type: {actor.get('source_summary')}")
         if bw_score > 0:
-            hover_lines.append(f"Betweenness: {bw_score:.2f}")
+            hover_lines.append(f"Bridge Role: {bw_score:.2f}")
+        degree_score = actor.get("degree_centrality")
+        if degree_score is not None:
+            hover_lines.append(f"Connection Reach: {float(degree_score):.2f}")
         if evidence:
             hover_lines.append(f"Evidence: {evidence}")
         node_hover.append("<br>".join(hover_lines))
@@ -252,7 +259,7 @@ def build_network_graph(
         text=(
             "<b>Layout:</b> Proponents (left) · Neutral (center-left) · Unknown (center-right) · Opponents (right)<br>"
             "<b>Node shapes:</b> ● Legislator  ■ Corporation  ◆ Nonprofit  ▲ Lobbyist  ★ Coalition<br>"
-            "<b>Node size:</b> Influence tier (large=high)  "
+            "<b>Node size:</b> Estimated influence tier (large=high)  "
             "<b>Gold border:</b> Bridge actor (connects both sides)  "
             "<b>Unknown stance:</b> LLM could not determine from available evidence<br>"
             "<b>Edges:</b> ··· lobbies-for  — co-sponsors"

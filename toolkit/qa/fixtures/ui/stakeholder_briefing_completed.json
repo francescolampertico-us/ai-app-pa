@@ -1,0 +1,79 @@
+{
+  "id": "qa-stakeholder-briefing-completed",
+  "status": "completed",
+  "progress": 100,
+  "message": "Briefing complete.",
+  "download_url": "/api/jobs/qa-stakeholder-briefing-completed/artifacts/0",
+  "created_at": "2026-04-18T12:00:00",
+  "result_data": {
+    "header": {
+      "stakeholder_name": "Sen. Maria Cantwell",
+      "organization": "U.S. Senate"
+    },
+    "briefing_quality": "complete",
+    "disclosure_mode": "targeted",
+    "profile": {
+      "summary": "Chair-level stakeholder with influence on tech and commerce policy.",
+      "current_role": "U.S. Senator from Washington",
+      "key_areas": [
+        "technology",
+        "commerce"
+      ],
+      "notable_positions": "Supports federal standards paired with innovation incentives."
+    },
+    "policy_positions": [
+      {
+        "position": "Supports pragmatic AI safeguards.",
+        "evidence": "Public statements and committee agenda.",
+        "relevance": "Directly linked to the meeting objective."
+      }
+    ],
+    "talking_points": [
+      {
+        "point": "Target only the highest-risk systems.",
+        "rationale": "Keeps the message pro-innovation."
+      }
+    ],
+    "key_questions": [
+      {
+        "question": "What testing threshold is workable for your office?",
+        "purpose": "Identify a realistic legislative compromise."
+      }
+    ],
+    "curated_disclosures": [
+      {
+        "who": "Abridge AI, Inc.",
+        "what": "Lobbying on AI in health care.",
+        "why_it_matters": "Illustrates active stakeholder interest around adjacent AI regulation."
+      }
+    ],
+    "disclosures": {
+      "lda_entity": [
+        {
+          "registrant_name": "Example Strategies",
+          "client_name": "TechForward Alliance",
+          "filing_year": "2026",
+          "amount_reported": "$40,000"
+        }
+      ]
+    },
+    "news": [
+      {
+        "title": "Cantwell pushes for clear AI safeguards",
+        "source": "Policy Journal",
+        "date": "2026-04-12",
+        "url": "https://example.com/cantwell-ai"
+      }
+    ],
+    "markdown": "# Stakeholder Briefing\n\nBriefing content."
+  },
+  "artifacts": [
+    {
+      "name": "stakeholder_briefing.docx",
+      "path": "/tmp/stakeholder_briefing.docx",
+      "size_bytes": 1024,
+      "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "url": "/api/jobs/qa-stakeholder-briefing-completed/artifacts/0"
+    }
+  ]
+}

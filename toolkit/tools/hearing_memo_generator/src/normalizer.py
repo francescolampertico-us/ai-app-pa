@@ -313,6 +313,38 @@ def extract_metadata_candidates(text: str, notes: List[str]) -> dict:
     return candidates
 
 
+def strip_youtube_artifacts(text: str, notes: List[str]) -> str:
+    """Remove YouTube auto-caption noise patterns (NORMALIZATION_RULES §video).
+
+    Handles:
+    - Bracketed audio cues: [Music], [Applause], [Laughter], [Inaudible], etc.
+    - ASR stutter: consecutive duplicate words ("the the committee" → "the committee")
+    - YouTube chapter markers that survived timestamp stripping
+    """
+    original_len = len(text)
+
+    # Strip bracketed sound descriptors
+    text = re.sub(r"\[(?:Music|Applause|Laughter|Inaudible|Indistinct|Crosstalk|Silence|"
+                  r"Speaking foreign language|Background noise|Noise|Static|Beep)[^\]]*\]",
+                  "", text, flags=re.IGNORECASE)
+
+    # Strip chapter headings inserted by YouTube (e.g., "0:00 Opening Remarks")
+    text = re.sub(r"^\d{1,2}:\d{2}(?::\d{2})?\s+.+$", "", text, flags=re.MULTILINE)
+
+    # Remove ASR stutter: 2-4 consecutive occurrences of the same word
+    def _dedup_words(m: re.Match) -> str:
+        return m.group(1)
+    text = re.sub(r"\b(\w+)(?:\s+\1){1,3}\b", _dedup_words, text, flags=re.IGNORECASE)
+
+    # Collapse resulting blank lines
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    removed = original_len - len(text)
+    if removed > 0:
+        notes.append(f"Stripped ~{removed} chars of YouTube artifacts (sound cues, stutter)")
+    return text
+
+
 def detect_panels(text: str, notes: List[str]) -> List[str]:
     """Detect panel boundaries (NORMALIZATION_RULES §6)."""
     panel_signals = [
@@ -356,6 +388,9 @@ def normalize(filepath: str) -> NormalizationResult:
     notes.append(f"Detected source profile: {profile}")
 
     # 3-6. Cleanup pipeline
+    # 3a. YouTube-specific artifacts (before general cleanup)
+    if profile == "video_transcript":
+        raw_text = strip_youtube_artifacts(raw_text, notes)
     text = strip_vendor_noise(raw_text, notes)
     text = strip_timestamps(text, notes)
     text = normalize_speaker_labels(text, notes)

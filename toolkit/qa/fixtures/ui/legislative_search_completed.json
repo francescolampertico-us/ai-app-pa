@@ -1,0 +1,23 @@
+{
+  "id": "qa-legislative-search",
+  "status": "completed",
+  "progress": 100,
+  "message": "Search complete.",
+  "download_url": null,
+  "created_at": "2026-04-18T12:00:00",
+  "result_data": {
+    "action": "search",
+    "results": [
+      {
+        "bill_id": "123",
+        "number": "SB 101",
+        "title": "Artificial Intelligence Safety Act",
+        "state": "US",
+        "status": "Introduced",
+        "last_action_date": "2026-02-15",
+        "last_action": "Referred to committee"
+      }
+    ]
+  },
+  "artifacts": []
+}

@@ -15,7 +15,7 @@ from pathlib import Path
 # Load .env from toolkit root
 try:
     from dotenv import load_dotenv
-    _toolkit_root = Path(__file__).resolve().parent.parent.parent
+    _toolkit_root = Path(__file__).resolve().parent.parent.parent.parent
     load_dotenv(_toolkit_root / ".env")
 except ImportError:
     pass

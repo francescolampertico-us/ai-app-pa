@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "progress": 100,
+  "message": "This tool is temporarily unavailable because the upstream OpenAI quota or rate limit was exceeded. Try again later or reduce concurrent runs.",
+  "artifacts": []
+}

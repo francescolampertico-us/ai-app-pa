@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import datetime
+import json
 import mimetypes
 import os
+import sqlite3
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
@@ -13,8 +15,38 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
-JOB_STORE: Dict[str, dict] = {}
+# SQLite file lives next to main.py so it's outside the source tree but inside the backend dir.
+DB_PATH = Path(__file__).resolve().parents[2] / "jobs.db"
+JOBS_OUTPUT_ROOT = Path(__file__).resolve().parents[2] / "jobs_output"
 
+
+def _conn() -> sqlite3.Connection:
+    """Open a per-call connection with WAL mode for safe concurrent writes from background threads."""
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
+
+
+def _init_db() -> None:
+    with _conn() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS jobs (
+                id          TEXT PRIMARY KEY,
+                status      TEXT NOT NULL DEFAULT 'pending',
+                progress    INTEGER DEFAULT 0,
+                message     TEXT DEFAULT '',
+                created_at  TEXT NOT NULL,
+                result_data TEXT,
+                artifacts   TEXT NOT NULL DEFAULT '[]'
+            )
+        """)
+
+
+_init_db()
+
+
+# ── Pydantic models ──────────────────────────────────────────────────────────
 
 class ArtifactStatus(BaseModel):
     name: str
@@ -35,16 +67,92 @@ class JobStatus(BaseModel):
     artifacts: list[ArtifactStatus] = []
 
 
+# ── Internal helpers ─────────────────────────────────────────────────────────
+
+def _row_to_dict(row: sqlite3.Row) -> dict:
+    d = dict(row)
+    d["artifacts"] = json.loads(d.get("artifacts") or "[]")
+    d["result_data"] = json.loads(d["result_data"]) if d.get("result_data") else None
+    return d
+
+
+def _get_job(job_id: str) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    return _row_to_dict(row) if row else None
+
+
+def _parse_iso_datetime(value: str | None) -> datetime.datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _recover_result_data(output_dir: Path) -> dict | None:
+    json_candidates = sorted(
+        [p for p in output_dir.glob("*.json") if p.is_file()],
+        key=lambda p: (p.name.endswith("_data.json"), p.stat().st_size),
+        reverse=True,
+    )
+    for candidate in json_candidates:
+        try:
+            data = json.loads(candidate.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            continue
+    return None
+
+
+def _reconcile_job_from_output(job_id: str, job: dict) -> dict:
+    if not job or job.get("status") not in {"pending"}:
+        return job
+    output_dir = JOBS_OUTPUT_ROOT / job_id
+    if not output_dir.exists():
+        return job
+
+    files = sorted([p for p in output_dir.iterdir() if p.is_file()])
+    if not files:
+        return job
+
+    created_at = _parse_iso_datetime(job.get("created_at"))
+    latest_mtime = max(datetime.datetime.fromtimestamp(p.stat().st_mtime) for p in files)
+    now = datetime.datetime.now()
+    if created_at and (now - created_at).total_seconds() < 15:
+        return job
+    if (now - latest_mtime).total_seconds() < 10:
+        return job
+
+    artifacts = [build_artifact(str(p), job_id, idx) for idx, p in enumerate(files)]
+    result_data = job.get("result_data") or _recover_result_data(output_dir)
+    message = job.get("message") or "Job completed."
+    if not message.lower().startswith("job completed"):
+        message = f"{message} Recovered completed outputs from disk."
+
+    update_job(
+        job_id,
+        status="completed",
+        progress=100,
+        message=message,
+        artifacts=artifacts,
+        result_data=result_data,
+    )
+    refreshed = _get_job(job_id)
+    return refreshed or job
+
+
+# ── Public API (same signatures as before) ───────────────────────────────────
+
 def create_job() -> str:
     job_id = str(uuid.uuid4())
-    JOB_STORE[job_id] = {
-        "status": "pending",
-        "progress": 0,
-        "message": "Job initialized",
-        "created_at": datetime.datetime.now().isoformat(),
-        "artifacts": [],
-        "result_data": None,
-    }
+    with _conn() as conn:
+        conn.execute(
+            "INSERT INTO jobs (id, status, progress, message, created_at, artifacts) VALUES (?, ?, ?, ?, ?, ?)",
+            (job_id, "pending", 0, "Job initialized", datetime.datetime.now().isoformat(), "[]"),
+        )
     return job_id
 
 
@@ -56,19 +164,23 @@ def update_job(
     artifacts: list[dict] | None = None,
     result_data: dict | None = None,
 ):
-    job = JOB_STORE.get(job_id)
-    if not job:
-        return
+    sets: list[str] = []
+    params: list[Any] = []
     if status is not None:
-        job["status"] = status
+        sets.append("status = ?"); params.append(status)
     if progress is not None:
-        job["progress"] = progress
+        sets.append("progress = ?"); params.append(progress)
     if message is not None:
-        job["message"] = message
+        sets.append("message = ?"); params.append(message)
     if artifacts is not None:
-        job["artifacts"] = artifacts
+        sets.append("artifacts = ?"); params.append(json.dumps(artifacts))
     if result_data is not None:
-        job["result_data"] = result_data
+        sets.append("result_data = ?"); params.append(json.dumps(result_data))
+    if not sets:
+        return
+    params.append(job_id)
+    with _conn() as conn:
+        conn.execute(f"UPDATE jobs SET {', '.join(sets)} WHERE id = ?", params)
 
 
 def build_artifact(path: str, job_id: str, index: int) -> dict[str, Any]:
@@ -96,7 +208,7 @@ def set_job_artifacts(job_id: str, files: list[str]):
 
 
 def append_job_artifacts(job_id: str, files: list[str]):
-    job = JOB_STORE.get(job_id)
+    job = _get_job(job_id)
     if not job:
         return
     current_paths = [artifact["path"] for artifact in job.get("artifacts", [])]
@@ -104,16 +216,17 @@ def append_job_artifacts(job_id: str, files: list[str]):
     set_job_artifacts(job_id, current_paths)
 
 
+# ── Routes ───────────────────────────────────────────────────────────────────
+
 @router.get("/{job_id}/status", response_model=JobStatus)
 async def get_job_status(job_id: str):
-    job = JOB_STORE.get(job_id)
+    job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    job = _reconcile_job_from_output(job_id, job)
 
-    download_url = None
     artifacts = job.get("artifacts", [])
-    if artifacts:
-        download_url = artifacts[0]["url"]
+    download_url = artifacts[0]["url"] if artifacts else None
 
     return JobStatus(
         id=job_id,
@@ -129,7 +242,7 @@ async def get_job_status(job_id: str):
 
 @router.get("/{job_id}/artifacts/{artifact_index}")
 async def download_job_artifact(job_id: str, artifact_index: int):
-    job = JOB_STORE.get(job_id)
+    job = _get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 

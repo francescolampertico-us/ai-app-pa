@@ -3,6 +3,9 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRightIcon as ArrowRight, DownloadSimpleIcon as DownloadSimple, SpinnerGapIcon as SpinnerGap } from '@phosphor-icons/react';
 import { useFastApiJob } from '../hooks/useFastApiJob';
+import ModelSelector from '../components/ModelSelector';
+import StyledMarkdown from '../components/StyledMarkdown';
+import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 
 const DISCLOSURE_SOURCES = ['lda', 'fara', 'irs990'];
 
@@ -12,15 +15,18 @@ function DownloadRow({ job, onDownloadArtifact, onDownloadJson, onDownloadText }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <button onClick={() => onDownloadArtifact(artifactByName['background_memo.docx'])}
+      <button data-testid="download-background-memo-docx" onClick={() => onDownloadArtifact(artifactByName['background_memo.docx'])}
         className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-purple-200 transition-colors">
         <DownloadSimple size={18} /> Download DOCX
       </button>
-      <button onClick={() => onDownloadText(job?.result_data?.markdown || '', 'background_memo.md')}
+      <button data-testid="download-background-memo-markdown" onClick={() => onDownloadText(job?.result_data?.markdown || '', 'background_memo.md')}
         className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
         <DownloadSimple size={18} /> Download Markdown
       </button>
-      <button onClick={() => onDownloadJson(job?.result_data?.result || {}, 'background_memo.json')}
+      <button data-testid="download-background-memo-json" onClick={() => {
+        const { subject, memo_date, overview, fast_facts, sections, links } = job?.result_data || {};
+        onDownloadJson({ subject, memo_date, overview, fast_facts, sections, links }, 'background_memo.json');
+      }}
         className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
         <DownloadSimple size={18} /> Download JSON
       </button>
@@ -38,10 +44,12 @@ export default function BackgroundMemo() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [disclosureEntity, setDisclosureEntity] = useState('');
   const [disclosureSources, setDisclosureSources] = useState(['lda', 'fara']);
+  const [llmModel, setLlmModel] = useState('ChangeAgent');
 
-  const result = job?.result_data?.result;
-  const researchMd = job?.result_data?.research_md || '';
-  const disclosureMd = job?.result_data?.disclosure_md || '';
+  // result_data is now flat — memo content fields are top-level (no nested 'result' key).
+  const rd = job?.result_data;
+  const researchMd = rd?.research_md || '';
+  const disclosureMd = rd?.disclosure_md || '';
 
   const disclosureArtifacts = useMemo(
     () => (job?.artifacts || []).filter(artifact => /report\.md$|\.csv$/i.test(artifact.name)),
@@ -63,30 +71,37 @@ export default function BackgroundMemo() {
     payload.append('context', context);
     payload.append('disclosure_entity_override', disclosureEntity);
     payload.append('disclosure_sources', disclosureSources.join(','));
+    payload.append('llm_model', llmModel);
     uploadedFiles.forEach((file) => payload.append('file', file));
     submitJob(payload);
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-10 max-w-6xl mx-auto relative z-10">
+    <motion.div data-testid="tool-page-background-memo" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-10 max-w-6xl mx-auto relative z-10">
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
         <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
         </div>
-        <h1 className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Background Memo Generator</h1>
+        <h1 data-testid="page-title-background-memo" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Background Memo</h1>
         <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '70ch', fontWeight: 300 }}>
-          Generates a structured background memo on a client, organization, policy issue, or individual, with optional file grounding and automatic disclosure research.
+          Generates a structured first-draft background memo on a client, organization, policy issue, or individual, with optional file grounding and automatic disclosure research.
         </p>
+        <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
       </header>
+
+      <ResearchPrototypeNote
+        category="Policy Monitoring & Legislative Tracking"
+        message="This research prototype turns organizations, issues, and individuals into structured briefing material. It supports intelligence synthesis and first-pass drafting, but the memo remains a decision-support artifact that should be checked against primary sources before use."
+      />
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="glass-card p-8 flex flex-col gap-5">
             <div>
               <label className="field-label">Subject</label>
-              <input value={subject} onChange={(event) => setSubject(event.target.value)}
+              <input data-testid="input-background-subject" value={subject} onChange={(event) => setSubject(event.target.value)}
                 className="field" placeholder="e.g. Jagello 2000, Giordano Riello Group, AI Safety Act" required />
             </div>
             <div>
@@ -95,12 +110,12 @@ export default function BackgroundMemo() {
             </div>
             <div>
               <label className="field-label">Sections</label>
-              <textarea value={sectionsText} onChange={(event) => setSectionsText(event.target.value)}
+              <textarea data-testid="input-background-sections" value={sectionsText} onChange={(event) => setSectionsText(event.target.value)}
                 className="field resize-none" rows={8} placeholder={'Corporate Overview\nKey Leadership\nU.S. Presence\nPolicy Positions'} required />
             </div>
             <div>
               <label className="field-label">Additional Context</label>
-              <textarea value={context} onChange={(event) => setContext(event.target.value)}
+              <textarea data-testid="input-background-context" value={context} onChange={(event) => setContext(event.target.value)}
                 className="field resize-none" rows={4} placeholder="Key angles, background notes, or facts to anchor the memo..." />
             </div>
           </div>
@@ -108,7 +123,7 @@ export default function BackgroundMemo() {
           <div className="glass-card p-8 flex flex-col gap-5">
             <div>
               <label className="field-label">Source Files</label>
-              <input type="file" multiple accept=".pdf,.docx,.txt,.md"
+              <input data-testid="input-background-files" type="file" multiple accept=".pdf,.docx,.txt,.md"
                 onChange={(event) => setUploadedFiles(Array.from(event.target.files || []))}
                 className="field file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/20 file:text-violet-300" />
               {uploadedFiles.length > 0 && (
@@ -125,7 +140,7 @@ export default function BackgroundMemo() {
               </div>
               <div>
                 <label className="field-label">Entity Name In Filings</label>
-                <input value={disclosureEntity} onChange={(event) => setDisclosureEntity(event.target.value)}
+                <input data-testid="input-background-disclosure-entity" value={disclosureEntity} onChange={(event) => setDisclosureEntity(event.target.value)}
                   className="field" placeholder="Leave blank to use the subject name" />
               </div>
               <div>
@@ -133,7 +148,7 @@ export default function BackgroundMemo() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   {DISCLOSURE_SOURCES.map((source) => (
                     <label key={source} className="flex items-center gap-2 text-sm text-slate-300">
-                      <input type="checkbox" checked={disclosureSources.includes(source)} onChange={() => toggleDisclosureSource(source)} className="accent-violet-500" />
+                      <input data-testid={`toggle-background-disclosure-${source}`} type="checkbox" checked={disclosureSources.includes(source)} onChange={() => toggleDisclosureSource(source)} className="accent-violet-500" />
                       <span>{source}</span>
                     </label>
                   ))}
@@ -141,7 +156,7 @@ export default function BackgroundMemo() {
               </div>
             </div>
 
-            <button type="submit" disabled={loading || !subject.trim() || !sectionsText.trim()}
+            <button data-testid="submit-background-memo" type="submit" disabled={loading || !subject.trim() || !sectionsText.trim()}
               className="btn-primary mt-auto">
               {loading ? <><SpinnerGap size={18} className="animate-spin" /> Generating…</> : <>Generate Memo <ArrowRight size={18} /></>}
             </button>
@@ -151,7 +166,7 @@ export default function BackgroundMemo() {
 
       {job && (
         <div className="mt-12 space-y-8">
-          <div className="glass-card p-6">
+          <div data-testid="status-background-memo" className="glass-card p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="font-mono text-xs text-purple-300">{job.id.slice(0, 8).toUpperCase()}</span>
               <span className={job.status === 'completed' ? 'badge-complete' : job.status === 'failed' ? 'badge-failed' : 'badge-processing'}>{job.status}</span>
@@ -162,33 +177,41 @@ export default function BackgroundMemo() {
             </div>
           </div>
 
-          {job.status === 'completed' && result && (
+          {job.status === 'completed' && rd && (
             <>
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-amber-200 text-sm">
                 Review required. All memo text is model-generated and should be checked against primary sources before distribution.
               </div>
 
               <div className="glass-card p-8 space-y-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
+                    Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
+                  </div>
+                  <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+                  <span className="font-serif text-lg text-slate-200">Background Memo</span>
+                </div>
+
                 <section>
-                  <h2 className="display" style={{ fontSize: 26, color: '#fff', marginBottom: 12 }}>Overview</h2>
-                  <p className="text-slate-300 leading-7">{result.overview}</p>
+                  <h2 className="display" style={{ fontSize: 26, color: '#A78BFA', marginBottom: 12 }}>Overview</h2>
+                  <p className="text-slate-300 leading-7">{rd.overview}</p>
                 </section>
 
                 <section>
-                  <h2 className="display" style={{ fontSize: 26, color: '#fff', marginBottom: 12 }}>Fast Facts</h2>
+                  <h2 className="display" style={{ fontSize: 26, color: '#A78BFA', marginBottom: 12 }}>Fast Facts</h2>
                   <div className="space-y-3">
-                    {(result.fast_facts || []).map((fact) => (
+                    {(rd.fast_facts || []).map((fact) => (
                       <p key={fact} className="text-slate-300 leading-7"><strong className="text-white">• {fact}</strong></p>
                     ))}
                   </div>
                 </section>
 
-                {(result.sections || []).map((section) => (
+                {(rd.sections || []).map((section) => (
                   <section key={section.heading}>
-                    <h2 className="display" style={{ fontSize: 26, color: '#fff', marginBottom: 12 }}>{section.heading}</h2>
+                    <h2 className="display" style={{ fontSize: 26, color: '#A78BFA', marginBottom: 12 }}>{section.heading}</h2>
                     {(section.subsections || []).map((subsection, index) => (
                       <div key={`${section.heading}-${index}`} className="space-y-4 mb-5">
-                        {subsection.heading && <h3 className="text-lg text-slate-200 font-semibold">{subsection.heading}</h3>}
+                        {subsection.heading && <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 8 }}>{subsection.heading}</h3>}
                         {(subsection.paragraphs || []).map((paragraph, paragraphIndex) => (
                           <p key={paragraphIndex} className="text-slate-300 leading-7">{paragraph}</p>
                         ))}
@@ -198,9 +221,9 @@ export default function BackgroundMemo() {
                 ))}
 
                 <section>
-                  <h2 className="display" style={{ fontSize: 26, color: '#fff', marginBottom: 12 }}>Links</h2>
+                  <h2 className="display" style={{ fontSize: 26, color: '#A78BFA', marginBottom: 12 }}>Links</h2>
                   <div className="space-y-2">
-                    {(result.links || []).map((link) => (
+                    {(rd.links || []).map((link) => (
                       <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer"
                         className="block text-violet-300 hover:text-violet-200 underline underline-offset-4">
                         {link.label || link.url}
@@ -218,16 +241,16 @@ export default function BackgroundMemo() {
               />
 
               {researchMd && (
-                <details className="glass-card p-6">
+                <details data-testid="drawer-background-research" className="glass-card p-6">
                   <summary className="cursor-pointer text-white font-semibold">View Articles Used For Research</summary>
-                  <pre className="mt-4 whitespace-pre-wrap text-sm text-slate-300">{researchMd}</pre>
+                  <div className="mt-4"><StyledMarkdown>{researchMd}</StyledMarkdown></div>
                 </details>
               )}
 
               {disclosureMd && (
-                <details className="glass-card p-6">
+                <details data-testid="drawer-background-disclosures" className="glass-card p-6">
                   <summary className="cursor-pointer text-white font-semibold">View Raw Disclosure Data Used</summary>
-                  <pre className="mt-4 whitespace-pre-wrap text-sm text-slate-300">{disclosureMd}</pre>
+                  <div className="mt-4"><StyledMarkdown>{disclosureMd}</StyledMarkdown></div>
                 </details>
               )}
 
@@ -236,7 +259,7 @@ export default function BackgroundMemo() {
                   <h3 className="text-white text-lg font-semibold mb-4">Disclosure Downloads</h3>
                   <div className="flex flex-wrap gap-3">
                     {disclosureArtifacts.map((artifact) => (
-                      <button key={artifact.url} onClick={() => downloadArtifact(artifact)}
+                      <button data-testid={`download-background-artifact-${artifact.name}`} key={artifact.url} onClick={() => downloadArtifact(artifact)}
                         className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-sm">
                         {artifact.name}
                       </button>
