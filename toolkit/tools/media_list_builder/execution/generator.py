@@ -2704,7 +2704,10 @@ def generate_media_list(
             provider = NoopSearchProvider()
         else:
             print("Step 2: Collecting Layer 1 candidates...", file=sys.stderr)
-            articles = layer1_future.result() or []
+            try:
+                articles = layer1_future.result() or []
+            except Exception:
+                articles = []
             layer1_candidate_count = len(articles)
             print(f"  Layer 1 found {layer1_candidate_count} unique articles", file=sys.stderr)
 
