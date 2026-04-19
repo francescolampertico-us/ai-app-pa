@@ -144,7 +144,7 @@ def _llm_api_key(model: str) -> str:
         return api_key
     api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not set.")
+        raise RuntimeError("LLM API key is not set for the configured endpoint.")
     return api_key
 
 
@@ -875,9 +875,9 @@ def clean_clip_llm_openai(raw_text: str, model: str, title: Optional[str] = None
             body = resp.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="ignore")
-        raise RuntimeError(f"OpenAI API HTTP {exc.code}: {detail}") from exc
+        raise RuntimeError(f"LLM API HTTP {exc.code}: {detail}") from exc
     except Exception as exc:
-        raise RuntimeError(f"OpenAI API request failed: {exc}") from exc
+        raise RuntimeError(f"LLM API request failed: {exc}") from exc
 
     data = json.loads(body)
     text = data.get("output_text", "").strip()
@@ -889,7 +889,7 @@ def clean_clip_llm_openai(raw_text: str, model: str, title: Optional[str] = None
                     parts.append(content["text"])
         text = "\n".join(parts).strip()
     if not text:
-        raise RuntimeError("OpenAI API returned no text content.")
+        raise RuntimeError("LLM API returned no text content.")
     return _post_process_llm(text, title=title)
 
 
@@ -944,7 +944,7 @@ def main() -> None:
         type=str,
         choices=["local", "llm"],
         default="local",
-        help="Cleaning mode: 'local' (rule-based) or 'llm' (OpenAI API).",
+        help="Cleaning mode: 'local' (rule-based) or 'llm' (configured LLM-compatible endpoint).",
     )
     parser.add_argument(
         "--llm-model",

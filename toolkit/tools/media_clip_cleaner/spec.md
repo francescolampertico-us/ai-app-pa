@@ -1,69 +1,75 @@
 # Media Clip Cleaner
 
 ## Purpose
-Clean messy text copied from news websites into a **professional clip** suitable for pasting into a media monitoring report.
+Clean messy pasted article text into clip-ready body text for media monitoring workflows.
 
-This tool is designed for the “paywall/manual extraction” step: when full-text extraction fails and you must copy/paste the article yourself.
+This tool is used when:
+- copied article text includes page chrome, captions, bios, promos, related-story blocks, or footer junk
+- extraction quality is weak and the user wants to paste text manually
+- a selected article in the media clips workflow needs deeper cleanup before final report build
 
 ## When to use
-- A clip contains `[PASTE FULL TEXT HERE]` because extraction failed (often paywalls).
-- Copy/pasted text includes ads, cookie banners, UI elements, “recommended” blocks, or duplicated fragments.
+- A clip preview still contains obvious clutter after the light automatic cleanup.
+- A paywalled or badly extracted article needs manual paste and cleanup.
+- The reviewer wants to run deeper cleanup on one article without rerunning the whole search.
 
-## Input
-- Raw pasted text from the article page.
-- Optional: file-based input/output for repeatable runs.
+## Inputs
 
-## Execution
-From repository root:
+### Required
+- `raw_text` — pasted article text or a file/stdin source that resolves to pasted article text
 
-```bash
-python3 tools/media_clip_cleaner/execution/clean_clip.py \
-  --input-file /path/to/raw_article.txt \
-  --output-file /path/to/cleaned_clip.md
-```
+### Optional
+- `title` — known article headline to help remove title echoes
+- `mode` — `local` or `llm`
+- `llm_model` — model identifier for deeper cleanup mode
+- `fallback_local` — fallback to local rules if deeper cleanup fails
+- `input_file`
+- `output_file`
+- `--paste` interactive mode
 
-Alternative modes:
-- `--raw-text "..."` for short snippets
-- stdin piping (no flags), e.g. `cat raw.txt | python3 tools/media_clip_cleaner/execution/clean_clip.py`
-- interactive paste mode: `--paste`
+## Modes
 
-### LLM mode (recommended for cross-outlet reliability)
-Set your API key:
+### Local mode
+- deterministic
+- fast
+- best for obvious clutter removal
+- used safely in larger review workflows
 
-```bash
-export OPENAI_API_KEY="<your_key>"
-```
+### LLM mode
+- slower
+- stronger on broad structural judgment across outlets
+- uses a configured LLM-compatible endpoint
+- followed by validation and post-processing
 
-Run:
+## Cleaning contract
+The output should:
+- remove the main headline/title
+- remove bylines, bios, datelines, timestamps, image captions, photo credits, promos, navigation, related stories, widgets, footer text, and legal/corporate page chrome
+- preserve real article paragraphs verbatim
+- preserve real in-article section headers
+- keep paragraph separation
+- avoid commentary such as “Here is the cleaned text”
 
-```bash
-python3 tools/media_clip_cleaner/execution/clean_clip.py \
-  --mode llm \
-  --llm-model gpt-5-mini \
-  --input-file /path/to/raw_article.txt \
-  --output-file /path/to/cleaned_clip.md \
-  --fallback-local
-```
+The output should not rely on outlet-specific string matching alone; it should favor article coherence:
+- if a line would not belong if the publisher website disappeared and only the article remained, remove it
 
-Notes:
-- `--mode llm` calls OpenAI API and then validates output against the contract.
-- `--fallback-local` keeps the run resilient if API/validation fails.
+## Outputs
+- cleaned clip text returned to the caller
+- optional output file when requested
 
-## Output contract (what you should get)
-1) **Start directly with the subtitle/lede in italics**  
-2) **Do not include the main headline/title**  
-3) Remove:
-   - ads, UI clutter, “read more”, “recommended”, newsletter prompts
-   - timestamps/publication dates
-   - photo captions/credits
-4) Provide the **clean full article body** in normal paragraphs  
-5) Do not add any prefacing commentary (no “Here is…”)
+## Review requirements
+Human review is still recommended when:
+- the pasted source text is incomplete
+- the article is paywalled or copied in a structurally broken way
+- the cleaned output looks too short or too aggressive
 
-## Risk level
-**Green** — it’s a text-cleaning tool. Still, do a quick human scan to ensure the body is complete and nothing important was removed.
+Checklist:
+- confirm article body is intact
+- confirm title and metadata are removed
+- confirm no obvious page chrome remains
+- confirm author/title/date can still be set manually in the media clips review workflow if needed
 
 ## Known limitations
-- If the pasted input is incomplete (e.g., only part of the article), the output will also be incomplete.
-- Some sites interleave unrelated “cards” mid-article; those must be removed manually if they slip through.
-- Subtitle detection is conservative: the script italicizes only explicit subtitle/lede/deck markers.
-- Local mode may under-clean or over-clean on some outlet-specific templates; prefer LLM mode for highest reliability.
+- The cleaner cannot recover article text that was never copied in the first place.
+- Severely collapsed one-block pastes may still require manual touch-up.
+- Some ambiguous lines may need reviewer judgment, especially on opinion pages and unusual layouts.

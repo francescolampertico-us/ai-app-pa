@@ -6,15 +6,15 @@ tags: [media_monitoring, text_cleanup, paywall, paste]
 
 description: >
   Cleans raw text copied from news websites for media monitoring clips. Removes headlines, ads,
-  metadata, and UI clutter while preserving the subtitle/lede (italic) and the full article body.
+  metadata, and UI clutter while preserving real article paragraphs and paragraph structure.
 
 execution:
   entrypoint: tools/media_clip_cleaner/execution/clean_clip.py
   runtime: python
   notes:
     - "Can run locally via CLI with --raw-text, --input-file, stdin, or --paste."
-    - "Supports --mode local (rule-based) and --mode llm (OpenAI API)."
-    - "LLM mode uses OPENAI_API_KEY and validates output contract."
+    - "Supports --mode local (rule-based) and --mode llm (configured LLM-compatible endpoint)."
+    - "LLM mode validates output and can fall back to local cleanup if configured."
     - "Does not bypass paywalls; requires user-provided text."
 
 inputs:
@@ -23,8 +23,9 @@ inputs:
   optional:
     - input_file: "Path to a text file containing raw pasted content."
     - output_file: "Path to save cleaned markdown output."
+    - title: "Optional headline used to help remove title echoes."
     - mode: "'local' (default) or 'llm'."
-    - llm_model: "OpenAI model for llm mode (default: gpt-5-mini)."
+    - llm_model: "Configured model identifier for llm mode."
     - fallback_local: "If llm mode fails, fallback to local mode."
 
 outputs:
@@ -35,19 +36,19 @@ outputs:
         description: "Cleaned clip text suitable for insertion into report placeholders."
         path_pattern: "<output_file> (if specified)"
   output_contract:
-    must_start_with: "Italicized subtitle/lede paragraph (no main headline)."
-    body: "Clean paragraphs of the article body, non-italic."
+    must_start_with: "First real article paragraph or real in-article section header (no main headline)."
+    body: "Clean paragraphs of the article body with paragraph separation preserved."
     forbidden:
       - "Main headline/title"
-      - "Ads / recommended blocks / newsletter prompts"
-      - "Timestamps / publication dates / photographer credits"
+      - "Ads / recommended blocks / newsletter prompts / share prompts"
+      - "Timestamps / publication dates / photographer credits / image captions"
       - "Prefaces like 'Here is the cleaned text'"
-      - "Page chrome (e.g., skip links, nav labels, footer/legal blocks)"
+      - "Page chrome (e.g., skip links, nav labels, widgets, footer/legal blocks)"
 
 governance:
   review:
     required_for_external_use: false
     checklist:
-      - "Confirm subtitle/lede is preserved and italicized."
-      - "Confirm no headline or metadata remains."
+      - "Confirm no headline, byline, or metadata remains."
+      - "Confirm paragraphs and any real in-article section headers are preserved."
       - "Spot-check that the article body is complete and readable."
