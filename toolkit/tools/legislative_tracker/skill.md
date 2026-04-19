@@ -17,13 +17,13 @@ Use the Directive -> Orchestration -> Execution pattern to run this tool reliabl
 
 ### Prereqs
 - Set `LEGISCAN_API_KEY` environment variable (free from legiscan.com).
-- Set `OPENAI_API_KEY` for bill summarization features.
+- Set `CHANGE_AGENT_API_KEY` for bill summarization features.
 
 ## Orchestration (how the tool gathers and prepares information)
 1) Parse query and optional filters (state, year).
 2) Query LegiScan API `/search` endpoint; cache results.
 3) For bill detail: fetch `/getBill` and `/getBillText`; decode base64 text.
-4) For summarization: send bill text + metadata to LLM with structured prompt.
+4) For summarization: normalize bill text, extract directly supported facts with ChangeAgent, consolidate a traceable evidence index, then compose a verified source summary only if every displayed line can be traced back to the bill text.
 5) For watchlist: read/update local JSON; on refresh, re-fetch status for all tracked bills.
 6) Write output files (JSON, markdown) to output directory.
 
@@ -60,13 +60,14 @@ python3 tools/legislative_tracker/execution/run.py --watchlist refresh
 
 ## Output contract (format expectations)
 - `search_results.json` — bill search results with metadata.
-- `bill_summary.md` — AI-generated analysis with overview, provisions, impact, talking points.
+- `bill_summary.md` — verified source summary when full bill text is available and every displayed line is text-supported; otherwise a refusal report with diagnostics.
 - `watchlist.json` — persisted tracked bills with status history.
 - `report.md` — combined report for export.
 
 ## Non-negotiables
 - Never fabricate bill numbers, sponsor names, vote counts, or status.
-- Always include "Assumptions & Unknowns" in AI summaries.
-- Always present BOTH sides in talking points (for AND against).
-- Flag any bill text that was unavailable or incomplete.
+- Never emit a normal summary unless the bill text is complete and the summary lines are traceable to it.
+- Never substitute a metadata-first prose summary for a verified legislative summary.
+- Flag any bill text that was unavailable or unusable and refuse the verified summary in that case.
+- Prefer refusal over approximation when traceability is weak.
 - Cache API responses to respect rate limits.

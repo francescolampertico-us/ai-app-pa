@@ -7,7 +7,7 @@ import re
 import subprocess
 import sys
 import threading
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +15,8 @@ from fastapi import APIRouter, HTTPException, Request
 from starlette.datastructures import UploadFile
 
 from .jobs import create_job, set_job_artifacts, update_job
+
+BMG_SCHEMA_PATH = Path(__file__).resolve().parents[3] / "toolkit" / "tools" / "background_memo_generator" / "execution" / "schema.py"
 
 router = APIRouter()
 
@@ -24,6 +26,7 @@ TOOLKIT_ROOT = ROOT / "toolkit"
 TOOLS_ROOT = TOOLKIT_ROOT / "tools"
 JOBS_OUTPUT_ROOT = FASTAPI_ROOT / "jobs_output"
 JOBS_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+MEDIA_CLIPS_GENERATOR_PATH = TOOLS_ROOT / "media_clips" / "execution" / "generate_clips.py"
 
 STYLE_GUIDES_DIR = TOOLS_ROOT / "messaging_matrix" / "style_samples" / "style_guides"
 LEGISLATIVE_CACHE_DIR = TOOLS_ROOT / "legislative_tracker" / "execution" / ".cache"
@@ -41,6 +44,9 @@ def _load_module(name: str, path: Path):
     if not spec or not spec.loader:
         raise RuntimeError(f"Could not load module at {path}")
     module = importlib.util.module_from_spec(spec)
+    # Register before exec so forward-ref resolution (e.g. Pydantic model_rebuild)
+    # can find the module via sys.modules[cls.__module__].
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -81,6 +87,51 @@ def _existing(paths: list[Path]) -> list[str]:
     return existing
 
 
+_media_clip_prepare_fn: Any | None = None
+
+
+def _prepare_media_clip_body(text: str, title: str) -> list[str]:
+    paragraphs: list[str] = []
+    global _media_clip_prepare_fn
+
+    if text:
+        if _media_clip_prepare_fn is None:
+            try:
+                module = _load_module("_media_clips_generate_for_router", MEDIA_CLIPS_GENERATOR_PATH)
+                prepare_fn = getattr(module, "_prepare_clip_paragraphs", None)
+                _media_clip_prepare_fn = prepare_fn if callable(prepare_fn) else False
+            except Exception:
+                _media_clip_prepare_fn = False
+
+        if _media_clip_prepare_fn:
+            try:
+                prepared = _media_clip_prepare_fn(text, title or "")
+                if prepared:
+                    paragraphs = [p.strip() for p in prepared if p and p.strip()]
+            except Exception:
+                paragraphs = []
+
+    if paragraphs:
+        return paragraphs
+    return [p.strip() for p in text.split("\n") if p and p.strip()]
+
+
+def _media_clips_date_stamp(raw_date: str | None) -> str:
+    value = (raw_date or "").strip()
+    if not value:
+        return date.today().strftime("%b%d").lower()
+    for fmt in ("%B %d, %Y", "%b %d, %Y", "%Y-%m-%d", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(value, fmt).strftime("%b%d").lower()
+        except ValueError:
+            continue
+    try:
+        parsed = datetime.fromisoformat(value)
+        return parsed.strftime("%b%d").lower()
+    except ValueError:
+        return date.today().strftime("%b%d").lower()
+
+
 def _save_uploads(output_dir: Path, uploads: list[dict[str, Any]], field_name: str | None = None) -> list[Path]:
     saved: list[Path] = []
     for index, upload in enumerate(uploads):
@@ -109,6 +160,59 @@ def _extract_json_stdout(stdout: str) -> Any:
         return None
 
 
+CHANGE_AGENT_BASE_URL = "https://runpod-proxy-956966668285.us-central1.run.app/v1/"
+
+
+def _subprocess_env(llm_model: str | None = None) -> dict[str, str] | None:
+    """Return an env dict with OpenAI-compatible vars overridden for ChangeAgent, or None to inherit."""
+    import os
+    if llm_model != "ChangeAgent":
+        return None
+    env = os.environ.copy()
+    env["OPENAI_BASE_URL"] = CHANGE_AGENT_BASE_URL
+    env["OPENAI_API_KEY"] = os.environ.get("CHANGE_AGENT_API_KEY", "")
+    env["CHANGE_AGENT_BASE_URL"] = CHANGE_AGENT_BASE_URL
+    env["CHANGE_AGENT_API_KEY"] = os.environ.get("CHANGE_AGENT_API_KEY", "")
+    env["LLM_MODEL_OVERRIDE"] = "ChangeAgent"
+    return env
+
+
+_llm_env_lock = threading.Lock()
+
+
+from contextlib import contextmanager
+
+@contextmanager
+def _llm_env(llm_model: str | None):
+    """Thread-safe context manager: temporarily override OPENAI_* env vars for ChangeAgent."""
+    import os
+    if llm_model != "ChangeAgent":
+        yield
+        return
+    with _llm_env_lock:
+        old_key = os.environ.get("OPENAI_API_KEY")
+        old_base = os.environ.get("OPENAI_BASE_URL")
+        old_model = os.environ.get("LLM_MODEL_OVERRIDE")
+        try:
+            os.environ["OPENAI_API_KEY"] = os.environ.get("CHANGE_AGENT_API_KEY", "")
+            os.environ["OPENAI_BASE_URL"] = CHANGE_AGENT_BASE_URL
+            os.environ["LLM_MODEL_OVERRIDE"] = "ChangeAgent"
+            yield
+        finally:
+            if old_key is None:
+                os.environ.pop("OPENAI_API_KEY", None)
+            else:
+                os.environ["OPENAI_API_KEY"] = old_key
+            if old_base is None:
+                os.environ.pop("OPENAI_BASE_URL", None)
+            else:
+                os.environ["OPENAI_BASE_URL"] = old_base
+            if old_model is None:
+                os.environ.pop("LLM_MODEL_OVERRIDE", None)
+            else:
+                os.environ["LLM_MODEL_OVERRIDE"] = old_model
+
+
 def _run_command(
     job_id: str,
     cmd: list[str],
@@ -116,6 +220,7 @@ def _run_command(
     message: str,
     progress: int = 15,
     timeout: int = 600,
+    llm_model: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     update_job(job_id, status="processing", progress=progress, message=message)
     result = subprocess.run(
@@ -124,6 +229,7 @@ def _run_command(
         capture_output=True,
         text=True,
         timeout=timeout,
+        env=_subprocess_env(llm_model),
     )
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "Tool execution failed").strip()
@@ -185,6 +291,7 @@ def _run_disclosure_tracker(
     max_results: str = "500",
     fuzzy_threshold: str = "85",
     dry_run: bool = False,
+    llm_model: str | None = None,
 ) -> dict[str, Any]:
     run_path = TOOLS_ROOT / "influence_disclosure_tracker" / "execution" / "run.py"
     exec_dir = run_path.parent
@@ -205,6 +312,8 @@ def _run_disclosure_tracker(
         mode or "basic",
         "--max-results",
         str(max_results or "500"),
+        "--max-deep",
+        "2",
         "--fuzzy-threshold",
         str(fuzzy_threshold or "85"),
         "--format",
@@ -219,7 +328,7 @@ def _run_disclosure_tracker(
     if dry_run:
         cmd.append("--dry-run")
 
-    command_result = _run_command(job_id, cmd, exec_dir, "Querying disclosure databases...", progress=25, timeout=300)
+    command_result = _run_command(job_id, cmd, exec_dir, "Querying disclosure databases...", progress=25, timeout=300, llm_model=llm_model)
 
     report_path = next(output_dir.rglob("report.md"), None)
     csv_paths = sorted(output_dir.rglob("*.csv"))
@@ -326,8 +435,10 @@ def _build_media_report(clips_data: list[dict[str, Any]], report_topic: str, rep
         )
 
         body_text = clip.get("extracted_text", "")
-        if body_text:
-            for para in body_text.split("\n"):
+        body_paragraphs = _prepare_media_clip_body(body_text, clip.get("title", ""))
+        email_body_text = "\n\n".join(body_paragraphs)
+        if body_paragraphs:
+            for para in body_paragraphs:
                 para = para.strip()
                 if not para:
                     continue
@@ -343,15 +454,16 @@ def _build_media_report(clips_data: list[dict[str, Any]], report_topic: str, rep
 
         email_body += (
             f"{clip.get('source', 'Unknown')}\n{clip.get('title', 'Untitled')}\n{clip.get('url', '')}\n"
-            f"By {byline}\n{clip.get('date', '')}\n\n{body_text}\n\n----------\n\n"
+            f"By {byline}\n{clip.get('date', '')}\n\n{email_body_text}\n\n----------\n\n"
         )
         html_body += "<hr style='border:none;border-top:1px dashed #ccc;'>\n"
 
     html_body += "<p>Best regards</p>\n</div>"
 
-    docx_path = output_dir / "media_clips_report.docx"
-    email_txt = output_dir / "media_clips_email.txt"
-    email_html = output_dir / "media_clips_email.html"
+    stamp = _media_clips_date_stamp(report_date_str)
+    docx_path = output_dir / f"media_clips_{stamp}.docx"
+    email_txt = output_dir / f"media_clips_{stamp}_email.txt"
+    email_html = output_dir / f"media_clips_{stamp}_email.html"
     doc.save(docx_path)
     email_txt.write_text(email_body, encoding="utf-8")
     email_html.write_text(html_body, encoding="utf-8")
@@ -360,6 +472,7 @@ def _build_media_report(clips_data: list[dict[str, Any]], report_topic: str, rep
 
 def _handle_hearing_memo(job_id: str, values: dict[str, list[str]], uploads: list[dict[str, Any]]) -> None:
     output_dir = _job_output_dir(job_id)
+    llm_model = (values.get("llm_model") or ["ChangeAgent"])[0].strip() or "ChangeAgent"
     update_job(job_id, status="processing", progress=5, message="Preparing hearing memo inputs...")
 
     upload_paths = _save_uploads(output_dir, uploads, "file")
@@ -406,19 +519,54 @@ def _handle_hearing_memo(job_id: str, values: dict[str, list[str]], uploads: lis
         if value:
             cmd.extend([flag, value])
 
-    _run_command(
+    proc = _run_command(
         job_id,
         cmd,
         TOOLS_ROOT / "hearing_memo_generator",
         "Running hearing memo pipeline...",
         progress=20,
         timeout=600,
+        llm_model=llm_model,
     )
 
     verification_path = output_dir / "hearing_memo_verification.json"
     output_json = _read_json(json_path, default={}) or {}
     verification = _read_json(verification_path, default=output_json.get("verification", {})) or {}
     memo_text = _read_text(text_path)
+
+    # Rename DOCX to <YYYYMMDD>_<title_slug>.docx
+    import re as _re
+    _meta = (output_json.get("record") or {}).get("metadata") or output_json.get("metadata") or {}
+    _raw_date = (
+        _meta.get("hearing_date")
+        or (values.get("hearing_date") or [""])[0].strip()
+        or (values.get("memo_date") or [""])[0].strip()
+        or date.today().isoformat()
+    )
+    try:
+        from datetime import datetime as _dt
+        for _fmt in ("%B %d, %Y", "%b %d, %Y", "%Y-%m-%d", "%m/%d/%Y"):
+            try:
+                _date_str = _dt.strptime(_raw_date.strip(), _fmt).strftime("%Y%m%d")
+                break
+            except ValueError:
+                continue
+        else:
+            _date_str = _re.sub(r"[^0-9]", "", _raw_date)[:8] or date.today().strftime("%Y%m%d")
+    except Exception:
+        _date_str = date.today().strftime("%Y%m%d")
+
+    _raw_title = (
+        _meta.get("hearing_title")
+        or (values.get("hearing_title") or [""])[0].strip()
+        or (values.get("subject_override") or [""])[0].strip()
+        or "hearing_memo"
+    )
+    _title_slug = _re.sub(r"[^a-z0-9]+", "_", _raw_title.lower()).strip("_")[:60]
+    _named_docx = output_dir / f"{_date_str}_{_title_slug}.docx"
+    if docx_path.exists():
+        docx_path.rename(_named_docx)
+        docx_path = _named_docx
 
     ordered_artifacts = _existing([docx_path, text_path, verification_path, json_path])
     set_job_artifacts(job_id, ordered_artifacts)
@@ -433,8 +581,9 @@ def _handle_hearing_memo(job_id: str, values: dict[str, list[str]], uploads: lis
             "flags": verification.get("flags", []),
             "human_checks": verification.get("human_checks", []),
             "verification": verification,
-            "hearing_record": output_json.get("hearing_record"),
-            "memo_output": output_json.get("memo_output"),
+            # Pipeline logs — always surface so the user can diagnose LLM errors
+            "stdout": (proc.stdout or "").strip(),
+            "stderr": (proc.stderr or "").strip(),
         },
     )
 
@@ -442,6 +591,7 @@ def _handle_hearing_memo(job_id: str, values: dict[str, list[str]], uploads: lis
 def _handle_influence_tracker(job_id: str, values: dict[str, list[str]], uploads: list[dict[str, Any]]) -> None:
     del uploads
     output_dir = _job_output_dir(job_id)
+    llm_model = (values.get("llm_model") or ["ChangeAgent"])[0].strip() or "ChangeAgent"
     result = _run_disclosure_tracker(
         job_id,
         output_dir,
@@ -457,6 +607,7 @@ def _handle_influence_tracker(job_id: str, values: dict[str, list[str]], uploads
         max_results=(values.get("max_results") or ["500"])[0].strip() or "500",
         fuzzy_threshold=(values.get("fuzzy_threshold") or ["85"])[0].strip() or "85",
         dry_run=((values.get("dry_run") or ["false"])[0].strip().lower() == "true"),
+        llm_model=llm_model,
     )
 
     set_job_artifacts(job_id, result.pop("artifacts"))
@@ -474,6 +625,7 @@ def _handle_legislative_tracker(job_id: str, values: dict[str, list[str]], uploa
     output_dir = _job_output_dir(job_id)
     exec_dir = TOOLS_ROOT / "legislative_tracker" / "execution"
     _ensure_sys_path(exec_dir)
+    llm_model = (values.get("llm_model") or ["ChangeAgent"])[0].strip() or "ChangeAgent"
 
     action = (values.get("action") or ["search"])[0].strip() or "search"
     bill_id = (values.get("bill_id") or [""])[0].strip()
@@ -481,6 +633,8 @@ def _handle_legislative_tracker(job_id: str, values: dict[str, list[str]], uploa
     year = (values.get("year") or [""])[0].strip()
     query = (values.get("query") or [""])[0].strip()
     max_results = (values.get("max_results") or [""])[0].strip()
+    title_only = (values.get("title_only") or ["false"])[0].strip().lower() == "true"
+    summary_level = (values.get("summary_level") or ["preview"])[0].strip().lower() or "preview"
 
     if action == "search":
         if not query:
@@ -500,7 +654,9 @@ def _handle_legislative_tracker(job_id: str, values: dict[str, list[str]], uploa
             cmd.extend(["--year", year])
         if max_results:
             cmd.extend(["--max-results", max_results])
-        result = _run_command(job_id, cmd, exec_dir, "Searching legislation...", progress=20, timeout=180)
+        if title_only:
+            cmd.append("--title-only")
+        result = _run_command(job_id, cmd, exec_dir, "Searching legislation...", progress=20, timeout=180, llm_model=llm_model)
         results_json = _extract_json_stdout(result.stdout)
         if results_json is None:
             results_json = _read_json(output_dir / "search_results.json", default=[])
@@ -526,24 +682,83 @@ def _handle_legislative_tracker(job_id: str, values: dict[str, list[str]], uploa
             "--bill-id",
             bill_id,
             "--summarize",
+            "--summary-level",
+            summary_level,
             "--out",
             str(output_dir),
+            "--model",
+            llm_model,
         ]
-        result = _run_command(job_id, cmd, exec_dir, "Generating bill summary...", progress=25, timeout=360)
+        timeout = 240 if summary_level == "preview" else 3600
+        result = _run_command(
+            job_id,
+            cmd,
+            exec_dir,
+            "Generating bill preview..." if summary_level == "preview" else "Generating detailed bill summary...",
+            progress=25,
+            timeout=timeout,
+            llm_model=llm_model,
+        )
         summary_json = _extract_json_stdout(result.stdout) or {}
         summary_md = _read_text(next(output_dir.rglob("bill_summary.md"), output_dir / "bill_summary.md"))
         detail_json_path = next(output_dir.rglob("bill_detail.json"), output_dir / "bill_detail.json")
         artifacts = _existing([detail_json_path, output_dir / "bill_summary.md"])
         set_job_artifacts(job_id, artifacts)
+        summary_status = summary_json.get("summary_status") or "failed_system"
+        source_text_status = summary_json.get("source_text_status") or "missing"
+        source_status = summary_json.get("source_status") or "unusable_text"
+        extraction_status = summary_json.get("extraction_status") or "not_run"
+        verification_status = summary_json.get("verification_status") or "failed_system"
+        extraction_coverage = summary_json.get("extraction_coverage")
+        coverage_mode = summary_json.get("coverage_mode") or "metadata_only"
+        evidence_coverage = summary_json.get("evidence_coverage") or extraction_coverage
+        validation_flags = summary_json.get("validation_flags") or []
+        unsupported_claims = summary_json.get("unsupported_claims") or []
+        traceability_report = summary_json.get("traceability_report") or []
+        model_path = summary_json.get("model_path") or {}
+        evidence_index = summary_json.get("evidence_index") or []
+        summary_structured = summary_json.get("summary_structured") or {}
+        summary_level = summary_json.get("summary_level") or summary_level
+        report_markdown = summary_json.get("report_markdown") or summary_md
+        result_status = "completed" if summary_status in {"preview_ready", "verified", "blocked_missing_source", "blocked_verification"} else "failed"
+        result_message = (
+            "Bill preview generated."
+            if summary_status == "preview_ready"
+            else
+            "Verified bill summary generated."
+            if summary_status == "verified"
+            else "Verified summary unavailable: official bill text was missing or unusable."
+            if summary_status == "blocked_missing_source"
+            else "Verified summary unavailable: generated claims could not be fully traced to the bill text."
+            if summary_status == "blocked_verification"
+            else "Bill summary generation failed."
+        )
         update_job(
             job_id,
-            status="completed",
+            status=result_status,
             progress=100,
-            message="Bill summary generated.",
+            message=result_message,
             result_data={
                 "action": "summarize",
                 "bill": summary_json.get("bill") or _read_json(detail_json_path, default={}),
                 "summary": summary_json.get("summary") or summary_md,
+                "caveats": summary_json.get("caveats") or [],
+                "summary_status": summary_status,
+                "source_text_status": source_text_status,
+                "source_status": source_status,
+                "extraction_status": extraction_status,
+                "verification_status": verification_status,
+                "extraction_coverage": extraction_coverage,
+                "coverage_mode": coverage_mode,
+                "evidence_coverage": evidence_coverage,
+                "validation_flags": validation_flags,
+                "unsupported_claims": unsupported_claims,
+                "traceability_report": traceability_report,
+                "model_path": model_path,
+                "evidence_index": evidence_index,
+                "summary_structured": summary_structured,
+                "report_markdown": report_markdown,
+                "summary_level": summary_level,
             },
         )
         return
@@ -605,6 +820,7 @@ def _handle_legislative_tracker(job_id: str, values: dict[str, list[str]], uploa
 
 def _handle_messaging_matrix(job_id: str, values: dict[str, list[str]], uploads: list[dict[str, Any]]) -> None:
     output_dir = _job_output_dir(job_id)
+    llm_model = (values.get("llm_model") or ["ChangeAgent"])[0].strip() or "ChangeAgent"
     update_job(job_id, status="processing", progress=10, message="Building messaging matrix...")
 
     upload_paths = _save_uploads(output_dir, uploads)
@@ -619,16 +835,19 @@ def _handle_messaging_matrix(job_id: str, values: dict[str, list[str]], uploads:
     variants_raw = (values.get("variants") or [""])[0].strip()
     variants = [variant.strip() for variant in variants_raw.split(",") if variant.strip()] or None
 
-    result = generator.generate_matrix(
-        position=(values.get("position") or [""])[0],
-        context=combined_context,
-        organization=(values.get("organization") or [""])[0],
-        target_audience=(values.get("target_audience") or [""])[0],
-        core_messages=(values.get("core_messages") or [""])[0],
-        facts=(values.get("facts") or [""])[0],
-        variants=variants,
-        style_guides_dir=str(STYLE_GUIDES_DIR),
-    )
+    update_job(job_id, status="processing", progress=20, message="Generating message house (step 1/2)…")
+    with _llm_env(llm_model):
+        result = generator.generate_matrix(
+            position=(values.get("position") or [""])[0],
+            context=combined_context,
+            organization=(values.get("organization") or [""])[0],
+            target_audience=(values.get("target_audience") or [""])[0],
+            core_messages=(values.get("core_messages") or [""])[0],
+            facts=(values.get("facts") or [""])[0],
+            variants=variants,
+            style_guides_dir=str(STYLE_GUIDES_DIR),
+        )
+    update_job(job_id, status="processing", progress=85, message="Exporting deliverables (step 2/2)…")
     markdown = generator.render_markdown(result)
 
     md_path = output_dir / "messaging_matrix.md"
@@ -644,12 +863,13 @@ def _handle_messaging_matrix(job_id: str, values: dict[str, list[str]], uploads:
         status="completed",
         progress=100,
         message="Messaging matrix generated.",
-        result_data={"markdown": markdown, "result": result},
+        result_data={**result, "markdown": markdown},
     )
 
 
 def _handle_stakeholder_briefing(job_id: str, values: dict[str, list[str]], uploads: list[dict[str, Any]]) -> None:
     output_dir = _job_output_dir(job_id)
+    llm_model = (values.get("llm_model") or ["ChangeAgent"])[0].strip() or "ChangeAgent"
     update_job(job_id, status="processing", progress=10, message="Generating stakeholder briefing...")
 
     upload_paths = _save_uploads(output_dir, uploads)
@@ -662,15 +882,16 @@ def _handle_stakeholder_briefing(job_id: str, values: dict[str, list[str]], uplo
     include_disclosures = (values.get("include_disclosures") or ["true"])[0].strip().lower() != "false"
     include_news = (values.get("include_news") or ["true"])[0].strip().lower() != "false"
 
-    result = generator.generate_briefing(
-        stakeholder_name=(values.get("stakeholder_name") or values.get("stakeholder") or values.get("name") or [""])[0],
-        meeting_purpose=(values.get("meeting_purpose") or values.get("purpose") or [""])[0],
-        organization=(values.get("organization") or [""])[0],
-        your_organization=(values.get("your_org") or [""])[0],
-        context=combined_context,
-        include_disclosures=include_disclosures,
-        include_news=include_news,
-    )
+    with _llm_env(llm_model):
+        result = generator.generate_briefing(
+            stakeholder_name=(values.get("stakeholder_name") or values.get("stakeholder") or values.get("name") or [""])[0],
+            meeting_purpose=(values.get("meeting_purpose") or values.get("purpose") or [""])[0],
+            organization=(values.get("organization") or [""])[0],
+            your_organization=(values.get("your_org") or [""])[0],
+            context=combined_context,
+            include_disclosures=include_disclosures,
+            include_news=include_news,
+        )
     markdown = generator.render_markdown(result)
 
     md_path = output_dir / "stakeholder_briefing.md"
@@ -681,12 +902,13 @@ def _handle_stakeholder_briefing(job_id: str, values: dict[str, list[str]], uplo
     exporter.export_docx(result, str(docx_path))
 
     set_job_artifacts(job_id, _existing([docx_path, md_path, json_path]))
-    update_job(job_id, status="completed", progress=100, message="Stakeholder briefing generated.", result_data={"markdown": markdown, "result": result})
+    update_job(job_id, status="completed", progress=100, message="Stakeholder briefing generated.", result_data={**result, "markdown": markdown})
 
 
 def _handle_media_list_builder(job_id: str, values: dict[str, list[str]], uploads: list[dict[str, Any]]) -> None:
     del uploads
     output_dir = _job_output_dir(job_id)
+    llm_model = (values.get("llm_model") or ["ChangeAgent"])[0].strip() or "ChangeAgent"
     update_job(job_id, status="processing", progress=10, message="Building media list...")
 
     generator = _load_module("mlb_generator_fastapi", TOOLS_ROOT / "media_list_builder" / "execution" / "generator.py")
@@ -696,12 +918,19 @@ def _handle_media_list_builder(job_id: str, values: dict[str, list[str]], upload
     media_types = [item.strip() for item in media_types_raw.split(",") if item.strip()] or None
     location = (values.get("location") or values.get("region") or ["US"])[0].strip() or "US"
 
-    result = generator.generate_media_list(
-        issue=(values.get("issue") or values.get("topic") or [""])[0],
-        location=location,
-        media_types=media_types,
-        num_contacts=int((values.get("num_contacts") or ["20"])[0] or "20"),
-    )
+    source_filter = (values.get("source_filter") or ["national"])[0].strip() or "national"
+
+    with _llm_env(llm_model):
+        result = generator.generate_media_list(
+            issue=(values.get("issue") or values.get("topic") or [""])[0],
+            location=location,
+            media_types=media_types,
+            num_contacts=int((values.get("num_contacts") or ["20"])[0] or "20"),
+            source_filter=source_filter,
+            broad_topic=(values.get("broad_topic") or [""])[0].strip(),
+            coverage_desk=(values.get("coverage_desk") or [""])[0].strip(),
+            topic_mode=(values.get("topic_mode") or ["specific"])[0].strip() or "specific",
+        )
     markdown = generator.render_markdown(result)
 
     md_path = output_dir / "media_list.md"
@@ -712,12 +941,13 @@ def _handle_media_list_builder(job_id: str, values: dict[str, list[str]], upload
     exporter.export_xlsx(result, str(xlsx_path))
 
     set_job_artifacts(job_id, _existing([xlsx_path, md_path, json_path]))
-    update_job(job_id, status="completed", progress=100, message="Media list generated.", result_data={"markdown": markdown, "result": result})
+    update_job(job_id, status="completed", progress=100, message="Media list generated.", result_data={**result, "markdown": markdown})
 
 
 def _handle_stakeholder_map_builder(job_id: str, values: dict[str, list[str]], uploads: list[dict[str, Any]]) -> None:
     del uploads
     output_dir = _job_output_dir(job_id)
+    llm_model = (values.get("llm_model") or ["ChangeAgent"])[0].strip() or "ChangeAgent"
     update_job(job_id, status="processing", progress=10, message="Building stakeholder map...")
 
     generator = _load_module("smb_generator_fastapi", TOOLS_ROOT / "stakeholder_map_builder" / "execution" / "generator.py")
@@ -730,15 +960,20 @@ def _handle_stakeholder_map_builder(job_id: str, values: dict[str, list[str]], u
     include_types_raw = (values.get("include_types") or [""])[0].strip()
     include_types = [item.strip().lower() for item in include_types_raw.split(",") if item.strip()] or None
 
-    result = generator.build_map(
-        policy_issue=(values.get("policy_issue") or [""])[0],
-        scope=scope,
-        state=state,
-        year=int(year_raw) if year_raw else None,
-        include_types=include_types,
-    )
+    with _llm_env(llm_model):
+        result = generator.build_map(
+            policy_issue=(values.get("policy_issue") or [""])[0],
+            scope=scope,
+            state=state,
+            year=int(year_raw) if year_raw else None,
+            include_types=include_types,
+        )
     markdown = generator.render_markdown(result)
-    analytics = analytics_mod.compute_network_analytics(result.get("actors", []), result.get("relationships", []))
+    # analytics is computed inside build_map() and enriches actors in-place;
+    # fall back to a fresh compute if missing (e.g. older cached result)
+    analytics = result.get("network_analytics") or analytics_mod.compute_network_analytics(
+        result.get("actors", []), result.get("relationships", [])
+    )
 
     md_path = output_dir / "stakeholder_map.md"
     json_path = output_dir / "stakeholder_map.json"
@@ -764,11 +999,23 @@ def _handle_stakeholder_map_builder(job_id: str, values: dict[str, list[str]], u
         pass
 
     set_job_artifacts(job_id, _existing([xlsx_path, docx_path, json_path, md_path, html_path]))
-    update_job(job_id, status="completed", progress=100, message="Stakeholder map generated.", result_data={"markdown": markdown, "result": result, "analytics": analytics})
+    update_job(
+        job_id,
+        status="completed",
+        progress=100,
+        message="Stakeholder map generated.",
+        result_data={
+            **result,
+            "markdown": markdown,
+            "analytics": analytics,
+            "strategic_analysis": result.get("strategic_analysis", {}),
+        },
+    )
 
 
 def _handle_background_memo(job_id: str, values: dict[str, list[str]], uploads: list[dict[str, Any]]) -> None:
     output_dir = _job_output_dir(job_id)
+    llm_model = (values.get("llm_model") or ["ChangeAgent"])[0].strip() or "ChangeAgent"
     update_job(job_id, status="processing", progress=5, message="Preparing background memo research...")
 
     upload_paths = _save_uploads(output_dir, uploads)
@@ -783,7 +1030,7 @@ def _handle_background_memo(job_id: str, values: dict[str, list[str]], uploads: 
         raise RuntimeError("At least one section heading is required.")
 
     disclosure_entity = (values.get("disclosure_entity_override") or [""])[0].strip() or subject
-    disclosure_sources = (values.get("disclosure_sources") or ["lda,fara"])[0].strip() or "lda,fara"
+    disclosure_sources = (values.get("disclosure_sources") or [""])[0].strip()
 
     research_md = ""
     disclosure_md = ""
@@ -799,38 +1046,41 @@ def _handle_background_memo(job_id: str, values: dict[str, list[str]], uploads: 
         except Exception:
             research_md = ""
 
-    try:
-        update_job(job_id, status="processing", progress=35, message="Searching disclosure records...")
-        disclosure_result = _run_disclosure_tracker(
-            job_id,
-            output_dir / "disclosures",
-            entities=disclosure_entity,
-            search_field="both",
-            all_years=True,
-            quarters="Q1,Q2,Q3,Q4",
-            sources=disclosure_sources,
-            mode="basic",
-        )
-        disclosure_md = disclosure_result["report"]
-        disclosure_csv_data = disclosure_result["csv_data"]
-        disclosure_artifacts = [Path(path) for path in disclosure_result.get("artifacts", [])]
-    except Exception:
-        disclosure_md = ""
-        disclosure_csv_data = {}
-        disclosure_artifacts = []
+    if disclosure_sources:
+        try:
+            update_job(job_id, status="processing", progress=35, message="Searching disclosure records...")
+            disclosure_result = _run_disclosure_tracker(
+                job_id,
+                output_dir / "disclosures",
+                entities=disclosure_entity,
+                search_field="both",
+                all_years=True,
+                quarters="Q1,Q2,Q3,Q4",
+                sources=disclosure_sources,
+                mode="basic",
+            )
+            disclosure_md = disclosure_result["report"]
+            disclosure_csv_data = disclosure_result["csv_data"]
+            disclosure_artifacts = [Path(path) for path in disclosure_result.get("artifacts", [])]
+        except Exception:
+            disclosure_md = ""
+            disclosure_csv_data = {}
+            disclosure_artifacts = []
 
     generator = _load_module("bmg_generator_fastapi", TOOLS_ROOT / "background_memo_generator" / "execution" / "generator.py")
     exporter = _load_module("bmg_export_fastapi", TOOLS_ROOT / "background_memo_generator" / "execution" / "export.py")
 
     update_job(job_id, status="processing", progress=60, message="Generating background memo...")
     combined_research = "\n\n".join(part for part in [file_context, research_md] if part)
-    result = generator.generate_memo(
-        subject=subject,
-        sections=sections,
-        context=context,
-        disclosure_context=disclosure_md,
-        research_context=combined_research,
-    )
+    with _llm_env(llm_model):
+        result = generator.generate_memo(
+            subject=subject,
+            sections=sections,
+            context=context,
+            disclosure_context=disclosure_md,
+            research_context=combined_research,
+            suppress_disclosures=not bool(disclosure_sources),
+        )
     markdown = generator.render_markdown(result, memo_date=memo_date)
 
     docx_path = output_dir / "background_memo.docx"
@@ -842,24 +1092,35 @@ def _handle_background_memo(job_id: str, values: dict[str, list[str]], uploads: 
 
     artifacts = [docx_path, md_path, json_path, *disclosure_artifacts]
     set_job_artifacts(job_id, _existing(artifacts))
+
+    # Build a validated, flat result_data using the job-level schema.
+    schema_mod = _load_module("bmg_schema_fastapi", BMG_SCHEMA_PATH)
+    job_result = schema_mod.BackgroundMemoJobResult(
+        subject=result["subject"],
+        memo_date=memo_date,
+        sections_requested=result.get("sections_requested", sections),
+        overview=result["overview"],
+        fast_facts=result["fast_facts"],
+        sections=result["sections"],
+        links=result["links"],
+        markdown=markdown,
+        research_md=research_md,
+        disclosure_md=disclosure_md,
+        disclosure_csv_data=disclosure_csv_data,
+    )
     update_job(
         job_id,
         status="completed",
         progress=100,
         message="Background memo generated.",
-        result_data={
-            "markdown": markdown,
-            "result": result,
-            "research_md": research_md,
-            "disclosure_md": disclosure_md,
-            "disclosure_csv_data": disclosure_csv_data,
-        },
+        result_data=job_result.model_dump(),
     )
 
 
 def _handle_media_clips(job_id: str, values: dict[str, list[str]], uploads: list[dict[str, Any]]) -> None:
     del uploads
     output_dir = _job_output_dir(job_id)
+    llm_model = (values.get("llm_model") or ["ChangeAgent"])[0].strip() or "ChangeAgent"
     action = (values.get("action") or ["generate"])[0].strip() or "generate"
 
     if action == "build_report":
@@ -869,10 +1130,11 @@ def _handle_media_clips(job_id: str, values: dict[str, list[str]], uploads: list
         report_topic = (values.get("report_topic") or values.get("topic") or ["Media Clips"])[0]
         report_date = (values.get("report_date_str") or values.get("target_date") or [date.today().isoformat()])[0]
         docx_path, email_txt, email_html = _build_media_report(clips_data, report_topic, report_date, output_dir)
-        json_path = output_dir / "media_clips_data.json"
+        json_path = output_dir / "clips_data.json"
         json_path.write_text(json.dumps(clips_data, indent=2), encoding="utf-8")
         set_job_artifacts(job_id, _existing([docx_path, email_txt, email_html, json_path]))
-        update_job(job_id, status="completed", progress=100, message="Media clips report rebuilt.", result_data={"clips_data": clips_data, "missing_full_text": sum(1 for clip in clips_data if not clip.get("has_full_text"))})
+        email_body_text = _read_text(email_txt) if email_txt.exists() else ""
+        update_job(job_id, status="completed", progress=100, message="Media clips report rebuilt.", result_data={"clips_data": clips_data, "missing_full_text": sum(1 for clip in clips_data if not clip.get("has_full_text")), "email_body": email_body_text})
         return
 
     cmd = [
@@ -894,6 +1156,22 @@ def _handle_media_clips(job_id: str, values: dict[str, list[str]], uploads: list
         "--no-email",
     ]
     since = (values.get("since") or values.get("since_date") or [""])[0].strip()
+    period_str = (values.get("period") or ["24h"])[0].strip()
+
+    # Auto-compute --since from period when not manually provided.
+    # GNews ignores its own period parameter and returns stale articles,
+    # so we enforce the cutoff ourselves via post-fetch date filtering.
+    if not since:
+        period_map = {"h": "hours", "d": "days", "w": "weeks", "m": "days"}
+        m = re.match(r"^(\d+)([hdwm])$", period_str.lower())
+        if m:
+            amount = int(m.group(1))
+            unit_char = m.group(2)
+            if unit_char == "m":
+                amount *= 30  # approximate months as days
+            kwargs = {period_map[unit_char]: amount}
+            since = (datetime.utcnow() - timedelta(**kwargs)).strftime("%Y-%m-%d %H:%M")
+
     target_date = (values.get("target_date") or [date.today().isoformat()])[0].strip()
     source_filter = (values.get("source_filter") or ["mainstream"])[0].strip().lower()
     custom_sources = (values.get("custom_sources") or [""])[0].strip()
@@ -905,8 +1183,14 @@ def _handle_media_clips(job_id: str, values: dict[str, list[str]], uploads: list
         cmd.append("--all-sources")
     elif custom_sources:
         cmd.extend(["--custom-sources", custom_sources.replace("\n", ",")])
+    max_clips_str = (values.get("max_clips") or [""])[0].strip()
+    if max_clips_str and max_clips_str.lower() not in {"all", "0", ""}:
+        try:
+            cmd.extend(["--max-clips", str(int(max_clips_str))])
+        except ValueError:
+            pass
 
-    command_result = _run_command(job_id, cmd, TOOLS_ROOT / "media_clips" / "execution", "Generating media clips...", progress=20, timeout=240)
+    command_result = _run_command(job_id, cmd, TOOLS_ROOT / "media_clips" / "execution", "Generating media clips...", progress=20, timeout=240, llm_model=llm_model)
 
     data_path = next(output_dir.rglob("*_data.json"), None)
     docx_path = next(output_dir.rglob("*.docx"), None)
@@ -934,8 +1218,9 @@ def _handle_media_clip_cleaner(job_id: str, values: dict[str, list[str]], upload
     upload_paths = _save_uploads(output_dir, uploads)
     output_path = output_dir / "cleaned_clip.md"
     raw_text = (values.get("raw_text") or [""])[0]
+    title = (values.get("title") or [""])[0].strip()
     mode = (values.get("mode") or ["local"])[0].strip().lower() or "local"
-    llm_model = (values.get("llm_model") or ["gpt-4.1-mini"])[0].strip() or "gpt-4.1-mini"
+    llm_model = (values.get("llm_model") or ["ChangeAgent"])[0].strip() or "ChangeAgent"
     cmd = [
         sys.executable,
         str(TOOLS_ROOT / "media_clip_cleaner" / "execution" / "run.py"),
@@ -944,6 +1229,8 @@ def _handle_media_clip_cleaner(job_id: str, values: dict[str, list[str]], upload
         "--mode",
         "llm" if mode == "llm" else "local",
     ]
+    if title:
+        cmd.extend(["--title", title])
     if mode == "llm" and llm_model:
         cmd.extend(["--llm-model", llm_model])
     if (values.get("fallback_local") or ["false"])[0].strip().lower() == "true":
@@ -955,7 +1242,7 @@ def _handle_media_clip_cleaner(job_id: str, values: dict[str, list[str]], upload
     else:
         raise RuntimeError("Provide raw_text or an uploaded file.")
 
-    _run_command(job_id, cmd, TOOLS_ROOT / "media_clip_cleaner" / "execution", "Running clip cleaner...", progress=25, timeout=180)
+    _run_command(job_id, cmd, TOOLS_ROOT / "media_clip_cleaner" / "execution", "Running clip cleaner...", progress=25, timeout=180, llm_model=llm_model)
 
     cleaned_text = _read_text(output_path)
     set_job_artifacts(job_id, _existing([output_path]))
@@ -988,6 +1275,208 @@ def _run_handler(job_id: str, handler, values: dict[str, list[str]], uploads: li
                 "Try again later or reduce concurrent runs."
             )
         update_job(job_id, status="failed", progress=100, message=message)
+
+
+@router.post("/open-email-draft")
+async def open_email_draft(request: Request):
+    """Open a Mail.app draft pre-filled with the media clips email body and DOCX attachment."""
+    form = await request.form()
+    job_id = (form.get("job_id") or "").strip()
+    to_raw = (form.get("to") or "").strip()
+    subject = (form.get("subject") or "Media Clips").strip()
+    sender = (form.get("sender") or "").strip()
+
+    if not job_id:
+        raise HTTPException(status_code=400, detail="job_id is required.")
+    if not to_raw:
+        raise HTTPException(status_code=400, detail="At least one recipient (to) is required.")
+
+    output_dir = JOBS_OUTPUT_ROOT / job_id
+    if not output_dir.exists():
+        raise HTTPException(status_code=404, detail=f"No output directory for job {job_id}.")
+
+    # Find the DOCX artifact
+    docx_files = sorted(output_dir.glob("*.docx"))
+    docx_path = str(docx_files[0].resolve()) if docx_files else None
+
+    # Find the plain-text email body
+    txt_files = sorted(output_dir.glob("*email*.txt"))
+    body_text = ""
+    if txt_files:
+        body_text = txt_files[0].read_text(encoding="utf-8", errors="replace")
+    if not body_text:
+        body_text = f"Please find attached the {subject}."
+
+    recipients = [r.strip() for r in to_raw.split(",") if r.strip()]
+
+    # Build AppleScript
+    subject_safe = subject.replace('"', '\\"')
+    body_safe = body_text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+    sender_prop = f'sender:"{sender}", ' if sender else ""
+    recipient_list_as = ", ".join(f'"{r}"' for r in recipients)
+
+    script = f'''
+set recipientList to {{{recipient_list_as}}}
+set theSubject to "{subject_safe}"
+set theBody to "{body_safe}"
+{"set theFile to POSIX file " + chr(34) + docx_path.replace(chr(34), chr(92)+chr(34)) + chr(34) if docx_path else ""}
+
+tell application "Mail"
+    set newMessage to make new outgoing message with properties {{{sender_prop}subject:theSubject, content:theBody, visible:true}}
+    tell newMessage
+        {"make new attachment with properties {file name:theFile} at after the last paragraph" if docx_path else ""}
+        repeat with r in recipientList
+            make new to recipient at end of to recipients with properties {{address:r}}
+        end repeat
+    end tell
+    activate
+end tell
+'''
+
+    try:
+        result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=15)
+        if result.returncode != 0:
+            raise HTTPException(status_code=500, detail=f"AppleScript error: {result.stderr.strip()}")
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail="AppleScript timed out.")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="osascript not found — email draft requires macOS.")
+
+    return {"status": "ok", "message": "Mail.app draft opened."}
+
+
+@router.post("/pitch-draft")
+async def generate_pitch_draft(request: Request):
+    """
+    Generate a tailored pitch email for a single journalist contact.
+    Synchronous — returns the draft immediately (no job queue).
+    """
+    import os
+    from openai import OpenAI
+
+    body = await request.json()
+    contact: dict = body.get("contact", {})
+    issue: str = body.get("issue", "")
+    llm_model: str = body.get("llm_model", "ChangeAgent") or "ChangeAgent"
+
+    if not contact or not issue:
+        raise HTTPException(status_code=400, detail="contact and issue are required.")
+
+    raw_name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
+    unresolved_author = contact.get("contact_status") == "story_lead" or raw_name.lower() == "to verify"
+    name = "" if unresolved_author else raw_name
+    outlet = contact.get("outlet", "")
+    role = contact.get("role", "")
+    beat_notes = contact.get("notes", "")
+    pitch_angle = contact.get("pitch_angle", "")
+    why_now = contact.get("why_now", "")
+    pitch_offer = contact.get("pitch_offer", "")
+    prev_title = contact.get("previous_story_title", "")
+    prev_url = contact.get("previous_story_url", "")
+    pitch_root = TOOLS_ROOT / "media_list_builder"
+
+    def _read_optional(path: Path) -> str:
+        return path.read_text(encoding="utf-8").strip() if path.exists() else ""
+
+    best_practices = _read_optional(pitch_root / "pitch_instructions" / "pitch_best_practices.txt")
+    style_guide = _read_optional(pitch_root / "PITCH_STYLE_GUIDE.md")
+    agent_instructions = _read_optional(pitch_root / "pitch_agent_instructions.md")
+    skill_text = _read_optional(pitch_root / "skill.md")
+    example_paths = sorted((pitch_root / "pitch_examples").glob("*.txt"))
+    example_block = "\n\n".join(
+        f"Example {idx}:\n{path.read_text(encoding='utf-8').strip()}"
+        for idx, path in enumerate(example_paths, start=1)
+    )
+
+    system_prompt = (
+        "You are drafting a one-to-one journalist pitch using the project's reusable pitch instruction layer.\n\n"
+        "Follow the source hierarchy exactly:\n"
+        "1. pitch best practices\n"
+        "2. pitch style guide\n"
+        "3. agent instructions\n"
+        "4. examples for calibration only\n\n"
+        "Examples are reference only. Do not copy their topic framing, sentence structure, cadence, or tone too closely.\n\n"
+        f"=== PITCH BEST PRACTICES ===\n{best_practices}\n\n"
+        f"=== PITCH STYLE GUIDE ===\n{style_guide}\n\n"
+        f"=== PITCH AGENT INSTRUCTIONS ===\n{agent_instructions}\n\n"
+        f"=== PITCH SKILL ===\n{skill_text}\n\n"
+        f"=== CALIBRATION EXAMPLES ONLY ===\n{example_block}\n"
+    )
+
+    user_prompt = (
+        f"Issue being pitched: {issue}\n\n"
+        f"Journalist: {name or 'Unknown'}\n"
+        f"Outlet: {outlet}\n"
+        f"Role/Beat: {role}\n"
+        f"Pitch angle: {pitch_angle}\n"
+        f"Why-now hook: {why_now}\n"
+        f"Concrete offer: {pitch_offer}\n"
+        f"Recent relevant story: \"{prev_title}\" ({prev_url})\n"
+        f"Additional context: {beat_notes}\n\n"
+        "Draft a pitch email as JSON. Hard rules:\n"
+        f"- Author resolved: {'no' if unresolved_author else 'yes'}.\n"
+        "- If author resolved is no, do not guess or invent a journalist name. Write a pitch that can be sent once the correct reporter name is confirmed, and avoid personal-name greetings.\n"
+        "- Subject: name the development or access, not the topic category. Under 10 words.\n"
+        "- Opening line: reference the specific prior story in one sentence, then move on.\n"
+        "- Development: state what specifically happened, changed, or is imminent. Name the bill, agency, date, or ruling.\n"
+        "- Offer: use the 'Concrete offer' field above. One offer only. Do not invent exclusives or data.\n"
+        "- CTA: one sentence, light, non-pushy.\n"
+        "- Body: under 200 words total.\n"
+        "- Never use: 'emerging legislative language', 'timely update', 'brief briefing', 'gaining traction', 'given recent developments'.\n\n"
+        "Return:\n"
+        "{\"subject\": \"...\", \"body\": \"...\"}"
+    )
+
+    with _llm_env(llm_model):
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        base_url = os.environ.get("OPENAI_BASE_URL")
+        active_model = os.environ.get("LLM_MODEL_OVERRIDE") or llm_model
+
+        kwargs: dict = {"api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+        client = OpenAI(**kwargs)
+
+        response_format_kwarg = {} if os.environ.get("LLM_MODEL_OVERRIDE") else {"response_format": {"type": "json_object"}}
+
+        resp = client.chat.completions.create(
+            model=active_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.4,
+            **response_format_kwarg,
+        )
+
+    content = resp.choices[0].message.content or ""
+    # Parse JSON, fall back gracefully
+    import re as _re
+    text = content.strip()
+    m = _re.search(r"```(?:json)?\s*([\s\S]+?)```", text)
+    if m:
+        text = m.group(1).strip()
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = {"subject": f"Story pitch: {issue[:60]}", "body": text}
+
+    return {"subject": data.get("subject", ""), "body": data.get("body", "")}
+
+
+@router.get("")
+def list_tools():
+    """Return tool metadata from tool-registry.yaml, annotated with handler availability."""
+    import yaml  # noqa: PLC0415 — lazy import keeps startup fast if pyyaml somehow missing
+
+    registry_path = TOOLKIT_ROOT / "tool-registry.yaml"
+    if not registry_path.exists():
+        return []
+    data = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+    tools = data.get("tools", [])
+    for tool in tools:
+        tool["has_handler"] = tool["id"] in HANDLERS
+    return tools
 
 
 @router.post("/execute/{tool_id}")

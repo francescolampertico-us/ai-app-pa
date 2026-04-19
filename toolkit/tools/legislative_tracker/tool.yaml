@@ -7,15 +7,17 @@ tags: [legislation, bills, tracking, monitoring, summarization, legiscan, public
 description: >
   Searches, tracks, and summarizes legislation across federal and state jurisdictions
   using the LegiScan API. Produces bill search results, watchlist status updates,
-  and AI-generated plain-language summaries with impact analysis and talking points.
+  and ChangeAgent-generated verified source summaries only when every displayed line
+  can be traced back to the official bill text.
 
 execution:
   entrypoint: tools/legislative_tracker/execution/run.py
   runtime: python
   notes:
     - "Requires a free LegiScan API key (set LEGISCAN_API_KEY env var)."
+    - "Legislative summarization is ChangeAgent-only."
     - "Free tier allows 30,000 requests/month across all 50 states + Congress."
-    - "Bill text is base64-encoded from LegiScan; decoded and cleaned before LLM analysis."
+    - "Bill text is base64-encoded from LegiScan; decoded, normalized, and extracted before synthesis."
 
 inputs:
   required:
@@ -36,7 +38,7 @@ outputs:
         path_pattern: "<out>/search_results.json"
     - bill_summary.md:
         format: markdown
-        description: "AI-generated plain-language bill summary with impact analysis and talking points."
+        description: "Verified source summary when full bill text is available and all displayed lines are traceable; otherwise a refusal report with diagnostics."
         path_pattern: "<out>/<bill_number>/bill_summary.md"
     - watchlist.json:
         format: json
@@ -52,8 +54,8 @@ governance:
     required_for_external_use: true
     checklist:
       - "Verify bill numbers and titles match official sources."
-      - "Confirm AI summary accurately reflects bill provisions (spot-check against full text)."
-      - "Review talking points for balanced framing (for AND against)."
+      - "Confirm every summary line is supported by the bill text."
+      - "Check that no inferred policy impact or argument appears in the verified source summary."
       - "Validate sponsor names and party affiliations."
       - "Check that status information is current (bills move fast)."
       - "Manual verification required before external distribution."
@@ -64,12 +66,12 @@ dependencies:
     - openai
     - python-dateutil
   system:
-    - "Internet access for LegiScan API and OpenAI API"
+    - "Internet access for LegiScan API and ChangeAgent proxy"
   environment:
     - "LEGISCAN_API_KEY: Free API key from legiscan.com"
-    - "OPENAI_API_KEY: For bill summarization (gpt-4o-mini)"
+    - "CHANGE_AGENT_API_KEY: Required for bill summarization"
 
-notes:
+  notes:
   - "LegiScan API responses are cached locally for 24 hours to minimize API usage."
-  - "Bill text may be very long; the summarizer chunks and synthesizes if needed."
+  - "Bill text may be very long; the summarizer extracts facts in section-aware chunks and blocks output if traceability cannot be maintained."
   - "Watchlist is stored locally in execution/.cache/watchlist.json."

@@ -13,10 +13,10 @@ from __future__ import annotations
 import os
 import io
 import json
-import time
 import hashlib
 import base64
 import re
+import html
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -31,6 +31,7 @@ except ImportError:
 
 LEGISCAN_BASE_URL = "https://api.legiscan.com/"
 CACHE_TTL_HOURS = 24
+CHANGE_AGENT_BASE_URL = "https://runpod-proxy-956966668285.us-central1.run.app/v1/"
 
 
 class LegiScanClient:
@@ -91,18 +92,33 @@ class LegiScanClient:
         self._write_cache(cache_key, data)
         return data
 
+    def _api_call_nocache(self, params: dict) -> dict:
+        """Make a fresh (non-cached) API call to LegiScan."""
+        params["key"] = self.api_key
+        resp = requests.get(LEGISCAN_BASE_URL, params=params, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("status") == "ERROR":
+            raise RuntimeError(f"LegiScan API error: {data.get('alert', {}).get('message', 'Unknown')}")
+        return data
+
     # ------------------------------------------------------------------
     # Search
     # ------------------------------------------------------------------
 
-    def search_bills(self, query: str, state: str = "US", year: int = None, max_results: int = None) -> list[dict]:
+    def search_bills(self, query: str, state: str = "US", year: int = None,
+                     max_results: int = None, title_only: bool = False) -> list[dict]:
         """
         Search for bills matching a query.
 
         Args:
-            query: Search keywords.
-            state: Two-letter state code or 'US' for federal. Use 'ALL' for all.
-            year: Legislative session year (default: current year from API).
+            query:       Search keywords (or quoted phrase for LegiScan phrase search).
+            state:       Two-letter state code or 'US' for federal. Use 'ALL' for all.
+            year:        Legislative session year (default: current year from API).
+            max_results: Cap on returned results (applied after any filtering).
+            title_only:  If True, post-filter to bills whose title contains ALL query
+                         words. Narrows results to title matches only, since LegiScan
+                         searches full bill text and subjects by default.
 
         Returns:
             List of bill result dicts with normalized fields.
@@ -113,10 +129,16 @@ class LegiScanClient:
         if year:
             params["year"] = year
 
-        data = self._api_call(params)
+        # For title-only searches, bypass cache so we always get fresh results
+        # (cached broad searches for the same query would miss title-matching bills
+        # that fell outside LegiScan's top-50 relevance ranking).
+        if title_only:
+            data = self._api_call_nocache(params)
+        else:
+            data = self._api_call(params)
+
         search_list = data.get("searchresult", {})
 
-        # LegiScan returns results as numbered keys + a "summary" key
         results = []
         for key, val in search_list.items():
             if key == "summary":
@@ -125,15 +147,99 @@ class LegiScanClient:
                 results.append(self._normalize_search_result(val))
 
         results.sort(key=lambda r: r.get("relevance", 0), reverse=True)
+
+        if year:
+            year_str = str(year)
+            results = [r for r in results if (r.get("last_action_date") or "").startswith(year_str)
+                       or (r.get("last_action_date") or "") == ""]
+
+        if title_only:
+            phrase = query.strip().lower()
+            results = [r for r in results if phrase in r.get("title", "").lower()]
+        elif len(results) > 5:
+            results = self._llm_filter_results(query, results)
+
         if max_results:
             results = results[:max_results]
         return results
 
+    def _keyword_title_filter(self, query: str, results: list[dict]) -> list[dict]:
+        """Simple fallback: at least one significant query word must appear in the bill title."""
+        stop = {"the", "and", "for", "with", "from", "that", "this", "are", "was",
+                "act", "of", "to", "in", "a", "an", "its", "not", "has", "have"}
+        words = [w.lower() for w in re.split(r"\W+", query.strip())
+                 if len(w) > 3 and w.lower() not in stop]
+        if not words:
+            return results
+        return [r for r in results if any(w in r.get("title", "").lower() for w in words)]
+
+    def _llm_filter_results(self, query: str, results: list[dict]) -> list[dict]:
+        """Rerank broad search results by LLM relevance without dropping source results."""
+        if not results:
+            return results
+        llm_ranked = None
+        try:
+            from openai import OpenAI
+            client = OpenAI(
+                api_key=os.getenv("CHANGE_AGENT_API_KEY", ""),
+                base_url=CHANGE_AGENT_BASE_URL,
+            )
+            entries = "\n".join(
+                f"{r['bill_id']}|{r['number']}|{r['title']}" for r in results
+            )
+            prompt = (
+                f"Query: \"{query}\"\n\n"
+                f"The following bills were returned by a legislative database for this query. "
+                f"Many are off-topic because the database searches full bill text, not just titles.\n\n"
+                f"Bills (id|number|title):\n{entries}\n\n"
+                f"Task: Return a JSON array of bill_ids ordered from most relevant to least relevant. "
+                f"A bill is relevant only if its TITLE clearly relates to \"{query}\". "
+                f"Exclude bills where the connection is only through a single coincidental word. "
+                f"Example: if the query is \"housing affordability\", exclude conservation, "
+                f"heritage, homeland security, or civil rights bills even if they mention "
+                f"\"land\" or \"community\". Put the strongest title matches first. "
+                f"Return ONLY a JSON array of integers, e.g. [123456, 789012]. "
+                f"If none are relevant, return []"
+            )
+            resp = client.chat.completions.create(
+                model="ChangeAgent",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+            )
+            raw = (resp.choices[0].message.content or "").strip()
+            # Extract the JSON array — handle code fences and surrounding prose
+            match = re.search(r"\[[\s\d,]*\]", raw, re.DOTALL)
+            if match:
+                ranked_ids = [int(item) for item in json.loads(match.group())]
+                if ranked_ids:
+                    rank_map = {bill_id: idx for idx, bill_id in enumerate(ranked_ids)}
+                    llm_ranked = sorted(
+                        results,
+                        key=lambda item: (rank_map.get(item["bill_id"], len(results) + 1000), -item.get("relevance", 0)),
+                    )
+        except Exception:
+            pass
+
+        if llm_ranked:
+            return llm_ranked
+
+        # LLM rerank failed — fall back to keyword title prioritization without dropping results
+        keyword_filtered = self._keyword_title_filter(query, results)
+        if keyword_filtered:
+            keyword_ids = {item["bill_id"] for item in keyword_filtered}
+            keyword_ranked = [item for item in results if item["bill_id"] in keyword_ids]
+            keyword_ranked.extend(item for item in results if item["bill_id"] not in keyword_ids)
+            return keyword_ranked
+
+        return results
+
     def _normalize_search_result(self, raw: dict) -> dict:
         """Normalize a LegiScan search result into a clean dict."""
+        state = raw.get("state", "")
+        number = self.format_bill_number(raw.get("bill_number", ""), state)
         return {
             "bill_id": raw.get("bill_id"),
-            "number": raw.get("bill_number", ""),
+            "number": number,
             "title": raw.get("title", ""),
             "state": raw.get("state", ""),
             "status": self._status_label(raw.get("status", 0)),
@@ -204,12 +310,14 @@ class LegiScanClient:
                 "url": t.get("url", ""),
             })
 
+        state = raw.get("state", "")
+        number = self.format_bill_number(raw.get("bill_number", ""), state)
         return {
             "bill_id": raw.get("bill_id"),
-            "number": raw.get("bill_number", ""),
+            "number": number,
             "title": raw.get("title", ""),
             "description": raw.get("description", ""),
-            "state": raw.get("state", ""),
+            "state": state,
             "state_id": raw.get("state_id"),
             "session": raw.get("session", {}).get("session_name", ""),
             "status": self._status_label(raw.get("status", 0)),
@@ -253,11 +361,13 @@ class LegiScanClient:
         mime = text_data.get("mime", "").lower()
 
         if "pdf" in mime:
-            return self._extract_pdf_text(decoded)
+            text = self._extract_pdf_text(decoded)
         elif "html" in mime:
-            return self._strip_html(decoded.decode("utf-8", errors="replace"))
+            text = self._strip_html(decoded.decode("utf-8", errors="replace"))
         else:
-            return decoded.decode("utf-8", errors="replace")
+            text = decoded.decode("utf-8", errors="replace")
+
+        return self._normalize_bill_text(text)
 
     def _extract_pdf_text(self, pdf_bytes: bytes) -> str:
         """Extract text from PDF bytes using pypdf."""
@@ -276,17 +386,92 @@ class LegiScanClient:
 
         return "\n\n".join(pages)
 
+    def _normalize_bill_text(self, text: str) -> str:
+        """Normalize decoded bill text so downstream extraction sees cleaner structure."""
+        if not text:
+            return ""
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        text = text.replace("\u00a0", " ").replace("\ufeff", "").replace("\u200b", "")
+        text = re.sub(r"([A-Za-z])-\n([A-Za-z])", r"\1\2", text)
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
+
     def _strip_html(self, html: str) -> str:
-        """Basic HTML tag removal for bill text."""
+        """
+        Extract readable plain text from HTML bill text, preserving structure.
+
+        Block-level elements are converted to newlines so section breaks and
+        paragraph boundaries survive — the LLM extraction pass relies on this
+        structure to identify individual provisions.
+        """
+        # Remove non-content blocks entirely
         text = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL | re.IGNORECASE)
         text = re.sub(r"<script[^>]*>.*?</script>", "", text, flags=re.DOTALL | re.IGNORECASE)
-        text = re.sub(r"<[^>]+>", " ", text)
-        text = re.sub(r"&nbsp;", " ", text)
-        text = re.sub(r"&amp;", "&", text)
-        text = re.sub(r"&lt;", "<", text)
-        text = re.sub(r"&gt;", ">", text)
-        text = re.sub(r"\s+", " ", text).strip()
-        return text
+
+        # Convert block-level and line-break elements to newlines before stripping
+        text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"</?(p|div|li|tr|td|th|h[1-6]|section|article|blockquote|pre)[^>]*>",
+            "\n",
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # Strip all remaining tags
+        text = re.sub(r"<[^>]+>", "", text)
+
+        # Decode HTML entities
+        text = html.unescape(text)
+
+        # Normalise each line's internal whitespace, then reassemble
+        lines = [re.sub(r"[ \t]+", " ", line).strip() for line in text.split("\n")]
+
+        # Collapse runs of more than two consecutive blank lines
+        result: list[str] = []
+        blank_run = 0
+        for line in lines:
+            if line:
+                blank_run = 0
+                result.append(line)
+            else:
+                blank_run += 1
+                if blank_run <= 2:
+                    result.append("")
+
+        return "\n".join(result).strip()
+
+    @staticmethod
+    def score_bill_text(text: str) -> float:
+        """
+        Heuristic score for bill text usefulness.
+
+        Higher scores reflect richer statutory structure and fewer decoding artifacts.
+        Used to choose the best available LegiScan text version across multiple docs.
+        """
+        if not text:
+            return -1.0
+        lowered = text.lower()
+        if lowered.startswith("[pdf bill text could not be extracted"):
+            return -1.0
+
+        score = min(len(text) / 1500.0, 60.0)
+        section_markers = len(re.findall(r"(?im)^(?:sec\.|section|title)\b", text))
+        score += min(section_markers * 8.0, 48.0)
+
+        if "table of contents" in lowered:
+            score -= 6.0
+        if lowered.count("\nnone") >= 2 or lowered.count(" none ") >= 4:
+            score -= 18.0
+
+        replacement_chars = text.count("\ufffd")
+        score -= min(replacement_chars * 0.5, 20.0)
+
+        avg_line_len = (sum(len(line) for line in text.splitlines()) / max(len(text.splitlines()), 1))
+        if avg_line_len < 18:
+            score -= 8.0
+
+        return score
 
     # ------------------------------------------------------------------
     # Helpers
@@ -305,6 +490,39 @@ class LegiScanClient:
             6: "Failed",
         }
         return labels.get(code, f"Unknown ({code})")
+
+    @staticmethod
+    def format_bill_number(number: str, state: str = "") -> str:
+        """Format a raw LegiScan bill number into standard citation style."""
+        if not number:
+            return number
+        if state.upper() != "US":
+            return number
+        n = number.strip()
+        patterns = [
+            (r"^SCONRES(\d+)$", "S.Con.Res. "),
+            (r"^HCONRES(\d+)$", "H.Con.Res. "),
+            (r"^SJRES(\d+)$",   "S.J.Res. "),
+            (r"^HJRES(\d+)$",   "H.J.Res. "),
+            (r"^SJR(\d+)$",     "S.J.Res. "),
+            (r"^HJR(\d+)$",     "H.J.Res. "),
+            (r"^SR(\d+)$",      "S.Res. "),
+            (r"^HR(\d+)$",      "H.Res. "),
+            (r"^SB(\d+)$",      "S. "),
+            (r"^HB(\d+)$",      "H.R. "),
+        ]
+        for pattern, prefix in patterns:
+            m = re.match(pattern, n, re.IGNORECASE)
+            if m:
+                return f"{prefix}{m.group(1)}"
+        return number
+
+    @staticmethod
+    def format_jurisdiction(state: str) -> str:
+        """Return a human-friendly jurisdiction label."""
+        if (state or "").upper() == "US":
+            return "Federal (US)"
+        return state
 
     @staticmethod
     def state_list() -> list[str]:

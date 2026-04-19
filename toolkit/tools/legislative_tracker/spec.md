@@ -1,12 +1,13 @@
 # Legislative Tracker
 
 ## Purpose
-Search, track, and summarize legislation across federal and state jurisdictions. Combines bill discovery (keyword search), monitoring (persistent watchlist), and AI-powered analysis (plain-language summaries with impact assessment and talking points).
+Search, track, and summarize legislation across federal and state jurisdictions. Combines bill discovery (keyword search), monitoring (persistent watchlist), and ChangeAgent-powered source-text translation that only emits a verified summary when every displayed line is supported by the bill text.
 
 ## When to use
 - Scanning for bills related to a policy topic across jurisdictions.
 - Monitoring known bills for status changes (committee action, floor vote, enactment).
 - Generating a plain-language summary of a bill for a briefing, meeting prep, or messaging.
+- Generating a verified source summary grounded directly in bill text and official bill metadata.
 - Feeding bill context into downstream tools (Stakeholder Briefing, Meeting Prep Brief, Messaging Matrix).
 
 ## Inputs (Directive)
@@ -30,13 +31,17 @@ Depending on the operation:
 ### Summarize
 - `bill_summary.md` — structured markdown report containing:
   - **Bill Overview** — number, title, state, status, sponsors, last action
-  - **Plain-Language Summary** — 2-3 paragraphs explaining what the bill does
-  - **Key Provisions** — bulleted list of major provisions
-  - **Potential Impact** — analysis of who is affected and how
-  - **Talking Points FOR** — 3-5 arguments in favor
-  - **Talking Points AGAINST** — 3-5 arguments against
-  - **Status & Next Steps** — where the bill stands and what's likely next
-  - **Assumptions & Unknowns** — what the summary cannot determine
+  - **Verified Source Summary** — emitted only when the tool has complete usable bill text and all displayed lines are text-supported
+  - Otherwise: **Summary Unavailable** diagnostics explaining why a verified summary could not be produced
+- `result_data` from the app/backend summarize action also includes:
+  - `summary_status`
+  - `source_status`
+  - `extraction_status`
+  - `verification_status`
+  - `validation_flags`
+  - `unsupported_claims`
+  - `traceability_report`
+  - `model_path`
 
 ### Watchlist
 - `watchlist.json` — persisted list of tracked bills with status snapshots.
@@ -44,11 +49,13 @@ Depending on the operation:
 
 ## Limitations / Failure Modes
 - **API key required**: LegiScan requires a free API key; tool will error without it.
+- **ChangeAgent required**: Summarization requires ChangeAgent credentials and proxy routing.
 - **Rate limits**: Free tier allows 30,000 requests/month. Heavy usage across many states may hit limits.
-- **Bill text availability**: Not all bills have full text available via API; some return only summaries.
-- **AI summary accuracy**: LLM may miss political subtext or coalition dynamics (DiGiacomo 2025 warning). Human review essential.
+- **Bill text availability**: If complete usable bill text is unavailable, the tool must refuse to produce a verified summary.
+- **Amendment-heavy text**: Strike/insert drafting can block verified summary generation if the extracted claims cannot be traced cleanly.
+- **AI summary accuracy**: Verified summaries are constrained to direct textual support; unsupported lines are blocked rather than shown.
 - **Stale status**: Bill status is cached; real-time changes may not reflect immediately.
-- **Long bills**: Very long bills are chunked for summarization; synthesis may lose nuance.
+- **Long bills**: Very long bills are chunked section-by-section; verified output is allowed only if extraction and traceability remain complete.
 
 ## Human Review Checklist (Risk: Yellow)
 - Confirm bill numbers and titles match official sources (legislature website).
