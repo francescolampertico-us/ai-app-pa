@@ -19,9 +19,10 @@ Cross-reference an entity across three federal disclosure databases — LDA (lob
 - `max_results` — cap per source per entity (default: 500)
 
 ## Prereqs
-- Set `LDA_API_KEY` for higher LDA rate limits (optional; unauthenticated requests are throttled).
+- Set `LDA_API_KEY` for higher LDA rate limits (optional; unauthenticated requests are rate-limited).
 - FARA uses bulk CSV downloads from `efile.fara.gov`, cached locally for 24 hours — no key needed.
 - IRS 990 uses the ProPublica Nonprofit Explorer API — no key needed.
+- For deep mode, an LLM API key must be set in the environment.
 - `rapidfuzz`, `requests`, `pandas`, `python-dateutil` must be installed.
 
 ## Process
