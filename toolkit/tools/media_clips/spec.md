@@ -1,73 +1,91 @@
 # Media Clips
 
 ## Purpose
-Generate a daily media monitoring report for a given **topic** by running a set of **Boolean Google News queries**, then producing:
-1) a formatted **.docx** report (index + full clips), and  
-2) a draft **email in Mail.app** with the report attached (macOS).
+Generate a review-first media monitoring workflow for a topic or issue:
+1. search and collect relevant news,
+2. produce fast light-cleaned previews,
+3. let the user review, edit, paste, remove, and optionally deep-clean articles,
+4. build the final report and email artifacts from the reviewed set.
 
 ## When to use
-- Daily / weekly monitoring for a country, company, policy theme, or stakeholder issue.
-- When you want a consistent “clips” format ready to send internally.
+- Daily or ad hoc media monitoring on a country, company, stakeholder, crisis, or policy theme.
+- When a team needs a sendable clips packet but still wants manual control before output.
+- When light automatic cleanup is helpful but full trust in automatic extraction is not appropriate.
 
-## Inputs (Directive)
+## Inputs
+
 ### Required
-- `topic` — label used in the document and email subject (e.g., “India Media Clips”).
-- `queries` — comma-separated Boolean queries.
+- `topic` — label used in the report and UI.
+- `queries` — one or more search queries sent to Google News.
 
 ### Optional
-- `period` — e.g., `12h`, `24h`, `72h`, `7d`.  
-  If not provided: defaults to **72h on Mondays**, otherwise **24h**.
-- `since` — ignore articles published before a timestamp (`YYYY-MM-DD HH:MM`).
-- `target_date` — override report date (`YYYY-MM-DD`).
-- `suffix` — filename suffix (e.g., `Partial`).
-- `output_dir` — base folder where a `/topic/` subfolder is created.
-- `email_sender` — sender account for the Mail.app draft.
-- `email_recipient` — recipients for the Mail.app draft.
+- `period` — `12h`, `24h`, `72h`, `7d`; defaults to `72h` on Mondays and `24h` otherwise.
+- `since` — timestamp cutoff in `YYYY-MM-DD HH:MM`.
+- `target_date` — date used for report labeling and artifact names.
+- `source_filter` / `--all-sources` / `custom_sources` — source filtering mode.
+- `max_clips` — cap on accepted articles.
+- `suffix` — optional filename suffix when running the script directly.
+- `output_dir` — output folder.
+- `email_sender`, `email_recipient` — optional Mail.app draft inputs.
+- `llm_model` — model selection for deep clip cleaning.
 
-## What the tool produces (Execution Output)
-### Report (.docx)
-The report includes:
-- **Title page** (topic + date)
-- **Index** (numbered list; each entry links to the source URL)
-- **Clips section**, with for each article:
-  - source name
-  - title (as hyperlink)
-  - author (if available)
-  - date
-  - subtitle/lede (if available)
-  - full article body (when extraction succeeds)
+## Workflow
 
-If extraction fails (often due to paywalls), the body contains:
-- `[PASTE FULL TEXT HERE]`
+### 1. Discovery
+- Search Google News for the requested query set.
+- Filter duplicates, blocked sources, international mismatches, and out-of-window results.
+- Resolve article URLs.
 
-### Email draft (Mail.app, macOS)
-- Creates a draft email in **Mail.app** with the `.docx` attached.
-- Subject format: `{topic} - {Month DD, YYYY}`
+### 2. Fast extraction
+- Extract article text and author when possible.
+- Apply light automatic cleanup only:
+  - strip obvious metadata and page chrome
+  - preserve article body candidates
+  - keep the run fast enough for review-first use
 
-If you are not on macOS or do not want the draft step, the `.docx` generation is still the primary artifact.
+### 3. Review
+The reviewed article list is the working source of truth. For each article, the user can:
+- open the source
+- remove the article
+- edit author manually
+- edit article text manually
+- paste article text if extraction failed or was partial
+- run deeper cleanup on that one article only
 
-## Orchestration (where data comes from)
-- Google News results from the provided Boolean queries.
-- Source filtering: trusted sources allowed; blocked sources removed (configured in the execution script).
-- Deduplication: repeated links are removed.
+### 4. Final build
+- Build report and email artifacts from the reviewed `clips_data`.
+- Do not silently discard user edits by rerunning hidden extraction at report time.
 
-## Review requirements (Risk: Yellow)
-This tool is intended for distribution, so human review is required before sending externally.
+## Outputs
+
+### Backend report build
+- `media_clips_<mon><dd>.docx`
+- `media_clips_<mon><dd>_email.txt`
+- `media_clips_<mon><dd>_email.html`
+- `clips_data.json`
+
+### Direct script execution
+- `media_clips_<mon><dd>[_<suffix>].docx`
+- `media_clips_<mon><dd>[_<suffix>]_data.json`
+- optional Mail.app draft
+
+## Review requirements
+Human review is required before distribution.
 
 Checklist:
-- Confirm each clip is relevant to the queries.
-- Check for duplicates or missing high-salience stories.
-- Replace any `[PASTE FULL TEXT HERE]` sections for paywalled articles.
-- Verify names/titles/dates on any sensitive clip.
-- Confirm recipients before sending the Mail draft.
+- Confirm every clip is relevant.
+- Remove duplicates and weak results.
+- Fix author names where needed.
+- Paste missing article text where extraction failed.
+- Use deeper cleanup only when the light preview is not good enough.
+- Check dates, names, and links for sensitive outputs.
 
-## Known limitations / failure modes
-- Paywalls often prevent full extraction.
-- Google News can miss outlets or surface duplicates.
-- Some pages return “cluttered” text extraction depending on the site structure.
-- Author/date fields can be missing or inconsistent.
+## Known limitations
+- Google News query fetches can be intermittently slow upstream.
+- Some sites are slow or poor at text extraction.
+- Paywalled sources may still require manual paste.
+- Automatic cleanup improves previews but is not perfect; manual editing remains essential.
 
-## Future extensions
-- Parameterize geography beyond India (topic + query sets).
-- Allow multiple output formats (short digest vs full clips).
-- Add alternative email export (Gmail API / Outlook / plain .eml) for non-macOS.
+## Implementation notes
+- Speed improvements should preserve article selection behavior as much as possible.
+- The tool uses a configured LLM-compatible endpoint for optional deep cleanup, but manual editing is always available as the fallback.

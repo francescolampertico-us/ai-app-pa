@@ -5,15 +5,16 @@ risk_level: yellow
 tags: [media_monitoring, google_news, docx, email, public_affairs]
 
 description: >
-  Daily media monitoring tool. Searches Google News with Boolean queries, filters to trusted sources,
-  deduplicates results, extracts article text where possible, generates a formatted .docx, and creates a
-  draft email in Mail.app with the document attached.
+  Media monitoring workflow. Searches Google News, gathers relevant articles, applies light automatic
+  cleanup for fast previews, supports manual inline review and optional deeper LLM-compatible cleanup,
+  then generates a formatted .docx report plus plain-text and HTML email artifacts.
 
 execution:
   entrypoint: tools/media_clips/execution/generate_clips.py
   runtime: python
   notes:
     - "Email draft creation uses Mail.app via osascript (macOS). Doc generation works without Mail."
+    - "The review UI is intended to be the source of truth before final report build."
 
 inputs:
   required:
@@ -25,25 +26,33 @@ inputs:
     - target_date: "Override the date used for the report filename (YYYY-MM-DD)."
     - suffix: "Filename suffix (e.g., 'Partial')."
     - output_dir: "Base output directory (topic subfolder is created inside)."
+    - source_filter: "Source mode in the app (mainstream, all sources, or custom)."
+    - custom_sources: "Comma-separated custom trusted domains."
+    - max_clips: "Cap on accepted clips."
     - email_sender: "Sender email address used in Mail.app draft."
     - email_recipient: "Comma-separated recipients for the Mail.app draft."
+    - llm_model: "Configured LLM-compatible model selection for deep article cleanup."
 
 outputs:
   artifacts:
     - docx_report:
         format: docx
-        description: "Formatted report with title page, index, and full clips."
-        path_pattern: "<output_dir>/<topic>/<safe_topic>_<Month_DD>[_<suffix>].docx"
+        description: "Formatted report with title page, index, and reviewed clips."
+        path_pattern: "<output_dir>/<topic>/media_clips_<mon><dd>[_<suffix>].docx"
+    - reviewed_clip_data:
+        format: json
+        description: "Reviewed clips payload used to build the final report."
+        path_pattern: "<output_dir>/clips_data.json or <output_dir>/<topic>/media_clips_<mon><dd>[_<suffix>]_data.json"
     - email_draft:
-        format: mail_app_draft
-        description: "Draft email created in Mail.app with the .docx attached."
+        format: txt_html_mail_artifacts
+        description: "Plain-text and HTML email body artifacts; Mail.app draft is optional."
   output_contract:
     required_sections:
       - "Title Page (topic + date)"
       - "Index (numbered list with links)"
-      - "Clips (source, title link, author, date, subtitle/lede, body)"
+      - "Clips (source, title link, author, date, optional subtitle/lede, body)"
     placeholders:
-      - "[PASTE FULL TEXT HERE] when extraction fails (often paywalls)."
+      - "Manual article paste/edit remains available when extraction fails or is incomplete."
 
 governance:
   review:
@@ -51,7 +60,7 @@ governance:
     checklist:
       - "Scan relevance: each clip truly matches the query set."
       - "Check duplicates / missing key stories."
-      - "Paywalls: replace any '[PASTE FULL TEXT HERE]' with cleaned pasted text."
+      - "Paste or edit article text manually when extraction is weak or missing."
       - "Verify author/date formatting for high-sensitivity distributions."
       - "Confirm recipients before sending the Mail draft."
 
@@ -72,3 +81,4 @@ dependencies:
 notes:
   - "Trusted/blocked source lists are currently configured inside the execution script."
   - "Topic is currently used to create an output folder and to label the report."
+  - "Light cleanup is part of the initial pass; deeper cleanup is intended to be run article-by-article only when needed."

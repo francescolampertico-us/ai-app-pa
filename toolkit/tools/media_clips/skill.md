@@ -1,88 +1,57 @@
-# Skill — Media Clips (DOE-aligned)
-
-This skill defines how to run the **Media Clips** tool using the Directive → Orchestration → Execution pattern.
-
-—
-
-## Directive (what you must decide before running)
-
-### Required
-- **Topic**: the label for the report (e.g., `India`, `India Media Clips`, `EU AI Act`).
-- **Boolean queries**: a comma-separated list of Google News searches.
-
-### Optional (but common)
-- **Time window**: `—period` (e.g., `24h`, `72h`, `7d`)
-- **Cutoff**: `—since “YYYY-MM-DD HH:MM”` (ignore older stories)
-- **Output location**: `—output-dir <path>`
-- **Email draft**:
-  - `—email-sender you@domain.com`
-  - `—email-recipient a@domain.com,b@domain.com`
-- **Report date override**: `—target-date YYYY-MM-DD`
-- **Filename suffix**: `—suffix Partial`
-
-—
-
-## Orchestration (how the tool gathers and prepares information)
-
-1) Run each Boolean query against Google News.  
-2) Filter results:
-   - remove blocked sources
-   - keep only trusted sources (lists are currently configured in the execution script)
-3) Deduplicate articles (avoid repeated links).  
-4) Extract article content where possible:
-   - if extraction fails (often paywalls), insert `[PASTE FULL TEXT HERE]`.
-
-—
-
-## Execution (how to run)
-
-### 1) Run the script
-From the repository root:
-
-```bash
-python tools/media_clips/execution/generate_clips.py \
-  python tools/media_clips/execution/generate_clips.py \
-  --topic "India" \
-  --queries '"India" AND ("elections" OR "BJP" OR "Modi"), ("New Delhi" AND "trade")' \
-  --period 24h \
-  --output-dir "/path/to/output" \
-  --email-sender "you@domain.com" \
-  --email-recipient "team@domain.com"
-
-```
-
-Notes:
-- `--queries` is a comma-separated list. Wrap it in quotes to avoid shell parsing issues.
-- If you omit `--period`, the script defaults to **72h on Mondays**, otherwise **24h**.
-- If you omit email flags, the `.docx` is still generated; the Mail draft step may be skipped depending on implementation.
-
-### 2) Output artifacts
-- A topic folder is created under `output-dir`.
-- The report is saved as `.docx` inside that folder.
-- A draft email is created in Mail.app (macOS) with the `.docx` attached.
-
-### 3) Human review (required)
-Before sending/distributing:
-- Replace any `[PASTE FULL TEXT HERE]` blocks for paywalled articles.
-- Confirm relevance: each clip actually matches the intended queries.
-- Remove duplicates or low-salience items.
-- Verify names/titles/dates for sensitive clips.
-
+---
+name: media-clips
+description: Search recent news, generate fast cleaned article previews, review and edit clips inline, optionally run deeper cleaning with a configured LLM-compatible endpoint, and build the final media clips report and email artifacts.
 ---
 
-## Paywall workflow (manual step)
-If an article is paywalled:
-1) Open it in browser (logged in if needed).
-2) Copy the article text.
-3) Clean it using the auxiliary tool **Media Clip Cleaner** (Gem / tool).
-4) Paste the cleaned text into the report where `[PASTE FULL TEXT HERE]` appears.
+# Media Clips
 
----
+## Goal
+Find relevant recent coverage, present a fast review queue with light-cleaned previews, let the user edit or paste article text manually when needed, optionally run deeper article cleanup, and then build the final clips report.
 
-## Output contract (format expectations)
-Every report should contain:
-- Title page (topic + date)
-- Index (numbered list of articles with links)
-- Full clips section with: source, linked title, author (if available), date, subtitle/lede, body
-- A clear placeholder when full text is not available (`[PASTE FULL TEXT HERE]`)
+## Inputs
+- `topic`
+- `queries`
+- optional `period`
+- optional `since`
+- optional `target_date`
+- optional `source_filter`
+- optional `custom_sources`
+- optional `max_clips`
+- optional `suffix`
+- optional `output_dir`
+- optional `email_sender`
+- optional `email_recipient`
+- optional `llm_model`
 
+## Prereqs
+- Internet access is required.
+- Python dependencies in `tool.yaml` must be installed.
+- macOS Mail.app is optional and only needed for draft-email creation.
+- If deeper clip cleaning is used, the configured LLM-compatible endpoint credentials must be available.
+
+## Process
+1. Query Google News for the requested time window.
+2. Filter blocked, duplicate, non-matching, and out-of-window results.
+3. Extract article text and author where possible.
+4. Apply a light automatic cleanup to produce usable preview text quickly.
+5. Present the clips for review so the user can:
+   - remove an article
+   - edit article text inline
+   - paste missing article text manually
+   - edit author manually
+   - run deeper cleanup only on selected articles
+6. Build the final report and email artifacts from the reviewed `clips_data`, not from a fresh hidden re-run.
+
+## Output
+- `media_clips_<mon><dd>.docx`
+- `media_clips_<mon><dd>_email.txt`
+- `media_clips_<mon><dd>_email.html`
+- `clips_data.json`
+- generator-side `media_clips_<mon><dd>_data.json` when run directly from the script
+
+## Rules
+- Preserve article selection quality; do not loosen relevance rules just to make the run faster.
+- Use light cleanup in the initial pass and reserve deeper cleanup for selected articles.
+- Treat inline user edits and pasted text as the source of truth for final report generation.
+- Never assume missing extraction means irrelevant coverage; keep manual paste/edit available.
+- Human review is required before circulation outside the team.

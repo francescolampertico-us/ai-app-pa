@@ -1,6 +1,8 @@
 import os
 import datetime
 import subprocess # For AppleScript
+import multiprocessing as mp
+import queue
 from gnews import GNews
 from docx import Document
 from docx.shared import Pt
@@ -26,6 +28,9 @@ DEFAULT_QUERIES = [
     '"Test" AND "Search"'
 ]
 
+QUERY_FETCH_TIMEOUT_SECONDS = 45
+QUERY_FETCH_RETRIES = 1
+
 TRUSTED_SOURCES = [
 
     'economist.com', 'nytimes.com', 'washingtonpost.com', 'wsj.com', 'usatoday.com', 
@@ -36,9 +41,65 @@ TRUSTED_SOURCES = [
 
 # Explicitly blocked sources (to fix matching errors)
 BLOCKED_SOURCES = [
-    'cnbc tv18', 'cnbctv18', 'hindu', 'times of india', 'indian express', 
+    'cnbc tv18', 'cnbctv18', 'hindu', 'times of india', 'indian express',
     'deccan herald', 'prothom alo', 'economic times' # Safety additions
 ]
+
+# Keywords in publisher names that indicate non-US sources.
+# Applied regardless of source filter mode since GNews country='US' targeting is unreliable.
+INTERNATIONAL_SOURCE_INDICATORS = (
+    "ireland", "irish times", " irish ",
+    "scotland", "scottish",
+    "nigeria", "nigerian",
+    "south africa", "south african",
+    "papua", "new guinea",
+    "new zealand", "nz herald",
+    ".co.uk", ".ie", ".ng", ".za", ".scot", ".pg", ".nz",
+)
+
+def _is_international_source(source_name: str, source_url: str) -> bool:
+    """Return True if publisher appears to be non-US based on name or URL TLD."""
+    combined = f" {source_name} {source_url} ".lower()
+    return any(ind in combined for ind in INTERNATIONAL_SOURCE_INDICATORS)
+
+
+def _gnews_fetch_worker(query: str, period: str, max_results: int, result_queue) -> None:
+    try:
+        google_news = GNews(language='en', country='US', period=period, max_results=max_results)
+        result_queue.put(("ok", google_news.get_news(query)))
+    except Exception as exc:
+        result_queue.put(("error", str(exc)))
+
+
+def _fetch_news_with_timeout(query: str, period: str, max_results: int, timeout_seconds: int = QUERY_FETCH_TIMEOUT_SECONDS, retries: int = QUERY_FETCH_RETRIES):
+    for attempt in range(retries + 1):
+        result_queue = mp.Queue()
+        proc = mp.Process(
+            target=_gnews_fetch_worker,
+            args=(query, period, max_results, result_queue),
+            daemon=True,
+        )
+        proc.start()
+        proc.join(timeout_seconds)
+
+        if proc.is_alive():
+            proc.terminate()
+            proc.join(5)
+            print(f'GNews fetch timed out for query {query!r} (attempt {attempt + 1}/{retries + 1})')
+            continue
+
+        try:
+            status, payload = result_queue.get_nowait()
+        except queue.Empty:
+            print(f'GNews fetch returned no payload for query {query!r} (attempt {attempt + 1}/{retries + 1})')
+            continue
+
+        if status == "ok":
+            return payload
+
+        print(f'GNews fetch failed for query {query!r}: {payload}')
+
+    return []
 
 # Email Config
 EMAIL_RECIPIENTS = ["recipient@example.com"] # Update this with actual recipients
@@ -100,6 +161,111 @@ def create_email_draft(attachment_path, subject, body, recipients, sender=None):
     except subprocess.CalledProcessError as e:
         print(f"Failed to create email draft: {e}")
 
+
+def _strip_clip_dateline(para: str) -> str:
+    cleaned = re.sub(
+        r"^\s*(?:[A-Z][A-Z.\-']+(?:[-\s][A-Z.\-']+)*|[A-Z][A-Za-z.\-']+(?:\s+[A-Z][A-Za-z.\-']+){0,5})"
+        r"(?:,\s*[A-Z][A-Za-z.\-']+(?:\s+[A-Z][A-Za-z.\-']+)*)*"
+        r"\s*(?:\([^)]+\))?\s*[—–-]\s*",
+        "",
+        para.strip(),
+    ).strip()
+    return cleaned or para.strip()
+
+
+def _reflow_long_clip_block(text: str) -> list[str]:
+    sentences = re.split(r"(?<=[.!?])\s+(?=[\"'“”A-Z])", text.strip())
+    sentences = [s.strip() for s in sentences if s.strip()]
+    if not sentences:
+        return []
+    paragraphs = []
+    current = []
+    current_len = 0
+    for sentence in sentences:
+        sentence_len = len(sentence)
+        if current and (current_len + sentence_len > 450 or len(current) >= 3):
+            paragraphs.append(" ".join(current).strip())
+            current = [sentence]
+            current_len = sentence_len
+        else:
+            current.append(sentence)
+            current_len += sentence_len + 1
+    if current:
+        paragraphs.append(" ".join(current).strip())
+    return paragraphs
+
+
+def _prepare_clip_paragraphs(text: str, title: str) -> list[str]:
+    working = text or ""
+    if _slice_from_dateline_if_prefixed:
+        try:
+            working = _slice_from_dateline_if_prefixed(working, title=title)
+        except Exception as exc:
+            print(f"Final dateline slice failed for '{title}': {exc}")
+    if _strip_leading_article_chrome:
+        try:
+            working = _strip_leading_article_chrome(working, title=title, strip_category=True)
+        except Exception as exc:
+            print(f"Final leading chrome strip failed for '{title}': {exc}")
+    if _scrub_inline_noise:
+        try:
+            working = _scrub_inline_noise(working)
+        except Exception as exc:
+            print(f"Final inline-noise scrub failed for '{title}': {exc}")
+
+    raw_paragraphs = [p.strip() for p in re.split(r"\n\s*\n|\n", working) if p.strip()]
+    if len(raw_paragraphs) <= 1 and working and len(working) > 500:
+        raw_paragraphs = _reflow_long_clip_block(working)
+
+    prepared = []
+    seen = set()
+    for idx, para in enumerate(raw_paragraphs):
+        if idx == 0:
+            para = _strip_clip_dateline(para)
+        para = para.strip()
+        if not para:
+            continue
+        if prepared and _is_tail_section_start and _is_tail_section_start(para):
+            break
+        low = para.lower()
+        if (
+            "a free press is a cornerstone" in low
+            or "support trusted journalism" in low
+            or "civil dialogue" in low
+            or "donate now" in low
+        ):
+            continue
+        norm = re.sub(r"\s+", "", para.lower())
+        if norm in seen:
+            continue
+        seen.add(norm)
+        prepared.append(para)
+    return prepared
+
+import sys
+from pathlib import Path
+
+# Import local rule-based cleaner from the sibling media_clip_cleaner tool
+_CLEANER_DIR = Path(__file__).parent.parent.parent / "media_clip_cleaner" / "execution"
+if str(_CLEANER_DIR) not in sys.path:
+    sys.path.insert(0, str(_CLEANER_DIR))
+try:
+    from clean_clip import (
+        clean_clip as _clean_clip,
+        validate_output as _validate_cleaned_clip,
+        _is_tail_section_start as _is_tail_section_start,
+        _scrub_inline_noise as _scrub_inline_noise,
+        _slice_from_dateline_if_prefixed as _slice_from_dateline_if_prefixed,
+        _strip_leading_article_chrome as _strip_leading_article_chrome,
+    )
+except ImportError:
+    _clean_clip = None
+    _validate_cleaned_clip = None
+    _is_tail_section_start = None
+    _scrub_inline_noise = None
+    _slice_from_dateline_if_prefixed = None
+    _strip_leading_article_chrome = None
+
 import argparse
 
 def main():
@@ -116,6 +282,7 @@ def main():
     parser.add_argument('--no-email', action='store_true', help='Skip email draft creation')
     parser.add_argument('--all-sources', action='store_true', help='Include all sources, not just trusted mainstream media')
     parser.add_argument('--custom-sources', type=str, help='Comma-separated list of custom trusted domains', default=None)
+    parser.add_argument('--max-clips', type=int, default=None, help='Cap on number of articles included in the report')
     args = parser.parse_args()
 
     # Parse queries
@@ -167,9 +334,15 @@ def main():
         else:
             period = '24h'
 
-    # Increase max_results to capture more candidate articles
-    google_news = GNews(language='en', country='US', period=period, max_results=50)
-    
+    def _article_matches_query(article: dict, query: str) -> bool:
+        """Return True if any significant query word appears in article title or description."""
+        STOP = {"the", "and", "for", "with", "from", "that", "this", "are", "was", "were", "its", "not", "has", "have"}
+        words = [w.lower() for w in re.split(r"\W+", query) if len(w) > 3 and w.lower() not in STOP]
+        if not words:
+            return True
+        text = f"{article.get('title', '')} {article.get('description', '')}".lower()
+        return any(w in text for w in words)
+
     found_articles = []
     seen_urls = set()
     seen_titles = set()
@@ -177,8 +350,8 @@ def main():
     # 1. SEARCH
     for q in queries:
         print(f"Searching: {q}...")
-
-        results = google_news.get_news(q)
+        raw_results = _fetch_news_with_timeout(q, period=period, max_results=50)
+        results = [a for a in raw_results if _article_matches_query(a, q)]
         for item in results:
             # Filter Sources
             source_url = item.get('url', '')
@@ -187,6 +360,11 @@ def main():
             
             # 0. Check BLOCKED Sources
             if any(blocked in source_name or blocked in source_url.lower() for blocked in BLOCKED_SOURCES):
+                continue
+
+            # 0b. Filter out non-US sources (GNews country targeting is unreliable)
+            if _is_international_source(source_name, source_url):
+                print(f"Skipping international source: {source_name}")
                 continue
 
             # Simple domain check
@@ -281,13 +459,18 @@ def main():
             if response.status_code == 200:
                 html_content = response.text
                 
-                # A. Extract Text (Trafilatura)
+                # A. Extract Text + Author (Trafilatura)
+                # bare_extraction returns a dict in trafilatura 1.x
                 extracted_data = bare_extraction(html_content)
                 if extracted_data:
-                    extracted_text = getattr(extracted_data, 'text', '')
-                    extracted_author = getattr(extracted_data, 'author', None)
-                
-                # B. Extract Author (Newspaper3k)
+                    if isinstance(extracted_data, dict):
+                        extracted_text = extracted_data.get('text', '')
+                        extracted_author = extracted_data.get('author') or None
+                    else:
+                        extracted_text = getattr(extracted_data, 'text', '')
+                        extracted_author = getattr(extracted_data, 'author', None)
+
+                # B. Extract Author (Newspaper3k) — overrides trafilatura if found
                 try:
                     article_np = Article(final_url)
                     article_np.set_html(html_content)
@@ -318,14 +501,37 @@ def main():
             # Not a dup, accept it
             accepted_bodies.append(current_sig)
         
+        # Auto-clean extracted text with local rule-based cleaner
+        if extracted_text and _clean_clip:
+            try:
+                cleaned = _clean_clip(extracted_text, title=title)
+                if cleaned:
+                    ok = True
+                    issues = []
+                    if _validate_cleaned_clip:
+                        ok, issues = _validate_cleaned_clip(cleaned, title=title)
+                    if not ok:
+                        print(f"Auto-clean validation failed for '{title}': {'; '.join(issues)}")
+                    else:
+                        extracted_text = cleaned
+            except Exception as _e:
+                print(f"Auto-clean failed for '{title}': {_e}")
+
         # Store processed data in article dict
         article['final_url'] = final_url
         article['extracted_text'] = extracted_text
         article['extracted_author'] = extracted_author
-        
+
         final_articles.append(article)
+        if args.max_clips and args.max_clips > 0 and len(final_articles) >= args.max_clips:
+            print(f"Reached requested clip count ({args.max_clips}); stopping article processing early.")
+            break
 
     print(f"Final Count after Content Dedup: {len(final_articles)}")
+
+    if args.max_clips and args.max_clips > 0:
+        final_articles = final_articles[:args.max_clips]
+        print(f"Capped to {len(final_articles)} articles (--max-clips={args.max_clips})")
 
     # 2. GENERATE DOC
     doc = Document()
@@ -461,16 +667,14 @@ def main():
             set_font(run_title)
         p_head.add_run("\n")
         
-        author_str = "By Staff"
-        if extracted_author:
-            author_str = f"By {extracted_author}"
-        
+        author_str = f"By {extracted_author}" if extracted_author else "By Staff"
+
         run_auth = p_head.add_run(f"{author_str}\n")
         set_font(run_auth, bold=False)
-        
+
         run_dt = p_head.add_run(f"{date_cleaned_clip}")
         set_font(run_dt, bold=False)
-        
+
         # Email Body Header
         email_body_text += f"{source}\n{title}\n{url}\n{author_str}\n{date_cleaned_clip}\n\n"
 
@@ -517,10 +721,10 @@ def main():
                      run.italic = True
 
         if extracted_text:
-            # Re-split (already done above, but index logic is local)
-            paragraphs = extracted_text.split('\n')
+            paragraphs = _prepare_clip_paragraphs(extracted_text, title)
             
             # Apply start_idx from above
+            start_idx = min(start_idx, len(paragraphs))
             
             # C. Loop and Print
             first_printed = False
@@ -545,9 +749,9 @@ def main():
                 
                 seen_paragraphs.add(para_norm)
 
-                # Remove Dateline on the first paragraph
+                # Remove any remaining dateline on the first paragraph
                 if not first_printed:
-                    para = re.sub(r'^[A-Za-z\s\(\)\.,]{3,50}\s?[-—–]\s?', '', para)
+                    para = _strip_clip_dateline(para)
                     first_printed = True
                 
                 # CLEANUP: Remove "Photo Credit" and "First Published"
@@ -580,9 +784,8 @@ def main():
         os.makedirs(topic_dir)
     
     suffix_str = f"_{args.suffix}" if args.suffix else ""
-    # Safe filename from topic
-    safe_topic = re.sub(r'[^a-zA-Z0-9_\-]', '_', args.topic)
-    filename = os.path.join(topic_dir, f"{safe_topic}_{target_date_obj.strftime('%B_%d')}{suffix_str}.docx")
+    date_stamp = target_date_obj.strftime("%b%d").lower()
+    filename = os.path.join(topic_dir, f"media_clips_{date_stamp}{suffix_str}.docx")
     doc.save(filename)
     print(f"Saved to {filename}")
 
