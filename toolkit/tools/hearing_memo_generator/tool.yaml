@@ -10,10 +10,11 @@ description: >
   verification pass. Output is always a draft pending human review.
 
 execution:
-  entrypoint: tools/hearing_memo_tool_package/execution/run.py
+  entrypoint: tools/hearing_memo_generator/execution/run.py
   runtime: python
   notes:
-    - "Requires OPENAI_API_KEY for best extraction quality; runs in heuristic fallback without it."
+    - "Uses configured LLM-compatible processing for best extraction quality when available."
+    - "Runs in heuristic fallback mode when configured LLM processing is unavailable."
 
 inputs:
   required:
@@ -77,7 +78,7 @@ dependencies:
     - python-docx
     - openai
   system:
-    - "OPENAI_API_KEY (optional but recommended for extraction)"
+    - "Configured LLM-compatible endpoint credentials (optional but recommended for extraction)"
 
 notes:
   - "Approved heading family and style rules are defined in STYLE_GUIDE.md."

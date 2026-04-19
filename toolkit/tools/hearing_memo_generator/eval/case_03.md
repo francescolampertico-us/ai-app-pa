@@ -4,11 +4,11 @@
 Note: input files live in eval/inputs and are not committed to git.
 
 ```bash
-python3 tools/hearing_memo_tool_package/execution/run.py \
-  --input tools/hearing_memo_tool_package/eval/inputs/case_03_transcript_excerpt.txt \
-  --output tools/hearing_memo_tool_package/eval/runs/case_03/memo.docx \
-  --json-output tools/hearing_memo_tool_package/eval/runs/case_03/bundle.json \
-  --text-output tools/hearing_memo_tool_package/eval/runs/case_03/memo.md
+python3 toolkit/tools/hearing_memo_generator/execution/run.py \
+  --input toolkit/tools/hearing_memo_generator/eval/inputs/case_03_transcript_excerpt.txt \
+  --output toolkit/tools/hearing_memo_generator/eval/runs/case_03/memo.docx \
+  --json-output toolkit/tools/hearing_memo_generator/eval/runs/case_03/bundle.json \
+  --text-output toolkit/tools/hearing_memo_generator/eval/runs/case_03/memo.md
 ```
 
 ## Acceptance Criteria

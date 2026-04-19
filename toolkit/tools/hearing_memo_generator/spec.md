@@ -1,16 +1,26 @@
-# Purpose
+# Hearing Memo Generator
+
+## Purpose
 Generate a house-style congressional hearing memo from transcript or hearing-source text with strict structure, controlled headings, and a verification pass. Output is always a draft and requires human review before distribution.
 
-# Inputs
-## Required
+## Inputs
+
+### Required
 - `input`: Path to hearing transcript (PDF or text).
 
-## Optional
+### Optional
 - `hearing_title`, `hearing_date`, `hearing_time`, `committee`: Overrides when auto-detection is uncertain.
 - `memo_from`, `memo_date`, `subject`, `confidentiality_footer`: Metadata overrides for the memo header/footer.
 - `output`, `text_output`, `json_output`: Output locations.
 
-# Output Contract
+## Workflow
+1. Detect metadata and hearing structure from transcript or source text.
+2. Build a structured hearing record for leadership remarks, witness testimony, and Q&A exchanges.
+3. Compose the memo using the approved heading family and house style.
+4. Verify metadata completeness, title consistency, heading compliance, and unsupported claims.
+5. Export the memo as a draft for reviewer approval.
+
+## Output Contract
 The memo must include exactly these top-level sections in order:
 1. FROM / DATE / SUBJECT block
 2. Display title (official hearing title)
@@ -26,7 +36,11 @@ Quality requirements:
 - Witness headings preserve honorific + affiliation when verified.
 - No invented names, titles, affiliations, or dates.
 
-# V1 Freeze (Locked)
+## Extraction Modes
+- Structured extraction with a configured LLM-compatible endpoint when available.
+- Heuristic fallback when configured LLM processing is unavailable.
+
+## V1 Freeze (Locked)
 **Version locked:** 1.0.0 (2026-03-16)
 
 Accepted input types:
@@ -40,7 +54,7 @@ Fixed output structure:
 Known limitations (V1):
 - Co-chair/commission formats may require manual metadata overrides.
 - Highly noisy OCR may reduce speaker segmentation quality.
-- Extraction quality is best with `OPENAI_API_KEY`; heuristic fallback is acceptable but lower fidelity.
+- Extraction quality is strongest with configured LLM-compatible processing; heuristic fallback is acceptable but lower fidelity.
 
 Fixed style rules:
 - Use the exact headings in `STYLE_GUIDE.md`.
@@ -56,14 +70,14 @@ Fixed verification rules:
 - Q&A organized by member headings only.
 - Confidentiality footer present and unmodified unless explicitly overridden.
 
-# Failure Modes
+## Failure Modes
 - Missing or incorrect witness affiliations.
 - Over-detailed overview (mentions individual speakers).
 - Q&A grouped by issue instead of member.
 - Fabricated or overstated claims not grounded in the transcript.
 - Footer omitted or modified without authorization.
 
-# Human Review Checklist
+## Human Review Checklist
 - Verify title, committee, and dates against the source.
 - Confirm witness names and affiliations.
 - Confirm overview abstraction level and tone.
