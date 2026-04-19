@@ -853,21 +853,13 @@ def analyze_story(issue: str, client: OpenAI, topic_mode: str = "specific", cove
         "Preserve the literal core topic and named entity in your understanding of the story.\n\n"
         '{"beat": "...", "themes": ["...", "..."], "adjacent_topics": ["...", "...", "...", "...", "..."]}'
     )
-    import time as _t
-    for _att in range(3):
-        try:
-            response = client.chat.completions.create(
-                model=_active_model(MODEL),
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.2,
-                **_max_tokens_kwarg(300),
-                **_response_format_kwarg(),
-            )
-            break
-        except Exception:
-            if _att == 2:
-                raise
-            _t.sleep(4)
+    response = client.chat.completions.create(
+        model=_active_model(MODEL),
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+        **_max_tokens_kwarg(300),
+        **_response_format_kwarg(),
+    )
     analysis = _parse_json_content(response.choices[0].message.content)
     if coverage_desk and not analysis.get("beat"):
         analysis["beat"] = coverage_desk
@@ -2532,24 +2524,16 @@ def enrich_contacts(journalists: List[dict], issue: str, location: str,
         "Only reference a prior story if it is plainly relevant to the same issue or a closely connected sanctions/regulatory development."
     )
 
-    import time as _t2
-    for _att2 in range(3):
-        try:
-            response = client.chat.completions.create(
-                model=_active_model(MODEL),
-                messages=[
-                    {"role": "system", "content": ENRICH_SYSTEM},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.3,
-                **_max_tokens_kwarg(6000),
-                **_response_format_kwarg(),
-            )
-            break
-        except Exception:
-            if _att2 == 2:
-                raise
-            _t2.sleep(4)
+    response = client.chat.completions.create(
+        model=_active_model(MODEL),
+        messages=[
+            {"role": "system", "content": ENRICH_SYSTEM},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.3,
+        **_max_tokens_kwarg(6000),
+        **_response_format_kwarg(),
+    )
 
     return _parse_json_content(response.choices[0].message.content)
 
@@ -2581,13 +2565,11 @@ def generate_media_list(
             "news_research": [{ ... }],
         }
     """
-    _CHANGE_AGENT_BASE_URL = "https://runpod-proxy-956966668285.us-central1.run.app/v1/"
-    api_key = os.environ.get("CHANGE_AGENT_API_KEY", "").strip()
-    base_url = os.environ.get("OPENAI_BASE_URL") or _CHANGE_AGENT_BASE_URL
+    api_key = os.getenv("OPENAI_API_KEY", "")
     if not api_key:
-        raise ValueError("CHANGE_AGENT_API_KEY is required.")
+        raise ValueError("OPENAI_API_KEY is required.")
 
-    client = OpenAI(api_key=api_key, base_url=base_url, timeout=120.0, max_retries=0)
+    client = OpenAI(api_key=api_key)
     media_types = media_types or list(MEDIA_TYPE_LABELS.keys())
     num_contacts = min(num_contacts, 40)
     broad_topic = (broad_topic or "").strip()
