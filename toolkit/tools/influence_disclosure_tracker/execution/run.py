@@ -28,6 +28,8 @@ def parse_args():
     parser.add_argument("--lda-api-key", default=os.getenv("LDA_API_KEY"), help="LDA API Key")
     parser.add_argument("--fuzzy-threshold", type=float, default=85.0, help="Fuzzy match threshold")
     parser.add_argument("--max-results", type=int, default=500, help="Max results")
+    parser.add_argument("--max-deep", type=int, default=2,
+                        help="Max number of orgs to run deep XML+LLM extraction on per entity (default: 2)")
     parser.add_argument("--cache-dir", default=".cache/influence_disclosure_tracker", help="Cache dir")
     # --build-fara-index removed: FARA now uses bulk CSV downloads automatically
     parser.add_argument("--search-field", default="client", choices=["client", "registrant", "both"],
@@ -93,15 +95,21 @@ def main():
             
     # 2. FARA
     if "fara" in sources:
-        fara_client = FARAClient(io, fuzzy_threshold=args.fuzzy_threshold, max_results=args.max_results)
+        fara_client = FARAClient(io, fuzzy_threshold=args.fuzzy_threshold, max_results=args.max_results,
+                                  filing_years=filing_years)
+        fara_date_from = args.from_date or ""
+        fara_date_to = args.to_date or ""
+        if filing_years and not fara_date_from and not fara_date_to:
+            fara_date_from = f"{min(filing_years)}-01-01"
+            fara_date_to = f"{max(filing_years)}-12-31"
         for ent in entities:
-            fara_client.search_entity(ent, args.from_date or "", args.to_date or "")
+            fara_client.search_entity(ent, fara_date_from, fara_date_to)
             
     # 3. IRS 990
     if "irs990" in sources:
         irs990_client = IRS990Client(io, fuzzy_threshold=args.fuzzy_threshold,
                                      max_results=args.max_results, mode=args.mode,
-                                     filing_years=filing_years)
+                                     filing_years=filing_years, max_deep=args.max_deep)
         for ent in entities:
             irs990_client.search_entity(ent, args.from_date or "", args.to_date or "")
             

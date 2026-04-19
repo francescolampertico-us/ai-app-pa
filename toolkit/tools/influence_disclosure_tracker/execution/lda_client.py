@@ -5,7 +5,7 @@ from io_utils import IOUtils
 from matching import match_entity
 
 class LDAClient:
-    BASE_URL = "https://lda.gov/api/v1/" # Using lda.gov as requested
+    BASE_URL = "https://lda.senate.gov/api/v1/"
     
     def __init__(self, io_utils: IOUtils, api_key: str = None, fuzzy_threshold: float = 85.0,
                  max_results: int = 500, search_field: str = "client"):
@@ -204,9 +204,7 @@ class LDAClient:
         f_uuid = filing.get("url")
         client = filing.get("client", {})
         registrant = filing.get("registrant", {})
-        c_id = client.get("id")
         c_name = client.get("name")
-        r_id = registrant.get("id")
         r_name = registrant.get("name")
 
         amount = filing.get("expenses") or filing.get("income")

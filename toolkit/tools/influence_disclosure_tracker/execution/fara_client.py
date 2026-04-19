@@ -31,10 +31,11 @@ CACHE_MAX_AGE_HOURS = 24
 
 class FARAClient:
     def __init__(self, io_utils: IOUtils, fuzzy_threshold: float = 85.0,
-                 max_results: int = 500):
+                 max_results: int = 500, filing_years=None):
         self.io = io_utils
         self.fuzzy_threshold = fuzzy_threshold
         self.max_results = max_results
+        self.filing_years = {str(y) for y in filing_years} if filing_years else None
 
         self.cache_dir = os.path.join(os.path.dirname(__file__), ".cache", "fara_bulk")
         os.makedirs(self.cache_dir, exist_ok=True)
@@ -147,9 +148,14 @@ class FARAClient:
         return date_str[:10]
 
     def _is_within_date_range(self, date_raw: str, date_from: str, date_to: str) -> bool:
+        parsed = self._parse_date(date_raw)
+        # When specific filing years were selected, match only those exact years
+        if self.filing_years:
+            if not parsed:
+                return True
+            return parsed[:4] in self.filing_years
         if not date_from and not date_to:
             return True
-        parsed = self._parse_date(date_raw)
         if not parsed:
             return True
         if date_from and parsed < date_from:
@@ -202,6 +208,8 @@ class FARAClient:
             r_num = (fp.get("Registration Number") or "").strip()
             if not fp_name or r_num in matched_reg_nums:
                 continue
+            if not self._fp_active_in_range(fp, date_from, date_to):
+                continue
 
             m = match_entity(entity_query, fp_name, self.fuzzy_threshold)
             if m["match"]:
@@ -217,6 +225,21 @@ class FARAClient:
     # -------------------------------------------------------------------------
     # OUTPUT EMITTERS
     # -------------------------------------------------------------------------
+
+    def _fp_active_in_range(self, fp: dict, date_from: str, date_to: str) -> bool:
+        """Return False if FP's active period has no overlap with [date_from, date_to]."""
+        if not date_from and not date_to:
+            return True
+        fp_reg_date = self._parse_date(fp.get("Foreign Principal Registration Date", ""))
+        fp_term_raw = (fp.get("Foreign Principal Termination Date") or "").strip()
+        fp_term_date = self._parse_date(fp_term_raw) if fp_term_raw else ""
+        # FP registered after the search window ends → no overlap
+        if date_to and fp_reg_date and fp_reg_date > date_to:
+            return False
+        # FP terminated before the search window starts → no overlap
+        if date_from and fp_term_date and fp_term_date < date_from:
+            return False
+        return True
 
     def _emit_registrant(self, query, r_num, reg, match_info, fp_by_reg, date_from, date_to):
         r_name = (reg.get("Name") or "").strip()
@@ -245,6 +268,8 @@ class FARAClient:
 
         # Foreign principals for this registrant
         for fp in fp_by_reg.get(r_num, []):
+            if not self._fp_active_in_range(fp, date_from, date_to):
+                continue
             fp_name = (fp.get("Foreign Principal") or "").strip()
             self.io.append_row("fara_foreign_principals", {
                 "registration_number": r_num,
@@ -281,6 +306,8 @@ class FARAClient:
                 })
 
     def _emit_fp(self, query, r_num, fp, match_info, _fp_by_reg, date_from, date_to):
+        if not self._fp_active_in_range(fp, date_from, date_to):
+            return
         fp_name = (fp.get("Foreign Principal") or "").strip()
         reg_name = (fp.get("Registrant Name") or "").strip()
         fp_term = (fp.get("Foreign Principal Termination Date") or "").strip()
@@ -335,7 +362,7 @@ class FARAClient:
             doc_fp_norm = _normalize(doc_fp_raw)
             if not doc_fp_norm or (fp_norm not in doc_fp_norm and doc_fp_norm not in fp_norm):
                 continue
-            doc_date = doc.get("Date Stamped", "")
+            doc_date = doc.get("Stamped Date", doc.get("Date Stamped", doc.get("Date", "")))
             if not self._is_within_date_range(doc_date, date_from, date_to):
                 continue
             self.io.append_row("fara_documents", {

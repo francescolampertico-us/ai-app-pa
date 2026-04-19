@@ -1,60 +1,48 @@
-# Skill - Influence Disclosure Tracker (DOE-aligned)
+---
+name: influence-disclosure-tracker
+description: Search and cross-reference lobbying (LDA), foreign agent (FARA), and nonprofit (IRS 990) disclosure records for any entity. Use when the user wants to track influence activity, check if an organization has filed lobbying disclosures, find foreign agent registrations, look up nonprofit financials, or build a disclosure summary report.
+---
 
-Use the Directive -> Orchestration -> Execution pattern to run this tool reliably.
+# Influence Disclosure Tracker
 
-## Directive (what you must decide before running)
+## Goal
+Cross-reference an entity across three federal disclosure databases — LDA (lobbying), FARA (foreign agents), and IRS Form 990 (nonprofits) — and produce normalized CSV tables and a markdown summary report.
 
-### Required
-- **Entities**: comma-separated list of entities (e.g., `Microsoft, OpenAI`).
-- **From / To dates**: `YYYY-MM-DD` to `YYYY-MM-DD`.
+## Inputs
+- `entities` — comma-separated list of organizations or individuals to search (required)
+- `filing_years` — comma-separated years, e.g. `2022,2023,2024` (omit for all years)
+- `quarters` — subset of Q1–Q4 (default: all four)
+- `sources` — any combination of `lda`, `fara`, `irs990` (default: all three)
+- `search_field` — `client` (entity is lobbying client), `registrant` (entity is a lobbying firm), or `both` (default: `both`)
+- `mode` — `basic` (default) or `deep` (XML parse + LLM enrichment for IRS 990)
+- `from` / `to` — date range override in `YYYY-MM-DD` (optional; derived from `filing_years` if omitted)
+- `max_results` — cap per source per entity (default: 500)
 
-### Optional (common)
-- **Sources**: `lda`, `fara`, `irs990` (`--sources "lda,fara,irs990"`).
-- **Mode**: `basic` (default) or `deep` (LLM-enriched) (`--mode basic`).
-- **Output base**: `--out /path/to/output`.
-- **Max results**: `--max-results 500`.
-- **Cache directory**: `--cache-dir .cache/influence_disclosure_tracker`.
+## Prereqs
+- Set `LDA_API_KEY` for higher LDA rate limits (optional; unauthenticated requests are throttled).
+- FARA uses bulk CSV downloads from `efile.fara.gov`, cached locally for 24 hours — no key needed.
+- IRS 990 uses the ProPublica Nonprofit Explorer API — no key needed.
+- `rapidfuzz`, `requests`, `pandas`, `python-dateutil` must be installed.
 
-### Prereqs
-- If using LDA with higher throughput, set `LDA_API_KEY`.
-- FARA uses bulk CSV downloads (cached 24 hours); no setup needed.
+## Process
+1. For each entity, query each selected source in parallel:
+   - **LDA**: call `lda.senate.gov/api/v1/filings/` filtering by `filing_year`; apply fuzzy name matching against client and registrant fields; auto-expand to `both` fields if the initial scoped search returns zero matches.
+   - **FARA**: download bulk CSVs; filter registrants and foreign principals whose active period overlaps the requested year range; apply fuzzy matching against both registrant and foreign principal name columns.
+   - **IRS 990**: query ProPublica by EIN/name; return filing metadata with PDF links.
+2. Apply three-tier matching (exact → contains → fuzzy) at a configurable threshold (default 85).
+3. Write normalized CSV tables to the output directory.
+4. Generate `report.md` with an Executive Summary source-status table, per-source sections gated to selected sources only, and a matching confidence appendix.
 
-## Orchestration (how the tool gathers and prepares information)
-1) Parse entities and date range.
-2) Query LDA API, download FARA bulk CSVs, and/or query ProPublica IRS 990 API.
-3) Apply exact, contains, and fuzzy string matching to normalize results.
-4) If `--mode deep`, retrieve full XML filings and parse/enrich them using an LLM.
-5) Write normalized CSV tables plus a markdown summary report.
+## Output
+- `master_results.csv` — unified match-level results with source, match type, and confidence
+- `lda_filings.csv`, `lda_issues.csv`, `lda_lobbyists.csv` — LDA detail tables
+- `fara_registrants.csv`, `fara_foreign_principals.csv`, `fara_documents.csv` — FARA detail tables
+- `irs990_organizations.csv`, `irs990_filings.csv` — IRS 990 filings with PDF links
+- `report.md` — narrative summary with Executive Summary, per-source sections, and match confidence appendix
 
-## Execution (how to run)
-
-### Example run
-From the repository root:
-
-```bash
-python3 tools/influence_disclosure_tracker/execution/run.py \
-  --entities "Microsoft" \
-  --from 2025-01-01 \
-  --to 2025-12-31 \
-  --sources "lda,fara" \
-  --out "./output" \
-  --max-results 500
-```
-
-### Example run with IRS 990 deep mode
-```bash
-python3 tools/influence_disclosure_tracker/execution/run.py \
-  --entities "Heritage Foundation" \
-  --filing-years "2023,2024" \
-  --sources "irs990" \
-  --mode deep \
-  --out "./output"
-```
-
-## Output contract (format expectations)
-- `master_results.csv` with match confidence and normalized fields.
-- `lda_*.csv` tables for LDA filings, issues, and lobbyists.
-- `fara_*.csv` tables for registrants, foreign principals, documents, and short forms.
-- `irs990_organizations.csv` and `irs990_filings.csv` for nonprofit tax data.
-- Deep mode adds: `irs990_deep_lobbying.csv`, `irs990_deep_officers.csv`, `irs990_deep_grants.csv`, `irs990_deep_related.csv`, `irs990_deep_enrichments.csv`.
-- `report.md` with executive summary and match confidence notes.
+## Rules
+- Never fabricate entity names, filing dates, dollar amounts, or registration numbers.
+- Always declare match confidence; flag fuzzy or contains matches for human review before external use.
+- If a source is not selected, it must not appear anywhere in the report.
+- IRS 990 XML data has a 1–3 year filing lag; absence of current-year data is expected.
+- FARA active-period filtering applies: only show registrants and foreign principals whose registration overlaps the requested date range.

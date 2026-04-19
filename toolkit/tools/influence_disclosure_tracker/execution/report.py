@@ -99,6 +99,8 @@ class ReportGenerator:
         lines.append("## Executive Summary")
         lines.append("")
 
+        sources = self.config.get('sources', ['lda', 'fara', 'irs990'])
+
         for ent in self.config['entities']:
             ent_records = [r for r in master if r['entity_query'].lower() == ent.lower()]
             lda_count = len([r for r in ent_records if r['source'] == 'LDA'])
@@ -120,17 +122,22 @@ class ReportGenerator:
 
             lines.append(f"### {ent}")
             lines.append("")
-            lines.append("| Metric | Value |")
+            lines.append("| Source | Status |")
             lines.append("|---|---|")
-            lines.append(f"| LDA filings | {lda_count} |")
-            if total > 0:
-                lines.append(f"| Total lobbying expenditure | ${total:,.0f} |")
-            if firms:
-                lines.append(f"| Outside lobbying firms retained | {len(firms)} |")
-            if fara_count:
-                lines.append(f"| FARA records | {fara_count} |")
-            if irs990_count:
-                lines.append(f"| IRS 990 filings | {irs990_count} |")
+            if 'lda' in sources:
+                if lda_count:
+                    lda_status = f"{lda_count} filing(s) found"
+                    if total > 0:
+                        lda_status += f" — ${total:,.0f} reported"
+                    if firms:
+                        lda_status += f" — {len(firms)} lobbying firm(s)"
+                else:
+                    lda_status = "No filings found"
+                lines.append(f"| LDA (lobbying) | {lda_status} |")
+            if 'fara' in sources:
+                lines.append(f"| FARA (foreign agent) | {'%d record(s) found' % fara_count if fara_count else 'No records found'} |")
+            if 'irs990' in sources:
+                lines.append(f"| IRS 990 (nonprofit) | {'%d filing(s) found' % irs990_count if irs990_count else 'No filings found'} |")
             lines.append("")
 
             # Client description as blockquote
@@ -144,10 +151,11 @@ class ReportGenerator:
         # =====================================================================
         # LOBBYING ACTIVITY BY FIRM
         # =====================================================================
-        lines.append("---")
-        lines.append("")
-        lines.append("## Lobbying Activity by Firm")
-        lines.append("")
+        if 'lda' in sources:
+            lines.append("---")
+            lines.append("")
+            lines.append("## Lobbying Activity by Firm")
+            lines.append("")
 
         # Group data by registrant
         filings_by_reg = defaultdict(list)
@@ -262,9 +270,12 @@ class ReportGenerator:
         # =====================================================================
         # FARA
         # =====================================================================
-        lines.append("## FARA Foreign Agent Filings")
-        lines.append("")
-        fara_master = [r for r in master if r['source'] == 'FARA']
+        if 'fara' in sources:
+            lines.append("---")
+            lines.append("")
+            lines.append("## FARA Foreign Agent Filings")
+            lines.append("")
+        fara_master = [r for r in master if r['source'] == 'FARA'] if 'fara' in sources else []
         fara_registrants = self.io.datasets.get("fara_registrants", [])
         fara_fps = self.io.datasets.get("fara_foreign_principals", [])
         fara_docs = self.io.datasets.get("fara_documents", [])
@@ -353,23 +364,24 @@ class ReportGenerator:
 
                 lines.append("---")
                 lines.append("")
-        else:
-            lines.append("No FARA records matched the specified entities.")
         lines.append("")
 
         # =====================================================================
         # IRS 990
         # =====================================================================
-        lines.append("---")
-        lines.append("")
-        lines.append("## Nonprofit Tax Filings (IRS Form 990)")
-        lines.append("")
-        irs990_master = [r for r in master if r['source'] == 'IRS990']
+        if 'irs990' in sources:
+            lines.append("---")
+            lines.append("")
+            lines.append("## Nonprofit Tax Filings (IRS Form 990)")
+            lines.append("")
+        irs990_master = [r for r in master if r['source'] == 'IRS990'] if 'irs990' in sources else []
         irs990_deep_profile = self.io.datasets.get("irs990_deep_profile", [])
         irs990_deep_grants = self.io.datasets.get("irs990_deep_grants", [])
         irs990_deep_compensation = self.io.datasets.get("irs990_deep_compensation", [])
         irs990_deep_lobbying = self.io.datasets.get("irs990_deep_lobbying", [])
         irs990_deep_officers = self.io.datasets.get("irs990_deep_officers", [])
+        irs990_deep_related = self.io.datasets.get("irs990_deep_related", [])
+        irs990_deep_sources = self.io.datasets.get("irs990_deep_sources", [])
 
         if irs990_master:
             from collections import OrderedDict
@@ -408,17 +420,53 @@ class ReportGenerator:
 
                 # Check for Deep Enrichment
                 enrich = next((e for e in irs990_enrichments if e.get("ein") == org_ein and e.get("one_sentence_org_profile", "").strip()), None)
-                if enrich:
-                    lines.append(f"> **AI Summary:** {enrich.get('one_sentence_org_profile')}")
+                deep_source = next((s for s in irs990_deep_sources if s.get("ein") == org_ein), None)
+                deep_source_year = (deep_source or {}).get("tax_year", "")
+                deep_source_reason = (deep_source or {}).get("parse_reason", "")
+                deep_source_is_pdf = ((deep_source or {}).get("source_type") or "").lower() == "pdf"
+                deep_source_is_ocr_pdf = deep_source_is_pdf and "Extraction method: ocr." in deep_source_reason
+                if deep_source:
+                    source_type = (deep_source.get("source_type") or "unknown").upper()
+                    source_status = deep_source.get("parse_status", "unknown")
+                    source_url = deep_source.get("source_url", "")
+                    source_reason = deep_source.get("parse_reason", "")
+                    source_label = f"**{source_type}** ({source_status})"
+                    if deep_source_year:
+                        source_label = f"{source_label} for tax year {deep_source_year}"
+                    lines.append(f"*Deep detail source:* {source_label}")
+                    if source_url:
+                        lines.append(f"*Source document:* [Open filing document]({source_url})")
+                    if source_reason:
+                        lines.append(f"*Source note:* {source_reason}")
+                    lines.append("")
+                if enrich and not deep_source_is_ocr_pdf:
+                    enrich_source = (deep_source or {}).get("source_type", "filing document").upper()
+                    enrich_year_note = f" (tax year {deep_source_year})" if deep_source_year else ""
+                    lines.append(f"> **Inferred analysis from the selected {enrich_source} filing detail{enrich_year_note}:**")
+                    lines.append(f"> **Profile:** {enrich.get('one_sentence_org_profile')}")
                     lines.append("> ")
                     lines.append(f"> **PA Relevance Score:** {enrich.get('pa_relevance_score')}")
                     lines.append(f"> **Issues:** {enrich.get('issue_area_tags')}")
+                    lines.append(f"> **Influence Signals:** {enrich.get('top_influence_signals')}")
+                    lines.append(f"> **Risk Flags:** {enrich.get('top_risk_flags')}")
                     lines.append(f"> **Tactics:** {enrich.get('likely_advocacy_tactics_named')}")
+                    lines.append(f"> **Likely Targets:** {enrich.get('likely_target_institutions_named')}")
                     lines.append("")
 
                 # Deep Profile (org overview from XML)
                 profile = next((p for p in irs990_deep_profile if p.get("ein") == org_ein), None)
                 if profile:
+                    if profile.get("source_type") == "pdf":
+                        pdf_year_note = f" (tax year {deep_source_year})" if deep_source_year else ""
+                        lines.append(
+                            f"*Best-effort factual detail extracted from the selected filing PDF{pdf_year_note} because XML was unavailable or unusable for this filing.*"
+                        )
+                        if deep_source_is_ocr_pdf:
+                            lines.append("*Interpretive inferred-analysis output is hidden for OCR-backed PDF fallback because OCR text can be noisy; use the factual fields and excerpts below instead.*")
+                    else:
+                        xml_year_note = f" (tax year {deep_source_year})" if deep_source_year else ""
+                        lines.append(f"*Verified structured fields parsed directly from the selected IRS XML filing{xml_year_note}.*")
+                    lines.append("")
                     lines.append("#### Organization Profile")
                     lines.append("")
                     lines.append("| | |")
@@ -442,10 +490,15 @@ class ReportGenerator:
                         flags.append("Grants to Organizations")
                     if flags:
                         lines.append(f"| **Activity flags** | {', '.join(flags)} |")
+                    if profile.get("schedule_mentions"):
+                        lines.append(f"| **Schedules referenced** | {profile.get('schedule_mentions')} |")
                     lines.append("")
 
                     # Financial breakdown
-                    lines.append("#### Financial Breakdown (Latest XML Filing)")
+                    financial_source = f"Selected {profile.get('source_type', 'xml').upper()} Filing"
+                    if deep_source_year:
+                        financial_source = f"{financial_source}, Tax Year {deep_source_year}"
+                    lines.append(f"#### Financial Breakdown ({financial_source})")
                     lines.append("")
                     lines.append("| Category | Amount |")
                     lines.append("|:---|---:|")
@@ -462,6 +515,14 @@ class ReportGenerator:
                     if profile.get("foreign_spending") not in ("0", "", None):
                         lines.append(f"| Foreign Spending | {fmt_dollar(profile.get('foreign_spending'))} |")
                     lines.append("")
+                    if profile.get("mission_excerpt") or profile.get("program_excerpt"):
+                        lines.append("#### Narrative Excerpts From Filing")
+                        lines.append("")
+                        if profile.get("mission_excerpt"):
+                            lines.append(f"- **Mission / purpose:** {profile.get('mission_excerpt')}")
+                        if profile.get("program_excerpt"):
+                            lines.append(f"- **Program services:** {profile.get('program_excerpt')}")
+                        lines.append("")
 
                 # Filings table
                 lines.append("#### Filing History")
@@ -523,6 +584,14 @@ class ReportGenerator:
                         for o in paid_officers:
                             lines.append(f"| {o.get('name', '')} | {o.get('title', '')} | {fmt_dollar(o.get('compensation'))} |")
                         lines.append("")
+                    else:
+                        lines.append("#### Key Officers (Part VII)")
+                        lines.append("")
+                        lines.append("| Name | Title | Compensation |")
+                        lines.append("|:---|:---|---:|")
+                        for o in top_officers[:10]:
+                            lines.append(f"| {o.get('name', '')} | {o.get('title', '')} | {fmt_dollar(o.get('compensation'))} |")
+                        lines.append("")
 
                 # Grants (Schedule I)
                 org_grants = [g for g in irs990_deep_grants if g.get("ein") == org_ein]
@@ -540,9 +609,18 @@ class ReportGenerator:
                         lines.append(f"| {g.get('recipient', '')} | {fmt_dollar(g.get('amount'))} | {purpose} | {loc} |")
                     lines.append("")
 
+                org_related = [r for r in irs990_deep_related if r.get("ein") == org_ein]
+                if org_related:
+                    lines.append("#### Related Organizations (Schedule R)")
+                    lines.append("")
+                    lines.append("| Related Organization | Type |")
+                    lines.append("|:---|:---|")
+                    for rel in org_related[:15]:
+                        lines.append(f"| {rel.get('related_name', '')} | {rel.get('related_type', '') or '—'} |")
+                    lines.append("")
+
+
                 lines.append("")
-        else:
-            lines.append("No IRS 990 records matched the specified entities.")
         lines.append("")
 
         # =====================================================================

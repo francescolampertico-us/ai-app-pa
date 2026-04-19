@@ -2,8 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpinnerGapIcon as SpinnerGap, ArrowRightIcon as ArrowRight, DownloadSimpleIcon as DownloadSimple, CaretDownIcon as CaretDown } from '@phosphor-icons/react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import ModelSelector from '../components/ModelSelector';
+import StyledMarkdown from '../components/StyledMarkdown';
+import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 
 const API = 'http://localhost:8000';
 const CUR_YEAR = new Date().getFullYear();
@@ -31,33 +32,52 @@ function downloadText(text, filename) {
 }
 
 function extractMatchedNames(csvData) {
-  const clients = new Set();
-  const registrants = new Set();
+  const clientCounts = {};
+  const registrantCounts = {};
+
+  const incClient = (name) => { if (name) clientCounts[name] = (clientCounts[name] || 0) + 1; };
+  const incRegistrant = (name) => { if (name) registrantCounts[name] = (registrantCounts[name] || 0) + 1; };
 
   (csvData.lda_filings || []).forEach((row) => {
-    if (row.registrant_name) registrants.add(row.registrant_name);
-    if (row.client_name) clients.add(row.client_name);
+    incRegistrant(row.registrant_name);
+    incClient(row.client_name);
   });
   (csvData.lda_issues || []).forEach((row) => {
-    if (row.registrant) registrants.add(row.registrant);
-    if (row.client) clients.add(row.client);
+    incRegistrant(row.registrant);
+    incClient(row.client);
   });
   (csvData.lda_lobbyists || []).forEach((row) => {
-    if (row.registrant) registrants.add(row.registrant);
-    if (row.client) clients.add(row.client);
+    incRegistrant(row.registrant);
+    incClient(row.client);
   });
   (csvData.fara_foreign_principals || []).forEach((row) => {
-    if (row.registrant_name) registrants.add(row.registrant_name);
-    if (row.foreign_principal_name) clients.add(row.foreign_principal_name);
+    incRegistrant(row.registrant_name);
+    incClient(row.foreign_principal_name);
   });
   (csvData.irs990_organizations || []).forEach((row) => {
-    if (row.organization_name) registrants.add(row.organization_name);
+    incRegistrant(row.organization_name);
   });
 
+  const sortByFreq = (counts) => Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+
   return {
-    clients: Array.from(clients).sort(),
-    registrants: Array.from(registrants).sort(),
+    clients: sortByFreq(clientCounts),
+    registrants: sortByFreq(registrantCounts),
+    clientCounts,
+    registrantCounts,
   };
+}
+
+function getAssociatedRegistrants(rawCsvData, clientName) {
+  if (!clientName) return [];
+  const registrants = new Set();
+  const add = (name) => { if (name) registrants.add(name); };
+  (rawCsvData.lda_filings || []).forEach(r => { if (r.client_name === clientName) add(r.registrant_name); });
+  (rawCsvData.lda_issues || []).forEach(r => { if (r.client === clientName) add(r.registrant); });
+  (rawCsvData.lda_lobbyists || []).forEach(r => { if (r.client === clientName) add(r.registrant); });
+  (rawCsvData.fara_foreign_principals || []).forEach(r => { if (r.foreign_principal_name === clientName) add(r.registrant_name); });
+  (rawCsvData.fara_documents || []).forEach(r => { if (r.foreign_principal_name === clientName) add(r.registrant_name); });
+  return [...registrants].filter(Boolean);
 }
 
 function filterCsvData(csvData, allowedNames) {
@@ -77,25 +97,64 @@ function filterCsvData(csvData, allowedNames) {
 }
 
 function filterReport(reportText, allowedNames) {
-  if (!reportText || !allowedNames.size) return reportText;
-  const allowed = new Set(Array.from(allowedNames).map((name) => name.toLowerCase()));
-  const lines = reportText.split('\n');
-  const output = [];
-  let keepCurrentSection = true;
+  if (!reportText) return reportText;
+  if (!allowedNames.size) return '';
+  const allowed = new Set(Array.from(allowedNames).map(n => n.toLowerCase()));
 
-  for (const line of lines) {
-    if (line.startsWith('### ')) {
-      const sectionName = line.slice(4).trim().toLowerCase();
-      keepCurrentSection = allowed.has(sectionName);
-      if (keepCurrentSection) output.push(line);
-      continue;
-    }
+  // These sections have no entity-specific ### subsections — always keep them.
+  const ALWAYS_INCLUDE = new Set(['executive summary', 'appendix: matching confidence']);
+
+  // Parse into blocks: preamble (level 0), ## sections (level 2), ### subsections (level 3)
+  const blocks = [];
+  let current = { level: 0, header: null, content: [] };
+  for (const line of reportText.split('\n')) {
     if (line.startsWith('## ')) {
-      keepCurrentSection = true;
-      output.push(line);
+      blocks.push(current);
+      current = { level: 2, header: line, content: [] };
+    } else if (line.startsWith('### ')) {
+      blocks.push(current);
+      current = { level: 3, header: line, content: [] };
+    } else {
+      current.content.push(line);
+    }
+  }
+  blocks.push(current);
+
+  const output = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const block = blocks[i];
+    if (block.level === 0) {
+      output.push(...block.content);
+      i++; continue;
+    }
+    if (block.level === 2) {
+      const sectionKey = block.header.slice(3).trim().toLowerCase();
+      // Collect all ### children of this ## section
+      const children = [];
+      i++;
+      while (i < blocks.length && blocks[i].level === 3) {
+        children.push(blocks[i]);
+        i++;
+      }
+      if (ALWAYS_INCLUDE.has(sectionKey)) {
+        // Keep header + all children regardless of filter
+        output.push(block.header);
+        output.push(...block.content);
+        children.forEach(c => { output.push(c.header); output.push(...c.content); });
+      } else {
+        // Only keep children whose name is in allowedNames
+        const kept = children.filter(c => allowed.has(c.header.slice(4).trim().toLowerCase()));
+        if (kept.length > 0) {
+          output.push(block.header);
+          // Omit bare ## content (e.g. "No records matched") — only emit ### children
+          kept.forEach(c => { output.push(c.header); output.push(...c.content); });
+        }
+        // If no kept children, entire ## section is suppressed
+      }
       continue;
     }
-    if (keepCurrentSection) output.push(line);
+    i++; // orphan ### — skip
   }
 
   return output.join('\n');
@@ -153,22 +212,75 @@ function YearDropdown({ selected, onChange }) {
   );
 }
 
-/* ── Collapsible data table with per-column filters ─────────────────────── */
+/* ── Per-column multi-select checkbox dropdown ───────────────────────────── */
+function ColumnFilter({ values, selected, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+  const toggle = v => onChange(selected.includes(v) ? selected.filter(x => x !== v) : [...selected, v]);
+  const label = selected.length === 0 ? 'All' : `${selected.length} ✓`;
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setOpen(o => !o)} style={{
+        width: '100%', background: selected.length ? 'rgba(109,40,217,0.2)' : 'rgba(24,24,27,0.9)',
+        border: `1px solid ${selected.length ? 'rgba(109,40,217,0.4)' : 'rgba(255,255,255,0.12)'}`,
+        borderRadius: 5, padding: '3px 8px', fontFamily: 'Inter', fontSize: 11,
+        color: selected.length ? '#c4b5fd' : '#71717A',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 60,
+      }}>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+        <span style={{ flexShrink: 0, marginLeft: 4, fontSize: 8 }}>▾</span>
+      </button>
+      {open && values.length > 0 && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 2px)', left: 0, zIndex: 200,
+          background: '#18181B', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
+          maxHeight: 180, overflowY: 'auto', padding: '4px 0', minWidth: 160,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        }}>
+          {values.map(v => {
+            const checked = selected.includes(v);
+            return (
+              <label key={v} onClick={e => { e.preventDefault(); toggle(v); }}
+                className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-white/5">
+                <input type="checkbox" readOnly checked={checked} className="accent-violet-500 pointer-events-none" style={{ flexShrink: 0 }} />
+                <span style={{ fontFamily: 'Inter', fontSize: 11, color: checked ? '#c4b5fd' : '#D4D4D8', whiteSpace: 'nowrap' }}>{v}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Collapsible data table with per-column multi-select filters ──────────── */
 function DataTable({ title, rows, headers, filename }) {
   const [open, setOpen] = useState(false);
   const [filters, setFilters] = useState({});
 
   if (!rows?.length) return null;
 
-  const setFilter = (h, v) => setFilters(prev => ({ ...prev, [h]: v }));
+  const clearFilters = () => setFilters({});
+
+  const uniqueValues = headers.reduce((acc, h) => {
+    acc[h] = [...new Set(rows.map(r => String(r[h] ?? '')).filter(v => v && v !== '—'))].sort();
+    return acc;
+  }, {});
 
   const filtered = rows.filter(row =>
     headers.every(h => {
-      const f = (filters[h] || '').trim().toLowerCase();
-      if (!f) return true;
-      return String(row[h] ?? '').toLowerCase().includes(f);
+      const sel = filters[h] || [];
+      if (!sel.length) return true;
+      return sel.includes(String(row[h] ?? ''));
     })
   );
+
+  const hasActiveFilter = Object.values(filters).some(f => f.length > 0);
 
   return (
     <div className="rounded-xl border border-white/8 overflow-hidden">
@@ -176,6 +288,11 @@ function DataTable({ title, rows, headers, filename }) {
         <button onClick={() => setOpen(o => !o)} className="flex items-center gap-3 text-left flex-1">
           <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#fff' }}>{title}</span>
           <span style={{ fontFamily: 'Inter', fontSize: 11, color: '#71717A' }}>{rows.length} records</span>
+          {hasActiveFilter && (
+            <span style={{ fontFamily: 'Inter', fontSize: 11, color: '#c4b5fd', background: 'rgba(109,40,217,0.2)', borderRadius: 4, padding: '1px 6px' }}>
+              {filtered.length} shown
+            </span>
+          )}
           <span style={{ color: '#71717A', fontSize: 18, lineHeight: 1 }}>{open ? '−' : '+'}</span>
         </button>
         <button onClick={() => downloadCsv(rows, headers, filename)}
@@ -189,28 +306,22 @@ function DataTable({ title, rows, headers, filename }) {
           <div className="overflow-x-auto rounded-lg border border-white/8 mb-4">
             <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter', fontSize: 12 }}>
               <thead>
-                {/* Filter row */}
-                <tr style={{ background: 'rgba(109,40,217,0.08)' }}>
-                  {headers.map(h => (
-                    <th key={h} style={{ padding: '5px 8px' }}>
-                      <input
-                        value={filters[h] || ''}
-                        onChange={e => setFilter(h, e.target.value)}
-                        placeholder="filter…"
-                        style={{
-                          width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: 5, padding: '3px 6px', fontFamily: 'Inter', fontSize: 11, color: '#D4D4D8',
-                          outline: 'none', minWidth: 60
-                        }} />
-                    </th>
-                  ))}
-                </tr>
-                {/* Header row */}
                 <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
                   {headers.map(h => (
                     <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: '#71717A',
                       fontWeight: 600, letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>
                       {h}
+                    </th>
+                  ))}
+                </tr>
+                <tr style={{ background: 'rgba(109,40,217,0.08)' }}>
+                  {headers.map(h => (
+                    <th key={h} style={{ padding: '5px 8px' }}>
+                      <ColumnFilter
+                        values={uniqueValues[h]}
+                        selected={filters[h] || []}
+                        onChange={sel => setFilters(prev => ({ ...prev, [h]: sel }))}
+                      />
                     </th>
                   ))}
                 </tr>
@@ -221,7 +332,9 @@ function DataTable({ title, rows, headers, filename }) {
                     {headers.map(h => (
                       <td key={h} style={{ padding: '7px 12px', color: '#D4D4D8', maxWidth: 280,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {row[h] || '—'}
+                        {String(row[h] || '').startsWith('http')
+                          ? <a href={row[h]} target="_blank" rel="noreferrer" className="text-violet-400 underline underline-offset-2 hover:text-violet-300 transition-colors">View</a>
+                          : (row[h] || '—')}
                       </td>
                     ))}
                   </tr>
@@ -237,10 +350,11 @@ function DataTable({ title, rows, headers, filename }) {
             </table>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            {Object.values(filters).some(f => f.trim()) && (
-              <span style={{ fontFamily: 'Inter', fontSize: 11, color: '#71717A' }}>
-                Showing {filtered.length} of {rows.length} rows
-              </span>
+            {hasActiveFilter && (
+              <button onClick={clearFilters}
+                style={{ fontFamily: 'Inter', fontSize: 11, color: '#71717A', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                Clear filters
+              </button>
             )}
             <button onClick={() => downloadCsv(filtered, headers, filename)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-violet-300 transition-colors"
@@ -254,32 +368,8 @@ function DataTable({ title, rows, headers, filename }) {
   );
 }
 
-/* ── Markdown styles for the report ─────────────────────────────────────── */
-const mdComponents = {
-  h1: ({children}) => <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: '#fff', marginTop: 32, marginBottom: 12 }}>{children}</h1>,
-  h2: ({children}) => <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: '#fff', marginTop: 28, marginBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 6 }}>{children}</h2>,
-  h3: ({children}) => <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#e4e4e7', marginTop: 20, marginBottom: 8 }}>{children}</h3>,
-  p: ({children}) => <p style={{ fontFamily: 'Inter', fontSize: 13, color: '#D4D4D8', lineHeight: 1.8, marginBottom: 12, fontWeight: 300 }}>{children}</p>,
-  strong: ({children}) => <strong style={{ fontWeight: 600, color: '#e4e4e7' }}>{children}</strong>,
-  em: ({children}) => <em style={{ color: '#A78BFA' }}>{children}</em>,
-  a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#A78BFA', textDecoration: 'underline' }}>{children}</a>,
-  ul: ({children}) => <ul style={{ paddingLeft: 20, marginBottom: 12 }}>{children}</ul>,
-  ol: ({children}) => <ol style={{ paddingLeft: 20, marginBottom: 12 }}>{children}</ol>,
-  li: ({children}) => <li style={{ fontFamily: 'Inter', fontSize: 13, color: '#D4D4D8', lineHeight: 1.8, fontWeight: 300, marginBottom: 4 }}>{children}</li>,
-  blockquote: ({children}) => <blockquote style={{ borderLeft: '3px solid rgba(167,139,250,0.4)', paddingLeft: 16, marginLeft: 0, color: '#A1A1AA' }}>{children}</blockquote>,
-  code: ({inline, children}) => inline
-    ? <code style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 4, padding: '1px 5px', fontFamily: 'monospace', fontSize: 12, color: '#c4b5fd' }}>{children}</code>
-    : <pre style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '12px 16px', overflowX: 'auto', marginBottom: 12 }}><code style={{ fontFamily: 'monospace', fontSize: 12, color: '#D4D4D8' }}>{children}</code></pre>,
-  table: ({children}) => (
-    <div style={{ overflowX: 'auto', marginBottom: 16 }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter', fontSize: 12 }}>{children}</table>
-    </div>
-  ),
-  thead: ({children}) => <thead style={{ background: 'rgba(255,255,255,0.04)' }}>{children}</thead>,
-  th: ({children}) => <th style={{ padding: '8px 12px', textAlign: 'left', color: '#71717A', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>{children}</th>,
-  td: ({children}) => <td style={{ padding: '7px 12px', color: '#D4D4D8', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>{children}</td>,
-  hr: () => <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', margin: '24px 0' }} />,
-};
+/* Irs990AnalysisCandidates removed — 990s now shown as plain DataTable like FARA */
+
 
 /* ── Report section ─────────────────────────────────────────────────────── */
 function Report({ text }) {
@@ -287,16 +377,20 @@ function Report({ text }) {
   return (
     <div className="glass-card p-8">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="display" style={{ fontSize: 22, color: '#fff' }}>Summary Report</h2>
+        <div className="flex items-center gap-3">
+          <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
+            Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
+          </div>
+          <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+          <h2 className="display" style={{ fontSize: 22, color: '#fff' }}>Summary Report</h2>
+        </div>
         <button onClick={() => downloadText(text, 'disclosure_report.md')}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-violet-300 transition-colors"
           style={{ background: 'rgba(109,40,217,0.15)', border: '1px solid rgba(109,40,217,0.25)', fontFamily: 'Inter', fontSize: 12 }}>
           <DownloadSimple size={14} /> Download .md
         </button>
       </div>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
-        {text}
-      </ReactMarkdown>
+      <StyledMarkdown>{text}</StyledMarkdown>
     </div>
   );
 }
@@ -309,10 +403,10 @@ export default function InfluenceTracker() {
   const [selectedYears, setSelectedYears] = useState([String(CUR_YEAR - 1)]);
   const [quarters, setQuarters]           = useState(['Q1','Q2','Q3','Q4']);
   const [sources, setSources]             = useState(['lda','irs990']);
-  const [mode, setMode]                   = useState('basic');
   const [maxResults, setMaxResults]       = useState('500');
   const [fuzzyThreshold, setFuzzyThreshold] = useState('85');
   const [dryRun, setDryRun]               = useState(false);
+  const [llmModel, setLlmModel]           = useState('ChangeAgent');
   const [selectedClients, setSelectedClients] = useState(null);
   const [selectedRegistrants, setSelectedRegistrants] = useState(null);
   const [job, setJob]     = useState(null);
@@ -329,6 +423,7 @@ export default function InfluenceTracker() {
         setJob(data);
         if (['completed','failed'].includes(data.status)) {
           setLoading(false);
+          setAnalysisPendingKey(null);
           clearInterval(intervalRef.current);
         }
       } catch (error) {
@@ -348,6 +443,8 @@ export default function InfluenceTracker() {
     if (!allYears && !selectedYears.length) { alert('Select at least one year.'); return; }
     setLoading(true);
     setJob(null);
+    setSelectedClients(null);
+    setSelectedRegistrants(null);
     const payload = new FormData();
     payload.append('entities', entities);
     payload.append('search_field', searchField);
@@ -355,10 +452,11 @@ export default function InfluenceTracker() {
     if (!allYears) payload.append('filing_years', selectedYears.join(','));
     payload.append('quarters', quarters.join(','));
     payload.append('sources', sources.join(','));
-    payload.append('mode', mode);
+    payload.append('mode', 'basic');
     payload.append('max_results', maxResults);
     payload.append('fuzzy_threshold', fuzzyThreshold);
     payload.append('dry_run', dryRun ? 'true' : 'false');
+    payload.append('llm_model', llmModel);
     try {
       const res = await fetch(`${API}/api/tools/execute/influence_disclosure_tracker`, { method: 'POST', body: payload });
       const data = await res.json();
@@ -369,11 +467,21 @@ export default function InfluenceTracker() {
   const result = job?.result_data;
   const rawCsvData = result?.csv_data || {};
   const matchedNames = extractMatchedNames(rawCsvData);
-  const effectiveSelectedClients = selectedClients ?? matchedNames.clients;
-  const effectiveSelectedRegistrants = selectedRegistrants ?? matchedNames.registrants;
+  const topClient = matchedNames.clients[0] ?? null;
+  const topRegistrant = matchedNames.registrants[0] ?? null;
+  // When no clients exist (990-only results), pre-select only the top registrant and no clients.
+  // When clients exist (LDA/FARA), pre-select top client + their associated registrants.
+  const defaultRegistrants = topClient
+    ? getAssociatedRegistrants(rawCsvData, topClient)
+    : (topRegistrant ? [topRegistrant] : []);
+  const effectiveSelectedClients = selectedClients ?? (topClient ? [topClient] : []);
+  const effectiveSelectedRegistrants = selectedRegistrants ?? defaultRegistrants;
   const allowedNames = new Set([...effectiveSelectedClients, ...effectiveSelectedRegistrants]);
   const csvData = filterCsvData(rawCsvData, allowedNames);
-  const reportText = filterReport(result?.report || '', allowedNames);
+  const hasAnyMatchedNames = matchedNames.clients.length > 0 || matchedNames.registrants.length > 0;
+  const reportText = hasAnyMatchedNames
+    ? filterReport(result?.report || '', allowedNames)
+    : (result?.report || '');
   const pipelineStdout = result?.stdout || '';
   const pipelineStderr = result?.stderr || '';
 
@@ -382,6 +490,7 @@ export default function InfluenceTracker() {
     Year: r.filing_year || '—', Quarter: r.filing_period || '—',
     Type: r.filing_type || '—',
     Amount: (() => { try { return r.amount ? `$${parseFloat(r.amount).toLocaleString('en-US', {maximumFractionDigits:0})}` : '—'; } catch { return r.amount || '—'; } })(),
+    Link: r.filing_url || '—',
   }));
   const ldaIssues = (csvData.lda_issues || []).map(r => ({
     Firm: r.registrant || '—', Client: r.client || '—',
@@ -411,26 +520,19 @@ export default function InfluenceTracker() {
     Registrant: r.registrant_name || '—', 'Foreign Principal': r.foreign_principal_name || '—',
     Link: r.document_url || '—',
   }));
-  const irs990Filings = (csvData.irs990_filings || []).map(r => {
-    const fmt = v => { try { return v ? `$${parseFloat(v).toLocaleString('en-US',{maximumFractionDigits:0})}` : '—'; } catch { return v||'—'; } };
-    return {
-      Organization: r.organization_name||'—', Year: r.tax_year||'—', Type: r.form_type||'—',
-      Revenue: fmt(r.total_revenue), Expenses: fmt(r.total_functional_expenses),
-      Assets: fmt(r.net_assets), PDF: r.pdf_url||'—', XML: r.xml_url||'—',
-    };
-  });
-  const irs990Enrichments = (csvData.irs990_deep_enrichments || []).map(r => ({
-    EIN: r.ein||'—', 'PA Relevance': r.pa_relevance_score||'—',
-    Profile: r.one_sentence_org_profile||'—', Issues: r.issue_area_tags||'—',
-    'Influence Signals': r.top_influence_signals||'—',
-    Tactics: r.likely_advocacy_tactics_named||'—',
-    Targets: r.likely_target_institutions_named||'—',
+  const fmtMoney = v => { try { return v ? `$${parseFloat(v).toLocaleString('en-US',{maximumFractionDigits:0})}` : '—'; } catch { return v||'—'; } };
+  const irs990Filings = (csvData.irs990_filings || []).map(r => ({
+    Organization: r.organization_name||'—', Year: r.tax_year||'—', Type: r.form_type||'—',
+    Revenue: fmtMoney(r.total_revenue), Expenses: fmtMoney(r.total_functional_expenses),
+    Assets: fmtMoney(r.net_assets), PDF: r.pdf_url||'—',
   }));
 
-  const hasResults = job?.status === 'completed' && (reportText || ldaFilings.length || faraFPs.length || irs990Filings.length);
+  const hasCompletedRun = job?.status === 'completed';
+  const hasAnyVisibleData = Boolean(reportText || ldaFilings.length || faraFPs.length || irs990Filings.length);
+  const showReport = Boolean(reportText);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+    <motion.div data-testid="tool-page-influence-tracker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       className="p-10 max-w-5xl mx-auto relative z-10">
 
       {/* Header */}
@@ -440,11 +542,19 @@ export default function InfluenceTracker() {
         <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect &nbsp;·&nbsp; TOOL
         </div>
-        <h1 className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Influence Disclosure Tracker</h1>
+        <h1 data-testid="page-title-influence-tracker" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Influence Disclosure Tracker</h1>
         <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '60ch', fontWeight: 300 }}>
           Retrieves and normalizes LDA lobbying, FARA foreign agent, and IRS 990 disclosure records — producing filterable tables and a markdown summary report.
         </p>
+        <div className="mt-3">
+          <ModelSelector value={llmModel} onChange={setLlmModel} />
+        </div>
       </header>
+
+      <ResearchPrototypeNote
+        category="Policy Monitoring & Legislative Tracking"
+        message="This tool supports disclosure research by collecting structured records and match confidence signals. It strengthens the intelligence-gathering layer of the prototype, but filing matches, document coverage, and narrative interpretation should still be reviewed before strategic use."
+      />
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="glass-card p-8 flex flex-col gap-6 relative overflow-hidden mb-8">
@@ -454,7 +564,7 @@ export default function InfluenceTracker() {
         {/* Entities */}
         <div>
           <label className="field-label">Entities to search</label>
-          <input type="text" value={entities} onChange={e => setEntities(e.target.value)}
+          <input data-testid="input-influence-entities" type="text" value={entities} onChange={e => setEntities(e.target.value)}
             placeholder="e.g. Microsoft, OpenAI" required className="field" />
         </div>
 
@@ -464,7 +574,7 @@ export default function InfluenceTracker() {
           <div className="flex flex-wrap gap-5 pt-1">
             {[['client','Client'],['registrant','Lobbying firm (registrant)'],['both','Both']].map(([v,l]) => (
               <label key={v} className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="search_field" value={v} checked={searchField===v}
+                <input data-testid={`toggle-influence-search-field-${v}`} type="radio" name="search_field" value={v} checked={searchField===v}
                   onChange={() => setSearchField(v)} className="accent-violet-500" />
                 <span style={{ fontFamily: 'Inter', fontSize: 13, color: '#D4D4D8' }}>{l}</span>
               </label>
@@ -477,7 +587,7 @@ export default function InfluenceTracker() {
           <div>
             <label className="field-label">Filing Years</label>
             <label className="flex items-center gap-2 mb-3 cursor-pointer">
-              <input type="checkbox" checked={allYears} onChange={e => setAllYears(e.target.checked)} className="accent-violet-500" />
+              <input data-testid="toggle-influence-all-years" type="checkbox" checked={allYears} onChange={e => setAllYears(e.target.checked)} className="accent-violet-500" />
               <span style={{ fontFamily: 'Inter', fontSize: 13, color: allYears ? '#A78BFA' : '#D4D4D8' }}>
                 All available years
               </span>
@@ -492,7 +602,7 @@ export default function InfluenceTracker() {
             <label className="field-label">Quarters</label>
             <div className="flex gap-2 pt-1">
               {['Q1','Q2','Q3','Q4'].map(q => (
-                <button key={q} type="button" onClick={() => toggleQuarter(q)}
+                <button data-testid={`toggle-influence-quarter-${q.toLowerCase()}`} key={q} type="button" onClick={() => toggleQuarter(q)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                   style={quarters.includes(q)
                     ? { background: 'rgba(109,40,217,0.35)', color: '#c4b5fd', border: '1px solid rgba(109,40,217,0.5)' }
@@ -503,12 +613,12 @@ export default function InfluenceTracker() {
             </div>
           </div>
 
-          {/* Sources + Mode */}
+          {/* Sources */}
           <div>
             <label className="field-label">Data Sources</label>
             <div className="flex flex-wrap gap-2 pt-1 mb-3">
               {[['lda','LDA'],['fara','FARA'],['irs990','IRS 990']].map(([v,l]) => (
-                <button key={v} type="button" onClick={() => toggleSource(v)}
+                <button data-testid={`toggle-influence-source-${v}`} key={v} type="button" onClick={() => toggleSource(v)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                   style={sources.includes(v)
                     ? { background: 'rgba(109,40,217,0.35)', color: '#c4b5fd', border: '1px solid rgba(109,40,217,0.5)' }
@@ -517,20 +627,6 @@ export default function InfluenceTracker() {
                 </button>
               ))}
             </div>
-            {sources.includes('irs990') && (
-              <div>
-                <label className="field-label" style={{ fontSize: 9 }}>IRS 990 Mode</label>
-                <div className="flex gap-3">
-                  {[['basic','Basic'],['deep','Deep (XML + LLM)']].map(([v,l]) => (
-                    <label key={v} className="flex items-center gap-1.5 cursor-pointer">
-                      <input type="radio" name="mode" value={v} checked={mode===v}
-                        onChange={() => setMode(v)} className="accent-violet-500" />
-                      <span style={{ fontFamily: 'Inter', fontSize: 12, color: '#D4D4D8' }}>{l}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -543,25 +639,25 @@ export default function InfluenceTracker() {
           <div className="p-4 border-t border-white/8 grid grid-cols-2 gap-4">
             <div>
               <label className="field-label">Max results per entity</label>
-              <input type="number" value={maxResults} onChange={e => setMaxResults(e.target.value)}
+              <input data-testid="input-influence-max-results" type="number" value={maxResults} onChange={e => setMaxResults(e.target.value)}
                 min="10" max="5000" className="field" style={{ fontFamily: 'Inter', fontSize: 13 }} />
             </div>
             <div>
               <label className="field-label">Fuzzy match threshold (50–100)</label>
-              <input type="range" min="50" max="100" value={fuzzyThreshold}
+              <input data-testid="input-influence-fuzzy-threshold" type="range" min="50" max="100" value={fuzzyThreshold}
                 onChange={e => setFuzzyThreshold(e.target.value)} className="w-full accent-violet-500 mt-2" />
               <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#71717A' }}>{fuzzyThreshold}</span>
             </div>
             <div className="col-span-2">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={dryRun} onChange={e => setDryRun(e.target.checked)} className="accent-violet-500" />
+                <input data-testid="toggle-influence-dry-run" type="checkbox" checked={dryRun} onChange={e => setDryRun(e.target.checked)} className="accent-violet-500" />
                 <span style={{ fontFamily: 'Inter', fontSize: 13, color: '#D4D4D8' }}>Dry run (skip API calls)</span>
               </label>
             </div>
           </div>
         </details>
 
-        <button type="submit" disabled={loading || !entities.trim()} className="btn-primary mt-2">
+        <button data-testid="submit-influence-tracker" type="submit" disabled={loading || !entities.trim()} className="btn-primary mt-2">
           {loading
             ? <><SpinnerGap size={18} className="animate-spin" /> Querying disclosure databases…</>
             : <>Search Disclosures <ArrowRight size={18} /></>}
@@ -570,9 +666,11 @@ export default function InfluenceTracker() {
 
       {/* Progress */}
       {job && ['pending','processing'].includes(job.status) && (
-        <div className="glass-card p-6 mb-8 flex flex-col gap-3">
+        <div data-testid="status-influence-tracker" className="glass-card p-6 mb-8 flex flex-col gap-3">
           <div className="flex justify-between">
-            <span style={{ fontFamily: 'Inter', fontSize: 13, color: '#D4D4D8' }}>{job.message}</span>
+            <span style={{ fontFamily: 'Inter', fontSize: 13, color: '#D4D4D8' }}>
+              {job.message}
+            </span>
             <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#A78BFA' }}>{job.progress}%</span>
           </div>
           <div className="progress-track">
@@ -604,7 +702,7 @@ export default function InfluenceTracker() {
 
       {/* Results */}
       <AnimatePresence>
-        {hasResults && (
+        {hasCompletedRun && (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6">
 
             {(matchedNames.clients.length > 0 || matchedNames.registrants.length > 0) && (
@@ -622,13 +720,27 @@ export default function InfluenceTracker() {
                           <input
                             type="checkbox"
                             checked={effectiveSelectedClients.includes(name)}
-                            onChange={() => setSelectedClients((prev) => {
-                              const base = prev ?? matchedNames.clients;
-                              return base.includes(name) ? base.filter((item) => item !== name) : [...base, name];
-                            })}
+                            onChange={() => {
+                              const isAdding = !effectiveSelectedClients.includes(name);
+                              setSelectedClients((prev) => {
+                                const base = prev ?? effectiveSelectedClients;
+                                return base.includes(name) ? base.filter((item) => item !== name) : [...base, name];
+                              });
+                              const assocRegs = getAssociatedRegistrants(rawCsvData, name);
+                              setSelectedRegistrants((prev) => {
+                                const baseRegs = prev ?? effectiveSelectedRegistrants;
+                                if (isAdding) {
+                                  return [...new Set([...baseRegs, ...assocRegs])];
+                                } else {
+                                  const remainingClients = effectiveSelectedClients.filter(c => c !== name);
+                                  const stillNeeded = new Set(remainingClients.flatMap(c => getAssociatedRegistrants(rawCsvData, c)));
+                                  return baseRegs.filter(r => stillNeeded.has(r) || !assocRegs.includes(r));
+                                }
+                              });
+                            }}
                             className="accent-violet-500"
                           />
-                          <span>{name}</span>
+                          <span>{name} <span className="text-slate-500 text-xs">({matchedNames.clientCounts[name]})</span></span>
                         </label>
                       ))}
                     </div>
@@ -642,12 +754,12 @@ export default function InfluenceTracker() {
                             type="checkbox"
                             checked={effectiveSelectedRegistrants.includes(name)}
                             onChange={() => setSelectedRegistrants((prev) => {
-                              const base = prev ?? matchedNames.registrants;
+                              const base = prev ?? effectiveSelectedRegistrants;
                               return base.includes(name) ? base.filter((item) => item !== name) : [...base, name];
                             })}
                             className="accent-violet-500"
                           />
-                          <span>{name}</span>
+                          <span>{name} <span className="text-slate-500 text-xs">({matchedNames.registrantCounts[name]})</span></span>
                         </label>
                       ))}
                     </div>
@@ -656,8 +768,7 @@ export default function InfluenceTracker() {
               </div>
             )}
 
-            {/* Report */}
-            <Report text={reportText} />
+            {showReport && <Report text={reportText} />}
 
             {/* LDA tables */}
             {(ldaFilings.length > 0 || ldaIssues.length > 0 || ldaLobbyists.length > 0) && (
@@ -665,7 +776,7 @@ export default function InfluenceTracker() {
                 <h2 className="display mb-4" style={{ fontSize: 22, color: '#fff' }}>LDA Data Tables</h2>
                 <div className="flex flex-col gap-3">
                   <DataTable title="Filings & Spending" rows={ldaFilings}
-                    headers={['Firm','Client','Year','Quarter','Type','Amount']} filename="lda_filings.csv" />
+                    headers={['Firm','Client','Year','Quarter','Type','Amount','Link']} filename="lda_filings.csv" />
                   <DataTable title="Issues & Government Entities" rows={ldaIssues}
                     headers={['Firm','Client','Issue Area','Topics','Gov. Entities']} filename="lda_issues.csv" />
                   <DataTable title="Lobbyists" rows={ldaLobbyists}
@@ -688,19 +799,17 @@ export default function InfluenceTracker() {
             )}
 
             {/* IRS 990 tables */}
-            {(irs990Filings.length > 0 || irs990Enrichments.length > 0) && (
+            {irs990Filings.length > 0 && (
               <div>
                 <h2 className="display mb-4" style={{ fontSize: 22, color: '#fff' }}>IRS 990 Data Tables</h2>
                 <div className="flex flex-col gap-3">
                   <DataTable title="IRS 990 Filings" rows={irs990Filings}
-                    headers={['Organization','Year','Type','Revenue','Expenses','Assets','PDF','XML']} filename="irs990_filings.csv" />
-                  <DataTable title="IRS 990 PA Enrichments" rows={irs990Enrichments}
-                    headers={['EIN','PA Relevance','Profile','Issues','Influence Signals','Tactics','Targets']} filename="irs990_enrichments.csv" />
+                    headers={['Organization','Year','Type','Revenue','Expenses','Assets','PDF']} filename="irs990_filings.csv" />
                 </div>
               </div>
             )}
 
-            {!reportText && !ldaFilings.length && !faraFPs.length && !irs990Filings.length && (
+            {!hasAnyVisibleData && (
               <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/8 p-5">
                 <p style={{ fontFamily: 'Inter', fontSize: 13, color: '#fde68a' }}>
                   No results found. This may happen if no disclosures match the entities and years selected.
