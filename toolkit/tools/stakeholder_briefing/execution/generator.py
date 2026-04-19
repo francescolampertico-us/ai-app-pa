@@ -25,6 +25,7 @@ except ImportError:
 
 
 MODEL = "ChangeAgent"
+CHANGE_AGENT_BASE_URL = "https://runpod-proxy-956966668285.us-central1.run.app/v1/"
 
 def _active_model(default: str) -> str:
     import os
@@ -558,7 +559,7 @@ Return ONLY a JSON object with this exact structure:
   ],
   "talking_points": [
     {
-      "point": "Specific, actionable thing to say or raise (not generic)",
+      "point": "Forward-looking statement or proposal centered on YOUR meeting objective. Use past events only as brief context to establish credibility or common ground — the point itself must advance the objective, not recap history.",
       "rationale": "Strategic reason — what reaction you expect and why it advances your objective"
     }
   ],
@@ -748,7 +749,8 @@ def synthesize_briefing(client: OpenAI, stakeholder_name: str,
                         meeting_purpose: str, organization: str = "",
                         your_organization: str = "", context: str = "",
                         news: list[dict] = None,
-                        disclosures: dict = None) -> dict:
+                        disclosures: dict = None,
+                        _api_key: str = None, _base_url: str = None) -> dict:
     """Use gpt-4.1 to synthesize all gathered data into a structured briefing."""
 
     parts = [
@@ -781,18 +783,33 @@ def synthesize_briefing(client: OpenAI, stakeholder_name: str,
 
     prompt = "\n".join(parts)
 
-    response = client.chat.completions.create(
-        model=_active_model(MODEL),
-        messages=[
-            {"role": "system", "content": BRIEFING_SYSTEM},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.3,
-        **_max_tokens_kwarg(4000),
-        **_response_format_kwarg(),
-    )
-
-    return _parse_json_content(response.choices[0].message.content)
+    import time
+    last_exc = None
+    for attempt in range(3):
+        # Fresh client on every attempt to avoid reusing a broken connection.
+        active_client = (
+            OpenAI(api_key=_api_key, base_url=_base_url, timeout=120.0, max_retries=0)
+            if _api_key else client
+        )
+        try:
+            response = active_client.chat.completions.create(
+                model=_active_model(MODEL),
+                messages=[
+                    {"role": "system", "content": BRIEFING_SYSTEM},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.3,
+                **_max_tokens_kwarg(4000),
+                **_response_format_kwarg(),
+            )
+            return _parse_json_content(response.choices[0].message.content)
+        except Exception as exc:
+            last_exc = exc
+            if attempt < 2:
+                time.sleep(4)
+            else:
+                raise
+    raise last_exc
 
 
 # ---------------------------------------------------------------------------
@@ -818,33 +835,36 @@ def generate_briefing(stakeholder_name: str, meeting_purpose: str,
             "key_questions": [ ... ],
         }
     """
-    api_key = os.getenv("OPENAI_API_KEY", "")
+    api_key = os.environ.get("CHANGE_AGENT_API_KEY", "").strip()
+    base_url = os.environ.get("OPENAI_BASE_URL") or CHANGE_AGENT_BASE_URL
     if not api_key:
-        raise ValueError("OPENAI_API_KEY is required.")
+        raise ValueError("CHANGE_AGENT_API_KEY is required.")
 
-    # Fail fast if the active LLM endpoint is unavailable instead of leaving the job stuck.
-    client = OpenAI(api_key=api_key, timeout=90.0, max_retries=1)
+    client = OpenAI(api_key=api_key, base_url=base_url, timeout=120.0, max_retries=2)
 
     # Step 1: Gather data
     news = []
     if include_news:
-        print("Step 1a: Fetching news...", file=sys.stderr)
-        news = fetch_news(stakeholder_name, meeting_purpose)
-        print(f"  Found {len(news)} articles", file=sys.stderr)
+        try:
+            news = fetch_news(stakeholder_name, meeting_purpose)
+        except Exception:
+            news = []
 
     disclosures = {"lda_entity": [], "lda_topic": [],
                    "fara": {"registrants": [], "foreign_principals": []},
                    "irs990": {"organizations": [], "filings": []}}
     if include_disclosures:
-        print("Step 1b: Searching disclosures (LDA + FARA + IRS 990)...", file=sys.stderr)
-        disclosures = fetch_disclosures(stakeholder_name, organization, meeting_purpose)
+        try:
+            disclosures = fetch_disclosures(stakeholder_name, organization, meeting_purpose)
+        except Exception:
+            pass
 
     # Step 2: LLM synthesis
-    print("Step 2: Synthesizing briefing...", file=sys.stderr)
     raw_synthesis = synthesize_briefing(
         client, stakeholder_name, meeting_purpose,
         organization, your_organization, context,
         news, disclosures,
+        _api_key=api_key, _base_url=base_url,
     )
     synthesis = _clean_synthesis_output(raw_synthesis, disclosures)
 

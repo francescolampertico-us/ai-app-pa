@@ -10,39 +10,37 @@ Senator Maria Cantwell (D-WA) is the Chair of the Senate Committee on Commerce, 
 
 **Current Role:** Chair, Senate Commerce Committee; Senior Senator from Washington State
 **Key Policy Areas:** Technology regulation, AI governance, data privacy, broadband access, trade
-**Notable Positions:** Led the bipartisan push for comprehensive AI legislation; co-authored the RESTRICT Act; advocate for balanced regulation that protects consumers while supporting innovation.
+**Notable Positions:** Led the bipartisan push for comprehensive AI legislation; advocate for balanced regulation that protects consumers while supporting innovation.
 
 ## Policy Positions
-- **Supports mandatory AI safety testing** — Introduced legislative framework for pre-deployment testing of high-risk AI systems.
-  *Relevance:* Directly aligned with our position on the AI Safety Act.
-- **Opposes self-regulation for AI** — Has publicly stated that industry self-regulation is insufficient for AI governance.
-  *Relevance:* May be receptive to our framework proposal but will push for stronger enforcement mechanisms.
-- **Champions data privacy legislation** — Long history of pushing for comprehensive federal privacy law.
-  *Relevance:* May link AI safety to broader data privacy framework.
-
-## Disclosure Data
-### LDA Lobbying
-- **Akin Gump** for TechForward Alliance — Filed 2026-01-15
-- **Brownstein Hyatt** for AI Policy Coalition — Filed 2025-12-01
+- **Supports mandatory AI safety testing** — Introduced legislative framework for pre-deployment testing of high-risk AI systems. *Directly aligned with the AI Safety Act's core requirement.*
+- **Opposes self-regulation for AI** — Has publicly stated that industry self-regulation is insufficient for AI governance. *May be receptive to our framework but will push for stronger enforcement mechanisms.*
+- **Champions data privacy legislation** — Long history of pushing for comprehensive federal privacy law. *Likely to link AI safety to broader data privacy protections.*
+- **Backs bipartisan technology coalitions** — Has worked across the aisle on tech regulation. *An opening to position TechForward as a constructive, non-partisan partner.*
 
 ## Recent News
-- [Cantwell Introduces AI Safety Framework Bill](https://example.com) — *Politico* (Mar 15, 2026)
-- [Commerce Committee Holds Hearing on AI Risks](https://example.com) — *The Hill* (Mar 10, 2026)
-- [Bipartisan AI Bill Gains Momentum in Senate](https://example.com) — *Reuters* (Mar 5, 2026)
+*(No news articles retrieved — run with `--include-news` to populate this section.)*
+
+## Disclosure Data
+*(Disclosure search skipped for government official — senators do not file LDA lobbying disclosures.)*
 
 ## Suggested Talking Points
-1. **Emphasize alignment between our framework and her legislative priorities**
-   *The Senator's bill and our proposal share the same core principle — mandatory pre-deployment testing. Lead with this common ground.*
-2. **Offer technical expertise for implementation details**
-   *Her staff will need industry input on testing standards. Position TechForward as a constructive partner, not an obstacle.*
-3. **Address the innovation concern proactively**
-   *Acknowledge the tension between safety and innovation, and present our data on how testing actually accelerates responsible deployment.*
+1. **Propose TechForward as a technical partner for testing standards development**
+   *Her staff will need industry input on what pre-deployment testing looks like in practice. Position this meeting as the start of that collaboration, not just a lobbying ask.*
+2. **Frame co-sponsorship as accelerating, not complicating, her existing bill**
+   *If our proposal aligns with her framework, co-sponsorship strengthens her bill's credibility with tech stakeholders — a concrete benefit to offer.*
+3. **Raise the risk-tiering question as a shared design challenge**
+   *A tiered approach based on AI risk level is technically sound and politically defensible. Invite her to weigh in on how to draw those lines.*
+4. **Connect AI safety to her data privacy record**
+   *She has championed consumer protection for 20 years. Position AI safety as the natural extension of that work — not a new issue but a familiar one in a new context.*
 
 ## Key Questions to Ask
-- **What timeline does she envision for committee markup?**
-  *Purpose:* Understand the legislative timeline to align our advocacy efforts.
-- **Is she open to a tiered approach based on risk level?**
-  *Purpose:* Our framework proposes risk-based testing — gauge her receptiveness.
+- **What is her timeline for committee markup?**
+  *Understand the legislative calendar to align TechForward's advocacy efforts and coalition-building.*
+- **Is she open to a risk-tiered approach in the testing framework?**
+  *Our proposal centers on risk-based requirements — gauge receptiveness before committing to a specific ask.*
+- **What stakeholder input is her staff still seeking?**
+  *Identify gaps where TechForward can provide the most useful technical or industry perspective.*
 
 ---
-*CONFIDENTIAL — FOR INTERNAL USE ONLY*
+*REVIEW REQUIRED — Verify all biographical details, committee roles, and policy positions against official sources before use.*

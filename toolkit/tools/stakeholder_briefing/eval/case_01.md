@@ -1,19 +1,21 @@
-# Eval Case 01: Known Senator
+# Eval Case 01 — Legislator (news + disclosures skipped)
 
 ## Input
-```
---name "Sen. Chuck Schumer"
---purpose "Discuss AI governance framework"
---organization "Senate Democratic Leadership"
---your-org "AI Policy Institute"
---no-disclosures
---no-news
+```bash
+python3 tools/stakeholder_briefing/execution/run.py \
+  --name "Sen. Maria Cantwell" \
+  --purpose "Discuss support for the AI Safety Act and potential co-sponsorship" \
+  --organization "Senate Commerce Committee" \
+  --your-org "TechForward Alliance" \
+  --no-disclosures \
+  --no-news \
+  --out "./output"
 ```
 
-## Expected
-- Profile section includes role as Senate Majority Leader
-- Policy positions mention his AI Insight Forums or AI legislation efforts
-- Talking points are framed from AI Policy Institute's perspective
-- Key questions section is present with 2-3 questions
-- All sections present in output
-- No fabricated quotes or specific statistics without [VERIFY]
+## Acceptance Criteria
+- Profile section includes her role on the Senate Commerce Committee.
+- Policy positions mention AI governance or technology regulation with specific evidence.
+- Talking points are framed from TechForward Alliance's perspective and forward-looking — centered on the co-sponsorship objective, not just recapping past statements.
+- Key questions section present with at least 2 questions.
+- No disclosure or news sections appear (both skipped).
+- No fabricated quotes or specific statistics presented as fact.

@@ -1,32 +1,33 @@
 id: stakeholder_briefing
 name: Stakeholder Briefing
-version: 0.1.0
+version: 0.2.0
 risk_level: yellow
 digiacomo_process: "#2 Stakeholder Analysis, #3 Government Relations"
 
 description: >
   Generates a pre-meeting one-pager for a stakeholder (legislator, lobbyist,
-  NGO leader, executive). Compiles a bio/role summary, policy positions,
+  NGO leader, executive). Compiles a profile summary, policy positions,
   relevant disclosure data (LDA/FARA/IRS 990), recent news mentions, and
-  suggested talking points — all synthesized into a concise briefing document.
+  suggested talking points — synthesized by an LLM into a concise briefing document.
 
 inputs:
   required:
     - stakeholder_name   # Full name of the person or organization
     - meeting_purpose    # Why you're meeting (e.g., "discuss AI Safety Act support")
   optional:
-    - organization       # Stakeholder's organization if not obvious from name
-    - your_organization  # Your organization (for framing talking points)
-    - context            # Additional context (bill text, prior correspondence, etc.)
-    - context_file       # Path to a context document (PDF, DOCX, TXT)
+    - organization         # Stakeholder's organization if not obvious from name
+    - your_organization    # Your organization (for framing talking points)
+    - context              # Additional context (bill text, prior correspondence, etc.)
+    - context_file         # Path to a context document (PDF, DOCX, TXT)
     - include_disclosures  # Whether to search LDA/FARA/IRS 990 (default: true)
     - include_news         # Whether to fetch recent news (default: true)
 
 outputs:
-  format: markdown + docx
+  format: markdown + docx + json
   artifacts:
     - stakeholder_briefing.md    # Full briefing report
     - stakeholder_briefing.docx  # DOCX one-pager
+    - stakeholder_briefing.json  # Structured result data
 
 execution:
   entry: execution/run.py
@@ -35,12 +36,15 @@ execution:
     - python-docx
     - gnews
   environment:
-    - "OPENAI_API_KEY: Required for profile synthesis and talking points"
-  models:
-    - "gpt-4o: Profile synthesis and talking point generation"
+    - "LLM API key required for profile synthesis and talking point generation"
+  notes:
+    - "LDA uses lda.senate.gov/api/v1/ — no key required"
+    - "FARA uses bulk CSV downloads from efile.fara.gov — no key required"
+    - "IRS 990 uses ProPublica Nonprofit Explorer API — no key required"
+    - "Government officials skip entity disclosure search (they do not file LDA)"
 
 risk_notes:
-  - "Stakeholder bio and policy positions are LLM-generated — verify against official sources."
-  - "Disclosure data comes from public records but may be incomplete or outdated."
+  - "Profile and policy positions are LLM-generated — verify against official sources before use."
+  - "Disclosure data comes from public records but may lag by 1–3 years."
   - "News results depend on Google News availability and may miss recent developments."
-  - "Talking points reflect the LLM's synthesis — review for accuracy and strategic fit."
+  - "Talking points reflect LLM synthesis — review for accuracy and strategic fit."
