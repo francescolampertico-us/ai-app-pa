@@ -1,5 +1,5 @@
 """
-Typed internal contracts for the Background Memo Generator.
+Typed internal contracts for the Background Memo tool.
 
 BackgroundMemoResult  — the validated output of a single generate_memo() call.
 BackgroundMemoJobResult — the full result_data shape stored in the job record.

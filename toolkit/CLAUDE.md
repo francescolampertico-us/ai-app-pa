@@ -47,7 +47,7 @@ Pages:
 **Entry:** `python3 tools/<tool_id>/execution/run.py --help`
 
 ### Tools built (10)
-Media Clips, Media Clip Cleaner, Influence Disclosure Tracker, Hearing Memo, Legislative Tracker, Messaging Matrix, Stakeholder Briefing, Media List Builder, Stakeholder Map Builder, Background Memo Generator
+Media Clips, Media Clip Cleaner, Influence Disclosure Tracker, Hearing Memo, Legislative Tracker, Messaging Matrix, Stakeholder Briefing, Media List Builder, Stakeholder Map Builder, Background Memo
 
 ### Adding a new tool
 1. Copy `templates/tool/` to `tools/<new_tool_id>/`

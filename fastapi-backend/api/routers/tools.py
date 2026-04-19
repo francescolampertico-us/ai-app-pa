@@ -16,7 +16,7 @@ from starlette.datastructures import UploadFile
 
 from .jobs import create_job, set_job_artifacts, update_job
 
-BMG_SCHEMA_PATH = Path(__file__).resolve().parents[3] / "toolkit" / "tools" / "background_memo_generator" / "execution" / "schema.py"
+BMG_SCHEMA_PATH = Path(__file__).resolve().parents[3] / "toolkit" / "tools" / "background_memo" / "execution" / "schema.py"
 
 router = APIRouter()
 
@@ -1037,7 +1037,7 @@ def _handle_background_memo(job_id: str, values: dict[str, list[str]], uploads: 
     disclosure_csv_data: dict[str, Any] = {}
     disclosure_artifacts: list[Path] = []
 
-    research_path = TOOLS_ROOT / "background_memo_generator" / "execution" / "research.py"
+    research_path = TOOLS_ROOT / "background_memo" / "execution" / "research.py"
     if research_path.exists():
         try:
             update_job(job_id, status="processing", progress=20, message="Running background web research...")
@@ -1067,8 +1067,8 @@ def _handle_background_memo(job_id: str, values: dict[str, list[str]], uploads: 
             disclosure_csv_data = {}
             disclosure_artifacts = []
 
-    generator = _load_module("bmg_generator_fastapi", TOOLS_ROOT / "background_memo_generator" / "execution" / "generator.py")
-    exporter = _load_module("bmg_export_fastapi", TOOLS_ROOT / "background_memo_generator" / "execution" / "export.py")
+    generator = _load_module("bmg_generator_fastapi", TOOLS_ROOT / "background_memo" / "execution" / "generator.py")
+    exporter = _load_module("bmg_export_fastapi", TOOLS_ROOT / "background_memo" / "execution" / "export.py")
 
     update_job(job_id, status="processing", progress=60, message="Generating background memo...")
     combined_research = "\n\n".join(part for part in [file_context, research_md] if part)

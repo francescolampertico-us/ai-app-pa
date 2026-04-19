@@ -536,7 +536,7 @@ def _tool_schemas(catalog: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "type": "function",
                 "function": {
                     "name": "run_background_memo_generator",
-                    "description": "Run the Background Memo Generator tool.",
+                    "description": "Run the Background Memo tool.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -992,7 +992,7 @@ def _run_background_memo(arguments: dict[str, Any], uploaded_files: list[dict[st
     outdir = _output_dir("background_memo_generator", subject)
     docx_path = outdir / "background_memo.docx"
     md_path = outdir / "background_memo.md"
-    script = TOOLKIT_ROOT / "tools" / "background_memo_generator" / "execution" / "run.py"
+    script = TOOLKIT_ROOT / "tools" / "background_memo" / "execution" / "run.py"
     cmd = [
         sys.executable,
         str(script),

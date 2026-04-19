@@ -33,7 +33,7 @@ This file stays intentionally small. Only add tests that guard an actual bug or 
 ### REG-0003
 - Source Bug ID: BUG-0001
 - Tool: Background Memo
-- Exact rerun input: rerun `BM-SMK-01` from `toolkit/qa/test_cases/background_memo_generator.md`
+- Exact rerun input: rerun `BM-SMK-01` from `toolkit/qa/test_cases/background_memo.md`
 - Must-stay-true assertions:
   - Output includes only the user-requested section headings.
   - No extra disclosure section is injected into the main memo body unless explicitly requested.
@@ -59,7 +59,7 @@ This file stays intentionally small. Only add tests that guard an actual bug or 
 ### REG-0005
 - Source Bug ID: BUG-0003
 - Tool: Background Memo
-- Exact rerun input: rerun `BM-SMK-01` from `toolkit/qa/test_cases/background_memo_generator.md`
+- Exact rerun input: rerun `BM-SMK-01` from `toolkit/qa/test_cases/background_memo.md`
 - Must-stay-true assertions:
   - `Overview of Activities` covers the organization's real activity mix, not just one event or one recent article cluster.
   - Low-value operational details do not crowd out higher-level, decision-relevant facts.

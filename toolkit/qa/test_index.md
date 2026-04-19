@@ -11,7 +11,7 @@ This is the master board for canonical manual coverage. `Status` refers to overa
 | Legislative Tracker | [legislative_tracker.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/legislative_tracker.md) | Yes | Yes | Yes | Not run | Ready |
 | Messaging Matrix | [messaging_matrix.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/messaging_matrix.md) | Yes | Yes | Yes | Not run | Ready |
 | Stakeholder Briefing | [stakeholder_briefing.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/stakeholder_briefing.md) | Yes | Yes | Yes | Not run | Ready |
-| Background Memo | [background_memo_generator.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/background_memo_generator.md) | Yes | Yes | Yes | Not run | Ready |
+| Background Memo | [background_memo.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/background_memo.md) | Yes | Yes | Yes | Not run | Ready |
 | Stakeholder Map | [stakeholder_map_builder.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/stakeholder_map_builder.md) | Yes | Yes | Yes | Not run | Ready |
 | Media Clip Cleaner | [media_clip_cleaner.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/media_clip_cleaner.md) | Yes | Yes | Yes | Not run | Ready |
 | Remy | [remy.md](/Users/francescolampertico/Desktop/capstone_project/toolkit/qa/test_cases/remy.md) | Yes | Yes | Yes | Not run | Ready |

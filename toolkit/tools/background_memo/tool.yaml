@@ -1,5 +1,5 @@
 id: background_memo_generator
-name: Background Memo Generator
+name: Background Memo
 version: 0.1.0
 risk_level: yellow
 digiacomo_process: "#2 Stakeholder Analysis, #3 Government Relations"
@@ -30,11 +30,9 @@ execution:
     - openai
     - python-docx
   environment:
-    - "OPENAI_API_KEY: Required for content generation"
-  models:
-    - "gpt-4o: Full memo generation"
+    - "Configured LLM-compatible endpoint credentials: Recommended for content generation"
 
 risk_notes:
-  - "All facts and figures are LLM-generated — verify against primary sources before distribution."
-  - "Links section contains LLM-suggested URLs — check each link before including."
+  - "All facts and figures are draft-generated — verify against primary sources before distribution."
+  - "Links section contains draft-suggested URLs — check each link before including."
   - "Do not distribute without human review."

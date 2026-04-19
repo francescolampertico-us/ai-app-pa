@@ -1,5 +1,5 @@
 """
-Background Memo Generator — Streamlit Page
+Background Memo — Streamlit Page
 ============================================
 Generate a structured background memo on any client, organization,
 policy issue, or individual. Automatically searches LDA/FARA disclosure
@@ -16,15 +16,15 @@ from datetime import date
 from pathlib import Path
 
 TOOLKIT_ROOT = Path(__file__).resolve().parent.parent.parent
-TOOL_ROOT = TOOLKIT_ROOT / "tools" / "background_memo_generator"
+TOOL_ROOT = TOOLKIT_ROOT / "tools" / "background_memo"
 DISCLOSURE_TOOL_ROOT = TOOLKIT_ROOT / "tools" / "influence_disclosure_tracker"
 sys.path.insert(0, str(TOOLKIT_ROOT / "app"))
 
-st.set_page_config(page_title="Background Memo Generator", page_icon="📄", layout="wide")
+st.set_page_config(page_title="Background Memo", page_icon="📄", layout="wide")
 
 from shared import page_header, demo_banner
 page_header(
-    title="Background Memo Generator",
+    title="Background Memo",
     icon="📄",
     version="0.2.0",
     risk="yellow",

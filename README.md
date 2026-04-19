@@ -37,7 +37,7 @@ capstone_project/
 | 7 | Stakeholder Briefing | #3 Briefing Creation | ✅ Complete |
 | 8 | Media List Builder | #1 Legislative Monitoring | ✅ Complete |
 | 9 | Stakeholder Map Builder | #2 Stakeholder Analysis, #4 Advocacy Campaign | ✅ Complete |
-| 10 | Background Memo Generator | #3 Briefing Creation | ✅ Complete |
+| 10 | Background Memo | #3 Briefing Creation | ✅ Complete |
 
 ---
 
@@ -47,7 +47,7 @@ capstone_project/
 |---|-------------|-------|
 | 1 | Legislative & Regulatory Monitoring | Media Clips, Legislative Tracker, Media List Builder |
 | 2 | Stakeholder Mapping & Analysis | Influence Disclosure Tracker, Stakeholder Map Builder |
-| 3 | Position Paper & Briefing Creation | Hearing Memo Generator, Stakeholder Briefing, Background Memo Generator |
+| 3 | Position Paper & Briefing Creation | Hearing Memo, Stakeholder Briefing, Background Memo |
 | 4 | Advocacy Campaign Planning | Messaging Matrix, Stakeholder Map Builder |
 | 5 | Digital Public Affairs | Messaging Matrix, Media Clip Cleaner |
 | 6 | Crisis Communication | — |

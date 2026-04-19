@@ -7,7 +7,7 @@ surfaces:
     title: Background Memo
     execute_endpoint: /api/tools/execute/background_memo_generator
     live_case_id: BM-SMK-01
-    test_case_path: toolkit/qa/test_cases/background_memo_generator.md
+    test_case_path: toolkit/qa/test_cases/background_memo.md
     helper_endpoints: []
     regressions: [REG-0003, REG-0005]
     test_ids:

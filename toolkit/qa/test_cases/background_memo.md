@@ -1,10 +1,10 @@
-# Background Memo Generator — Canonical Manual Cases
+# Background Memo — Canonical Manual Cases
 
 Use the web page at `/background-memo`.
 
 ## BM-SMK-01
 
-- Tool: Background Memo Generator
+- Tool: Background Memo
 - Goal: Validate a standard organization memo with clear structure and links.
 - Priority: P0
 - Scenario type: smoke
@@ -66,7 +66,7 @@ yes
 
 ## BM-EDGE-01
 
-- Tool: Background Memo Generator
+- Tool: Background Memo
 - Goal: Check person-focused memo behavior with many sections and a stronger need for restraint.
 - Priority: P1
 - Scenario type: edge

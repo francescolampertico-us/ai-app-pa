@@ -1,9 +1,9 @@
 """
-Background Memo Generator
+Background Memo
 ==========================
 Two-stage pipeline:
   1. Optional: pull LDA/FARA/IRS 990 disclosure data for the subject
-  2. LLM call (gpt-4.1) to produce a fully structured background memo
+  2. LLM call to produce a fully structured background memo
 
 Output structure:
   - Header (DATE, SUBJECT)
@@ -184,7 +184,7 @@ def generate_memo(
     suppress_disclosures: bool = False,
 ) -> dict:
     """
-    Generate a full background memo via gpt-4.1.
+    Generate a full background memo via the configured LLM-compatible endpoint.
 
     Args:
         subject:            The name of the client, organization, issue, or person.

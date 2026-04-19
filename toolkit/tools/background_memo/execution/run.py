@@ -1,5 +1,5 @@
 """
-Background Memo Generator — CLI entry point
+Background Memo — CLI entry point
 
 Usage:
   python run.py --subject "Jagello 2000" \

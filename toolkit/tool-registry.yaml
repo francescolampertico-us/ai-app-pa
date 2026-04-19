@@ -111,10 +111,10 @@ tools:
       artifacts: [stakeholder_briefing.md, stakeholder_briefing.docx]
 
   - id: background_memo_generator
-    name: Background Memo Generator
+    name: Background Memo
     version: 0.1.0
     risk_level: yellow
-    path: tools/background_memo_generator
+    path: tools/background_memo
     frontend_path: /background-memo
     description: "Generates a structured background memo on any client, organization, policy issue, or individual. Takes a subject and user-defined section headings; outputs Overview, Fast Facts, content sections, and links in house-style DOCX."
     inputs:

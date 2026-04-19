@@ -34,5 +34,5 @@
 - [ ] No obviously fabricated URLs (random strings, wrong TLDs for Czech orgs)
 
 ### Quality
-- [ ] No Mercury or client-identifying information in the output
+- [ ] No client-identifying information in the output
 - [ ] No confidential language or internal references
