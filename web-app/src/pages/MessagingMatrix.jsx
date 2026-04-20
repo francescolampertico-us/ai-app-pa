@@ -20,6 +20,17 @@ const VARIANT_LABELS = {
 const DELIVERABLES = Object.entries(VARIANT_LABELS);
 const DEFAULT_VARIANTS = DELIVERABLES.map(([value]) => value);
 
+function cleanVariant(text) {
+  if (!text) return '';
+  return text
+    // Known document-type header lines → H2 (purple, separated from metadata below)
+    .replace(/^((?:TALKING POINTS|FOR IMMEDIATE RELEASE|OP-ED|MEDIA TALKING POINTS|GRASSROOTS EMAIL|SOCIAL MEDIA POSTS?)[^\n]*)/gm, '\n## $1\n')
+    // "**Long bold title.** Body text starts with capital" → H3 + paragraph
+    .replace(/^\*\*([^*]{15,})\*\*\s+([A-Z])/gm, '### $1\n\n$2')
+    // Trailing-space soft-breaks after bold lines → proper paragraph break
+    .replace(/\*\*\s{2,}\n/g, '**\n\n');
+}
+
 export default function MessagingMatrix() {
   const { job, loading, submitJob, downloadArtifact, downloadJson, downloadText } = useFastApiJob('messaging_matrix');
 
@@ -221,7 +232,7 @@ export default function MessagingMatrix() {
 
             {activeTab !== 'Message Map' && (
               <div className="text-sm leading-7">
-                <StyledMarkdown>{(activeVariantKey ? rd.variants?.[activeVariantKey] : '').replace(/\*\*\s+\n/g, '**\n\n')}</StyledMarkdown>
+                <StyledMarkdown>{cleanVariant(activeVariantKey ? rd.variants?.[activeVariantKey] : '')}</StyledMarkdown>
               </div>
             )}
           </div>
