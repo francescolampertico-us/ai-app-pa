@@ -23,6 +23,19 @@ TOOLKIT_ROOT = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = TOOLKIT_ROOT / "tool-registry.yaml"
 OUTPUT_ROOT = TOOLKIT_ROOT / "output" / "remy"
 
+_FRONTEND_PATHS: dict[str, str] = {
+    "media_clips": "/media-clips",
+    "media_clip_cleaner": "/media-clips",
+    "influence_disclosure_tracker": "/influence",
+    "hearing_memo_generator": "/memos",
+    "legislative_tracker": "/legislative",
+    "messaging_matrix": "/messaging",
+    "media_list_builder": "/media-list",
+    "stakeholder_briefing": "/stakeholder-briefing",
+    "background_memo_generator": "/background-memo",
+    "stakeholder_map": "/stakeholders",
+}
+
 
 TOOL_GUIDANCE = {
     "hearing_memo_generator": {
@@ -1063,7 +1076,7 @@ def _execute_cli(
         "stderr": _truncate(result.stderr),
         "artifacts": artifacts,
         "artifact_previews": _artifact_previews(artifacts),
-        "frontend_path": next((t.get("frontend_path") for t in catalog if t["id"] == tool_id), "/media-clips" if tool_id == "media_clip_cleaner" else None),
+        "frontend_path": _FRONTEND_PATHS.get(tool_id),
     }
     if not payload["ok"] and not payload["stderr"]:
         payload["error"] = "Tool exited with a non-zero status."

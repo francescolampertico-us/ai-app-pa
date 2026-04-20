@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PaperPlaneTiltIcon as PaperPlaneTilt, SpinnerGapIcon as SpinnerGap, ArrowSquareOutIcon as ArrowSquareOut, DownloadSimpleIcon as DownloadSimple, WarningIcon as Warning } from '@phosphor-icons/react';
 import { API } from '../hooks/useFastApiJob';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
+import StyledMarkdown from '../components/StyledMarkdown';
 import { Link } from 'react-router-dom';
 
 const MotionDiv = motion.div;
@@ -67,7 +68,7 @@ function Message({ msg }) {
           ? 'bg-violet-600/25 border border-violet-500/30 text-white rounded-tr-sm'
           : 'bg-white/5 border border-white/8 text-zinc-200 rounded-tl-sm'
         }`} style={{ fontFamily: 'Inter', fontSize: 14, lineHeight: 1.65, fontWeight: 300 }}>
-          {msg.content}
+          {isUser ? msg.content : <StyledMarkdown>{msg.content}</StyledMarkdown>}
         </div>
         {(msg.tool_events || []).map((ev, i) => <ToolEvent key={i} event={ev} />)}
       </div>
