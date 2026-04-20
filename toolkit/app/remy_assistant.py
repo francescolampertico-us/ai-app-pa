@@ -17,11 +17,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import requests
 import yaml
 
 TOOLKIT_ROOT = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = TOOLKIT_ROOT / "tool-registry.yaml"
 OUTPUT_ROOT = TOOLKIT_ROOT / "output" / "remy"
+STYLE_GUIDES_ROOT = TOOLKIT_ROOT / "tools" / "messaging_matrix" / "style_samples" / "style_guides"
 
 _FRONTEND_PATHS: dict[str, str] = {
     "media_clips": "/media-clips",
@@ -103,10 +105,33 @@ def load_tool_catalog() -> list[dict[str, Any]]:
     return catalog
 
 
+def _load_writing_styles() -> str:
+    """Load style guide files and return a condensed writing knowledge block."""
+    guides = [
+        ("General style", "general_style_guide.md"),
+        ("Talking points", "talking_points_style_guide.md"),
+        ("Press releases", "press_releases_style_guide.md"),
+        ("Op-eds", "op_eds_style_guide.md"),
+        ("Speeches", "speeches_style_guide.md"),
+        ("Social media", "social_media_style_guide.md"),
+    ]
+    sections = []
+    for label, filename in guides:
+        path = STYLE_GUIDES_ROOT / filename
+        if path.exists():
+            content = path.read_text(encoding="utf-8").strip()
+            sections.append(f"### {label}\n{content}")
+    return "\n\n".join(sections) if sections else ""
+
+
 def build_system_prompt(catalog: list[dict[str, Any]], uploaded_files: list[dict[str, Any]]) -> str:
-    """Construct Remy's system prompt from registry metadata and current uploads."""
+    """Construct Remy's system prompt from registry metadata, writing styles, and current uploads."""
+    # Only surface the two executable toolkit tools in the catalog block
+    allowed_tool_ids = {"legislative_tracker", "influence_disclosure_tracker"}
     tool_lines = []
     for tool in catalog:
+        if tool["id"] not in allowed_tool_ids:
+            continue
         inputs = ", ".join(tool.get("inputs", {}).get("required", []))
         optional = ", ".join(tool.get("inputs", {}).get("optional", []))
         frontend_path = tool.get("frontend_path") or "not available"
@@ -115,13 +140,10 @@ def build_system_prompt(catalog: list[dict[str, Any]], uploaded_files: list[dict
             "\n".join(
                 [
                     f"- {tool['name']} ({tool['id']})",
-                    f"  Risk level: {tool.get('risk_level', 'unknown')}",
                     f"  Required inputs: {inputs or 'none listed'}",
                     f"  Optional inputs: {optional or 'none listed'}",
-                    f"  Output artifacts: {', '.join(tool.get('outputs', {}).get('artifacts', [])) or 'n/a'}",
                     f"  App page: {frontend_path}",
                     f"  When to use: {guidance.get('when_to_use') or tool.get('description', '')}",
-                    f"  Notes: {guidance.get('notes') or tool.get('spec_summary') or 'No extra notes.'}",
                 ]
             )
         )
@@ -131,40 +153,41 @@ def build_system_prompt(catalog: list[dict[str, Any]], uploaded_files: list[dict
             f"- {item['name']} ({item['kind']}, {item['size_bytes']} bytes)"
             for item in uploaded_files
         ]
-        upload_block = "Uploaded files available for tool use:\n" + "\n".join(upload_lines)
+        upload_block = "Uploaded files available:\n" + "\n".join(upload_lines)
     else:
-        upload_block = "Uploaded files available for tool use:\n- none"
+        upload_block = ""
+
+    writing_styles = _load_writing_styles()
+    writing_block = f"\n\n---\n## Writing Style Standards\n\n{writing_styles}" if writing_styles else ""
 
     return f"""
-You are Remy, the in-app strategy assistant for the Public Affairs AI Toolkit.
+You are Remy, a senior public affairs strategist and writer.
 
 Role:
-- Act as a senior public affairs operator with strong policy, legislative, stakeholder, media, and disclosure judgment.
-- Sound controlled, sharp, discreet, and strategic.
-- Capture the energy of a polished political fixer archetype, but do not quote, imitate, or claim to be any copyrighted character.
-- Keep answers concise, crisp, and operational.
+- Act as a seasoned PA operator: sharp, controlled, discreet, strategic.
+- You can research, analyze, and write professional PA documents.
+- When writing, apply the style standards defined below — do not deviate from them.
 
-Mission:
-- Help the user decide which toolkit tool to use.
-- Gather only the missing inputs needed to use that tool.
-- Execute toolkit tools when the user wants action, not just advice.
-- Explain outputs in practical public-affairs terms.
+Capabilities:
+1. RESEARCH — search recent news (gnews_search) and the open web (brave_search) to gather facts before writing or advising.
+2. LEGISLATIVE TRACKING — run the Legislative Tracker to find bills, check status, summarize legislation.
+3. DISCLOSURE RESEARCH — run the Influence Disclosure Tracker to look up LDA, FARA, and IRS 990 filings.
+4. WRITING — draft any PA document type (talking points, press release, op-ed, memo, speech, social media post, pitch, email) and produce a downloadable DOCX + markdown artifact via write_document.
 
 Behavior rules:
-- Prefer using the toolkit's tools when they directly help.
-- If a user goal maps to one of the tools, recommend that tool explicitly.
-- When recommending a tool, always call `get_toolkit_tool_details` first so the UI can surface the app page and usage details.
-- When the user clearly wants execution and enough inputs are available, call the specific run function for that tool rather than answering from general knowledge.
-- If required inputs are missing, ask only for those missing inputs.
-- Treat uploaded files as primary source material when relevant.
-- Never fabricate facts, filings, sources, names, dates, or legislative details.
+- Always ask clarifying questions before executing if key inputs are missing. Go back and forth until you have what you need.
+- For writing tasks: confirm the subject, position, audience, and any key facts before drafting. One round of questions is usually enough.
+- For research tasks: use gnews_search and/or brave_search to gather current facts before writing — do not fabricate.
+- For legislative or disclosure queries: run the relevant tool rather than answering from general knowledge.
+- When producing a written document: ALWAYS call write_document with the full content to produce the artifact. Never output a document only as chat text — always package it via write_document so the user gets a downloadable file. The content parameter is the complete document in markdown.
+- Never fabricate facts, names, filings, dates, or legislative details.
 - Flag medium-risk outputs as requiring human review before external use.
-- If a run fails, explain the blocker plainly and propose the next concrete step.
+- If a run fails, explain the blocker plainly and propose the next step.
+- Always include source links in your responses. When gnews_search or brave_search return URLs, cite them inline as markdown links next to the claims they support. For LDA filings, link to https://lda.senate.gov/filings/public/filing/search/ when referencing lobbying disclosure data. For FARA, link to https://www.fara.gov/. For LegiScan bills, include the bill URL if available in the tool result.
 
-Toolkit catalog:
+Executable toolkit tools:
 {chr(10).join(tool_lines)}
-
-{upload_block}
+{upload_block}{writing_block}
 """.strip()
 
 
@@ -298,18 +321,21 @@ def _maybe_autorun_tool(
     return None
 
 
-def _tool_schemas(catalog: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    tool_ids = [tool["id"] for tool in catalog] + ["media_clip_cleaner"]
-
-    schemas = [
+def _tool_schemas(_catalog: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
         {
             "type": "function",
             "function": {
-                "name": "list_toolkit_tools",
-                "description": "List the tools available in the Public Affairs AI Toolkit.",
+                "name": "gnews_search",
+                "description": "Search recent news articles via Google News. Use to gather current facts, monitor coverage, or research context before writing or advising.",
                 "parameters": {
                     "type": "object",
-                    "properties": {},
+                    "properties": {
+                        "query": {"type": "string", "description": "News search query"},
+                        "period": {"type": "string", "description": "Time period: '1d', '7d', '30d', '1y' (default '7d')"},
+                        "max_results": {"type": "integer", "description": "Max articles to return (default 8, max 20)"},
+                    },
+                    "required": ["query"],
                     "additionalProperties": False,
                 },
             },
@@ -317,285 +343,105 @@ def _tool_schemas(catalog: list[dict[str, Any]]) -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "get_toolkit_tool_details",
-                "description": "Get details, page path, required inputs, and usage guidance for a specific toolkit tool.",
+                "name": "brave_search",
+                "description": "Search the open web via Brave Search. Use for research, fact-checking, finding primary sources, or any query where broader web coverage is needed.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "tool_id": {
-                            "type": "string",
-                            "enum": tool_ids,
-                        }
+                        "query": {"type": "string", "description": "Web search query"},
+                        "count": {"type": "integer", "description": "Number of results (default 8, max 20)"},
                     },
-                    "required": ["tool_id"],
+                    "required": ["query"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "run_legislative_tracker",
+                "description": "Run the Legislative Tracker to search bills, look up a specific bill by ID, or manage a watchlist.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "bill_id": {"type": "string"},
+                        "state": {"type": "string"},
+                        "year": {"type": "integer"},
+                        "summarize": {"type": "boolean"},
+                        "watchlist": {"type": "string", "enum": ["add", "remove", "list", "refresh"]},
+                        "json": {"type": "boolean"},
+                    },
+                    "additionalProperties": False,
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "run_influence_disclosure_tracker",
+                "description": "Run the Influence Disclosure Tracker to look up LDA lobbying filings, FARA registrations, and IRS 990 data for any entity.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "entities": {
+                            "oneOf": [
+                                {"type": "string"},
+                                {"type": "array", "items": {"type": "string"}},
+                            ]
+                        },
+                        "from_date": {"type": "string"},
+                        "to_date": {"type": "string"},
+                        "filing_years": {
+                            "oneOf": [
+                                {"type": "string"},
+                                {"type": "array", "items": {"type": "string"}},
+                            ]
+                        },
+                        "filing_periods": {
+                            "oneOf": [
+                                {"type": "string"},
+                                {"type": "array", "items": {"type": "string"}},
+                            ]
+                        },
+                        "sources": {
+                            "oneOf": [
+                                {"type": "string"},
+                                {"type": "array", "items": {"type": "string"}},
+                            ]
+                        },
+                        "mode": {"type": "string", "enum": ["basic", "deep"]},
+                        "search_field": {"type": "string", "enum": ["client", "registrant", "both"]},
+                        "max_results": {"type": "integer"},
+                    },
+                    "required": ["entities"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "write_document",
+                "description": "Package a fully written PA document as a downloadable DOCX + markdown artifact. Call this after you have written the complete document content. The content parameter should be the full document text in markdown.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string", "description": "Document title (used as filename and heading)"},
+                        "document_type": {
+                            "type": "string",
+                            "enum": ["talking_points", "press_release", "op_ed", "speech", "memo", "social_media", "email", "pitch", "other"],
+                            "description": "Type of PA document",
+                        },
+                        "content": {"type": "string", "description": "Full document content in markdown"},
+                        "filename": {"type": "string", "description": "Optional custom base filename (no extension)"},
+                    },
+                    "required": ["title", "document_type", "content"],
                     "additionalProperties": False,
                 },
             },
         },
     ]
-
-    schemas.extend(
-        [
-            {
-                "type": "function",
-                "function": {
-                    "name": "run_media_clips",
-                    "description": "Run the Media Clips tool.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "topic": {"type": "string"},
-                            "queries": {
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "array", "items": {"type": "string"}},
-                                ]
-                            },
-                            "period": {"type": "string"},
-                            "since": {"type": "string"},
-                            "target_date": {"type": "string"},
-                            "suffix": {"type": "string"},
-                            "all_sources": {"type": "boolean"},
-                            "custom_sources": {
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "array", "items": {"type": "string"}},
-                                ]
-                            },
-                        },
-                        "required": ["topic", "queries"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "run_media_clip_cleaner",
-                    "description": "Run the Media Clip Cleaner tool.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "raw_text": {"type": "string"},
-                            "input_file_name": {"type": "string"},
-                            "mode": {"type": "string", "enum": ["local", "llm"]},
-                            "llm_model": {"type": "string"},
-                            "fallback_local": {"type": "boolean"},
-                        },
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "run_influence_disclosure_tracker",
-                    "description": "Run the Influence Disclosure Tracker tool.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "entities": {
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "array", "items": {"type": "string"}},
-                                ]
-                            },
-                            "from_date": {"type": "string"},
-                            "to_date": {"type": "string"},
-                            "filing_years": {
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "array", "items": {"type": "string"}},
-                                ]
-                            },
-                            "filing_periods": {
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "array", "items": {"type": "string"}},
-                                ]
-                            },
-                            "sources": {
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "array", "items": {"type": "string"}},
-                                ]
-                            },
-                            "mode": {"type": "string", "enum": ["basic", "deep"]},
-                            "search_field": {"type": "string", "enum": ["client", "registrant", "both"]},
-                            "max_results": {"type": "integer"},
-                        },
-                        "required": ["entities"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "run_hearing_memo_generator",
-                    "description": "Run the Hearing Memo tool on an uploaded transcript file.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "input_file_name": {"type": "string"},
-                            "memo_from": {"type": "string"},
-                            "memo_date": {"type": "string"},
-                            "subject": {"type": "string"},
-                            "confidentiality_footer": {"type": "string"},
-                            "hearing_title": {"type": "string"},
-                            "hearing_date": {"type": "string"},
-                            "hearing_time": {"type": "string"},
-                            "committee": {"type": "string"},
-                            "verbose": {"type": "boolean"},
-                        },
-                        "required": ["input_file_name"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "run_legislative_tracker",
-                    "description": "Run the Legislative Tracker tool.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "query": {"type": "string"},
-                            "bill_id": {"type": "string"},
-                            "state": {"type": "string"},
-                            "year": {"type": "integer"},
-                            "summarize": {"type": "boolean"},
-                            "watchlist": {"type": "string", "enum": ["add", "remove", "list", "refresh"]},
-                            "json": {"type": "boolean"},
-                        },
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "run_messaging_matrix",
-                    "description": "Run the Messaging Matrix tool.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "position": {"type": "string"},
-                            "context": {"type": "string"},
-                            "context_file_name": {"type": "string"},
-                            "organization": {"type": "string"},
-                            "audience": {"type": "string"},
-                            "core_messages": {"type": "string"},
-                            "facts": {"type": "string"},
-                            "variants": {
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "array", "items": {"type": "string"}},
-                                ]
-                            },
-                        },
-                        "required": ["position"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "run_media_list_builder",
-                    "description": "Run the Media List Builder tool.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "issue": {"type": "string"},
-                            "location": {"type": "string"},
-                            "media_types": {
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "array", "items": {"type": "string"}},
-                                ]
-                            },
-                            "num_contacts": {"type": "integer"},
-                        },
-                        "required": ["issue"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "run_stakeholder_briefing",
-                    "description": "Run the Stakeholder Briefing tool.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string"},
-                            "purpose": {"type": "string"},
-                            "organization": {"type": "string"},
-                            "your_org": {"type": "string"},
-                            "context": {"type": "string"},
-                            "context_file_name": {"type": "string"},
-                            "include_disclosures": {"type": "boolean"},
-                            "include_news": {"type": "boolean"},
-                        },
-                        "required": ["name", "purpose"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "run_background_memo_generator",
-                    "description": "Run the Background Memo tool.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "subject": {"type": "string"},
-                            "sections": {
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "array", "items": {"type": "string"}},
-                                ]
-                            },
-                            "context": {"type": "string"},
-                            "context_file_name": {"type": "string"},
-                            "date": {"type": "string"},
-                        },
-                        "required": ["subject", "sections"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "run_stakeholder_map",
-                    "description": "Run the Stakeholder Map tool.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "policy_issue": {"type": "string"},
-                            "scope": {"type": "string", "enum": ["federal", "state"]},
-                            "state": {"type": "string"},
-                            "include_types": {
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "array", "items": {"type": "string"}},
-                                ]
-                            },
-                            "no_graph": {"type": "boolean"},
-                        },
-                        "required": ["policy_issue"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-        ]
-    )
-    return schemas
 
 
 def _dispatch_tool_call(
@@ -604,48 +450,16 @@ def _dispatch_tool_call(
     catalog: list[dict[str, Any]],
     uploaded_files: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    if name == "list_toolkit_tools":
-        return {
-            "ok": True,
-            "tools": [
-                {
-                    "id": tool["id"],
-                    "name": tool["name"],
-                    "risk_level": tool.get("risk_level"),
-                    "frontend_path": tool.get("frontend_path"),
-                    "description": tool.get("description"),
-                }
-                for tool in catalog
-            ]
-            + [
-                {
-                    "id": "media_clip_cleaner",
-                    "name": "Media Clip Cleaner",
-                    "risk_level": "green",
-                    "frontend_path": "/media-clips",
-                    "description": "Clean pasted article text into clip-ready markdown.",
-                }
-            ],
-        }
-
-    if name == "get_toolkit_tool_details":
-        return _get_tool_details(args["tool_id"], catalog)
-
-    tool_name_map = {
-        "run_media_clips": "media_clips",
-        "run_media_clip_cleaner": "media_clip_cleaner",
-        "run_influence_disclosure_tracker": "influence_disclosure_tracker",
-        "run_hearing_memo_generator": "hearing_memo_generator",
-        "run_legislative_tracker": "legislative_tracker",
-        "run_messaging_matrix": "messaging_matrix",
-        "run_media_list_builder": "media_list_builder",
-        "run_stakeholder_briefing": "stakeholder_briefing",
-        "run_background_memo_generator": "background_memo_generator",
-        "run_stakeholder_map": "stakeholder_map",
-    }
-    if name in tool_name_map:
-        return _run_tool(tool_name_map[name], args, catalog, uploaded_files)
-
+    if name == "gnews_search":
+        return _run_gnews_search(args)
+    if name == "brave_search":
+        return _run_brave_search(args)
+    if name == "write_document":
+        return _run_write_document(args)
+    if name == "run_legislative_tracker":
+        return _run_tool("legislative_tracker", args, catalog, uploaded_files)
+    if name == "run_influence_disclosure_tracker":
+        return _run_tool("influence_disclosure_tracker", args, catalog, uploaded_files)
     return {"ok": False, "error": f"Unknown tool call: {name}"}
 
 
@@ -1046,6 +860,164 @@ def _run_stakeholder_map(arguments: dict[str, Any]) -> dict[str, Any]:
     return _execute_cli("stakeholder_map", cmd, outdir, cwd=script.parent, timeout=300)
 
 
+def _run_gnews_search(arguments: dict[str, Any]) -> dict[str, Any]:
+    query = arguments.get("query", "").strip()
+    if not query:
+        return {"ok": False, "tool_id": "gnews_search", "error": "query is required"}
+    period = arguments.get("period") or "7d"
+    max_results = min(int(arguments.get("max_results") or 8), 20)
+    try:
+        from gnews import GNews
+        gn = GNews(language="en", country="US", period=period, max_results=max_results)
+        articles = gn.get_news(query) or []
+        results = [
+            {
+                "title": a.get("title", ""),
+                "description": a.get("description", ""),
+                "url": a.get("url", ""),
+                "published_date": a.get("published date", ""),
+                "publisher": (a.get("publisher") or {}).get("title", ""),
+            }
+            for a in articles
+        ]
+        return {"ok": True, "tool_id": "gnews_search", "query": query, "results": results}
+    except Exception as exc:
+        return {"ok": False, "tool_id": "gnews_search", "error": str(exc)}
+
+
+def _run_brave_search(arguments: dict[str, Any]) -> dict[str, Any]:
+    query = arguments.get("query", "").strip()
+    if not query:
+        return {"ok": False, "tool_id": "brave_search", "error": "query is required"}
+    count = min(int(arguments.get("count") or 8), 20)
+    api_key = os.environ.get("BRAVE_SEARCH_API_KEY", "").strip()
+    if not api_key:
+        return {"ok": False, "tool_id": "brave_search", "error": "BRAVE_SEARCH_API_KEY is not set"}
+    try:
+        resp = requests.get(
+            "https://api.search.brave.com/res/v1/web/search",
+            headers={"Accept": "application/json", "X-Subscription-Token": api_key},
+            params={"q": query, "count": count},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        web_results = data.get("web", {}).get("results", [])
+        results = [
+            {
+                "title": r.get("title", ""),
+                "description": r.get("description", ""),
+                "url": r.get("url", ""),
+            }
+            for r in web_results
+        ]
+        return {"ok": True, "tool_id": "brave_search", "query": query, "results": results}
+    except Exception as exc:
+        return {"ok": False, "tool_id": "brave_search", "error": str(exc)}
+
+
+def _run_write_document(arguments: dict[str, Any]) -> dict[str, Any]:
+    title = arguments.get("title", "Document").strip()
+    content = arguments.get("content", "").strip()
+    doc_type = arguments.get("document_type", "other")
+    filename_base = _slugify(arguments.get("filename") or title) or "document"
+
+    outdir = _output_dir("remy_writer", title)
+    md_path = outdir / f"{filename_base}.md"
+    docx_path = outdir / f"{filename_base}.docx"
+
+    # Write markdown
+    full_md = f"# {title}\n\n{content}"
+    md_path.write_text(full_md, encoding="utf-8")
+
+    # Write DOCX
+    try:
+        _markdown_to_docx(title, content, docx_path)
+    except Exception as exc:
+        return {"ok": False, "tool_id": "write_document", "error": f"DOCX generation failed: {exc}"}
+
+    artifacts = _collect_artifacts(outdir)
+    return {
+        "ok": True,
+        "tool_id": "write_document",
+        "document_type": doc_type,
+        "title": title,
+        "output_dir": str(outdir),
+        "artifacts": artifacts,
+        "artifact_previews": _artifact_previews(artifacts),
+        "frontend_path": None,
+    }
+
+
+def _markdown_to_docx(title: str, content: str, output_path: Path) -> None:
+    from docx import Document
+    from docx.shared import Pt, RGBColor, Inches
+
+    doc = Document()
+
+    # Page margins
+    for section in doc.sections:
+        section.top_margin = Inches(1.0)
+        section.bottom_margin = Inches(1.0)
+        section.left_margin = Inches(1.25)
+        section.right_margin = Inches(1.25)
+
+    # Title
+    title_para = doc.add_heading(title, level=0)
+    title_para.runs[0].font.color.rgb = RGBColor(0x1A, 0x1A, 0x2E)
+
+    for raw_line in content.splitlines():
+        line = raw_line.rstrip()
+
+        if line.startswith("### "):
+            doc.add_heading(line[4:].strip(), level=3)
+        elif line.startswith("## "):
+            doc.add_heading(line[3:].strip(), level=2)
+        elif line.startswith("# "):
+            doc.add_heading(line[2:].strip(), level=1)
+        elif line.startswith(("- ", "* ", "+ ")):
+            para = doc.add_paragraph(style="List Bullet")
+            _apply_inline_markdown(para, line[2:].strip())
+        elif line.startswith(("  - ", "  * ")):
+            para = doc.add_paragraph(style="List Bullet 2")
+            _apply_inline_markdown(para, line[4:].strip())
+        elif line == "":
+            doc.add_paragraph("")
+        elif line.startswith("---") or line.startswith("***"):
+            doc.add_paragraph("─" * 40)
+        else:
+            para = doc.add_paragraph()
+            _apply_inline_markdown(para, line)
+            para.runs[0].font.size = Pt(11) if para.runs else None
+
+    doc.save(str(output_path))
+
+
+def _apply_inline_markdown(para, text: str) -> None:
+    """Parse **bold** and *italic* inline markdown and add styled runs."""
+    import re as _re
+    pattern = _re.compile(r"(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)")
+    last = 0
+    for m in pattern.finditer(text):
+        if m.start() > last:
+            para.add_run(text[last:m.start()])
+        full = m.group(0)
+        if full.startswith("**"):
+            run = para.add_run(m.group(2))
+            run.bold = True
+        elif full.startswith("*"):
+            run = para.add_run(m.group(3))
+            run.italic = True
+        elif full.startswith("`"):
+            run = para.add_run(m.group(4))
+            run.font.name = "Courier New"
+        last = m.end()
+    if last < len(text):
+        para.add_run(text[last:])
+    if not para.runs:
+        para.add_run(text)
+
+
 def _execute_cli(
     tool_id: str,
     cmd: list[str],
@@ -1315,7 +1287,8 @@ def _compose_disclosure_response(result: dict[str, Any], arguments: dict[str, An
 
     response += (
         "\n\nThis is based on the underlying LDA filing data returned by the tool. "
-        "Treat it as medium-risk output and review the filings before external use."
+        "Treat it as medium-risk output and review the filings before external use. "
+        "[Search LDA filings →](https://lda.senate.gov/filings/public/filing/search/)"
     )
     return response
 
