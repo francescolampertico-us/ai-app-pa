@@ -221,7 +221,7 @@ export default function MessagingMatrix() {
 
             {activeTab !== 'Message Map' && (
               <div className="text-sm leading-7">
-                <StyledMarkdown>{activeVariantKey ? rd.variants?.[activeVariantKey] : ''}</StyledMarkdown>
+                <StyledMarkdown>{(activeVariantKey ? rd.variants?.[activeVariantKey] : '').replace(/\*\*\s+\n/g, '**\n\n')}</StyledMarkdown>
               </div>
             )}
           </div>
