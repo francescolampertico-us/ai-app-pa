@@ -223,6 +223,52 @@ def _chat_change_agent(
     return response.choices[0].message.content or "No response returned."
 
 
+def _parse_change_agent_tool_call(text: str) -> tuple[str, dict[str, Any]] | tuple[None, None]:
+    """Parse ChangeAgent's XML-style function call. Handles two formats:
+    <function=NAME>...</function>  and  <tool><name>NAME</name>...</tool>
+    Returns (function_name, arguments) or (None, None)."""
+    # Format 1: <function=NAME>..params..</function>
+    fn_match = re.search(r"<function=([^\s>]+)>(.*?)(?:</function>|$)", text, re.DOTALL)
+    if fn_match:
+        fn_name = fn_match.group(1).strip()
+        body = fn_match.group(2)
+        return fn_name, _extract_xml_params(body)
+
+    # Format 2: <tool><name>NAME</name>..params..</tool>
+    tool_match = re.search(r"<tool>(.*?)(?:</tool>|$)", text, re.DOTALL)
+    if tool_match:
+        body = tool_match.group(1)
+        name_match = re.search(r"<name>\s*([^\s<]+)\s*</name>", body)
+        if name_match:
+            fn_name = name_match.group(1).strip()
+            return fn_name, _extract_xml_params(body)
+
+    return None, None
+
+
+def _extract_xml_params(body: str) -> dict[str, Any]:
+    """Extract key/value pairs from a ChangeAgent parameter block."""
+    args: dict[str, Any] = {}
+    # Match both <parameter=KEY> and <parameter>KEY> styles
+    for m in re.finditer(r"<parameter[=>]([^>\s]+)>\s*(.*?)\s*(?=</?parameter|</tool>|</function>|$)", body, re.DOTALL):
+        key = m.group(1).rstrip(">").strip()
+        raw = m.group(2).strip()
+        try:
+            args[key] = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            args[key] = raw
+    return args
+
+
+def _clean_change_agent_text(text: str) -> str:
+    """Strip tool call blocks and fabricated tool_result blocks from ChangeAgent response."""
+    cleaned = text
+    cleaned = re.sub(r"\s*<function=.*?(?:</function>|$)", "", cleaned, flags=re.DOTALL)
+    cleaned = re.sub(r"\s*<tool>.*?(?:</tool>|$)", "", cleaned, flags=re.DOTALL)
+    cleaned = re.sub(r"\s*<tool_result>.*?(?:</tool_result>|$)", "", cleaned, flags=re.DOTALL)
+    return cleaned.strip() or text.strip()
+
+
 def chat_with_remy(
     user_message: str,
     history: list[dict[str, Any]] | None = None,
@@ -240,15 +286,29 @@ def chat_with_remy(
 
     client = _make_client(model)
 
-    # ChangeAgent: streaming path, no tool calls
+    # ChangeAgent: tool-call loop — parse XML function calls from response text
     if model == "ChangeAgent":
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": build_system_prompt(catalog, uploaded_files)}
         ]
         messages.extend(_normalize_history(history))
         messages.append({"role": "user", "content": user_message})
-        text = _chat_change_agent(client, messages)
-        return {"text": text, "tool_events": []}
+        tool_events: list[dict[str, Any]] = []
+        for _ in range(6):
+            text = _chat_change_agent(client, messages)
+            fn_name, fn_args = _parse_change_agent_tool_call(text)
+            if not fn_name:
+                return {"text": text, "tool_events": tool_events}
+            result = _dispatch_tool_call(fn_name, fn_args or {}, catalog, uploaded_files)
+            tool_events.append(result)
+            prose = _clean_change_agent_text(text)
+            messages.append({"role": "assistant", "content": prose or "(called tool)"})
+            result_summary = json.dumps(
+                {k: v for k, v in result.items() if k not in {"command", "artifact_previews", "cwd", "output_dir"}},
+                ensure_ascii=False,
+            )[:6000]
+            messages.append({"role": "user", "content": f"Tool result for {fn_name}:\n{result_summary}\n\nNow answer the user's original question based on this data."})
+        return {"text": "Reached tool-call limit.", "tool_events": tool_events}
 
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": build_system_prompt(catalog, uploaded_files)}
@@ -456,9 +516,14 @@ def _dispatch_tool_call(
         return _run_brave_search(args)
     if name == "write_document":
         return _run_write_document(args)
-    if name == "run_legislative_tracker":
+    if name in ("run_legislative_tracker", "legislative_tracker"):
         return _run_tool("legislative_tracker", args, catalog, uploaded_files)
-    if name == "run_influence_disclosure_tracker":
+    if name in ("run_influence_disclosure_tracker", "influence_disclosure_tracker"):
+        # Normalize ChangeAgent param names (from/to → from_date/to_date)
+        if "from" in args and "from_date" not in args:
+            args["from_date"] = args.pop("from")
+        if "to" in args and "to_date" not in args:
+            args["to_date"] = args.pop("to")
         return _run_tool("influence_disclosure_tracker", args, catalog, uploaded_files)
     return {"ok": False, "error": f"Unknown tool call: {name}"}
 
