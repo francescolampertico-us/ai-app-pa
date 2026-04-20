@@ -358,6 +358,11 @@ export default function MediaListBuilder() {
                   <span className={job.status === 'completed' ? 'badge-complete' : job.status === 'failed' ? 'badge-failed' : 'badge-processing'}>{job.status}</span>
                 </div>
                 <p className="text-slate-300 text-sm mb-4">{job.message}</p>
+                {['pending', 'processing'].includes(job.status) && (
+                  <p className="text-xs text-slate-500 mb-4">
+                    Complex searches may take several minutes to finish.
+                  </p>
+                )}
                 <div className="progress-track">
                   <div className="progress-fill" style={{ width: `${job.progress || 0}%` }} />
                 </div>
