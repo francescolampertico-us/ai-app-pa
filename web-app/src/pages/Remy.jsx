@@ -151,7 +151,6 @@ export default function Remy() {
             }}
           >
             <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-            <option value="gpt-4.1">gpt-4.1</option>
             <option value="ChangeAgent">ChangeAgent</option>
           </select>
         </div>
