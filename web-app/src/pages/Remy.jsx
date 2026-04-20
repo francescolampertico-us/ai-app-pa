@@ -85,7 +85,7 @@ export default function Remy() {
   const [input, setInput]     = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState(null);
-  const [model, setModel]     = useState('gpt-4.1-mini');
+  const [model, setModel]     = useState('ChangeAgent');
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
 
@@ -150,7 +150,6 @@ export default function Remy() {
               borderRadius: 8, color: '#A78BFA', padding: '4px 10px', cursor: 'pointer',
             }}
           >
-            <option value="gpt-4.1-mini">gpt-4.1-mini</option>
             <option value="ChangeAgent">ChangeAgent</option>
           </select>
         </div>
