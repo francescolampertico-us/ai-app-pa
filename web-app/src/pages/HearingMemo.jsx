@@ -42,6 +42,7 @@ export default function HearingMemo() {
   const pipelineStdout = job?.result_data?.stdout || "";
   const pipelineStderr = job?.result_data?.stderr || "";
   const artifactMap = (job?.artifacts || []).reduce((acc, artifact) => ({ ...acc, [artifact.name]: artifact }), {});
+  const docxArtifact = (job?.artifacts || []).find(a => a.name.endsWith('.docx'));
   const downloadNamedArtifact = (name, fallbackAction) => {
     if (artifactMap[name]) {
       downloadArtifact(artifactMap[name]);
@@ -273,7 +274,7 @@ export default function HearingMemo() {
               <div>
                 <h3 className="font-serif text-2xl mb-4">Downloads</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <button data-testid="download-hearing-docx" onClick={() => downloadNamedArtifact("hearing_memo.docx")} className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-purple-200 transition-colors">
+                  <button data-testid="download-hearing-docx" onClick={() => docxArtifact ? downloadArtifact(docxArtifact) : downloadFile('docx')} className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-purple-200 transition-colors">
                     <DownloadSimple size={20} /> Download .docx
                   </button>
                   <button data-testid="download-hearing-text" onClick={() => downloadNamedArtifact("hearing_memo.txt", () => downloadText(memoText, "hearing_memo.txt"))} className="flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
