@@ -14,6 +14,8 @@ web-app/dist/
 fastapi-backend/jobs_output/
 fastapi-backend/.venv/
 fastapi-backend/jobs.db
+fastapi-backend/jobs.db-shm
+fastapi-backend/jobs.db-wal
 
 # ── Tool caches & temp output ─────────────────────────────────────────────────
 .cache/
@@ -37,6 +39,9 @@ toolkit/tools/background_memo_generator/examples/*
 .DS_Store
 .Rhistory
 *.swp
+.codex-runlogs/
+.tmp_ocr/
+web-app/test-results/
 
 # ── Nested repos (reference materials, not part of submission) ────────────────
 knowledge/

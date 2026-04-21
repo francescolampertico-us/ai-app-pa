@@ -1,71 +1,63 @@
 import { useEffect, useState } from 'react';
 import './research.css';
-import NarrativeLayout from '../../../academic-landing-page/src/components/NarrativeLayout.jsx';
-import SceneHero from '../../../academic-landing-page/src/components/SceneHero.jsx';
-import SceneIntro from '../../../academic-landing-page/src/components/SceneIntro.jsx';
-import SceneRQ from '../../../academic-landing-page/src/components/SceneRQ.jsx';
-import SceneLiteratureCh1 from '../../../academic-landing-page/src/components/SceneLiteratureCh1.jsx';
-import SceneLiteratureCh2 from '../../../academic-landing-page/src/components/SceneLiteratureCh2.jsx';
-import SceneLiteratureCh3 from '../../../academic-landing-page/src/components/SceneLiteratureCh3.jsx';
-import SceneMethodology from '../../../academic-landing-page/src/components/SceneMethodology.jsx';
-import SceneFindings from '../../../academic-landing-page/src/components/SceneFindings.jsx';
-import SceneSystemDesign from '../../../academic-landing-page/src/components/SceneSystemDesign.jsx';
-import SceneLimitations from '../../../academic-landing-page/src/components/SceneLimitations.jsx';
-import CitationPopup from '../../../academic-landing-page/src/components/CitationPopup.jsx';
+import NarrativeLayout from './landing/NarrativeLayout';
+import SceneHero from './landing/SceneHero';
+import SceneIntro from './landing/SceneIntro';
+import SceneRQ from './landing/SceneRQ';
+import SceneLiteratureCh1 from './landing/SceneLiteratureCh1';
+import SceneLiteratureCh2 from './landing/SceneLiteratureCh2';
+import SceneLiteratureCh3 from './landing/SceneLiteratureCh3';
+import SceneMethodology from './landing/SceneMethodology';
+import SceneFindings from './landing/SceneFindings';
+import SceneSystemDesign from './landing/SceneSystemDesign';
+import SceneLimitations from './landing/SceneLimitations';
+
+const SCENES = [
+  'scene-hero',
+  'scene-intro',
+  'scene-rq',
+  'scene-ch1',
+  'scene-ch2',
+  'scene-ch3',
+  'scene-methodology',
+  'scene-findings',
+  'scene-system-design',
+  'scene-limitations',
+  'scene-conclusion',
+  'scene-references',
+  'scene-appendix',
+];
 
 export default function ResearchLanding() {
-  const [activeScene, setActiveScene] = useState('intro');
-  const [hasVisitedApp, setHasVisitedApp] = useState(false);
-
-  useEffect(() => {
-    try {
-      setHasVisitedApp(window.localStorage.getItem('strategitect_dashboard_visited') === '1');
-    } catch {
-      setHasVisitedApp(false);
-    }
-  }, []);
+  const [activeScene, setActiveScene] = useState('scene-hero');
 
   useEffect(() => {
     const container = document.getElementById('scroll-container');
     if (!container) return undefined;
 
-    const scenes = [
-      { elementId: 'scene-hero', tag: 'intro' },
-      { elementId: 'scene-intro', tag: 'intro' },
-      { elementId: 'scene-rq', tag: 'intro' },
-      { elementId: 'scene-ch1', tag: 'literature' },
-      { elementId: 'scene-ch2', tag: 'literature' },
-      { elementId: 'scene-ch3', tag: 'literature' },
-      { elementId: 'scene-methodology', tag: 'methodology' },
-      { elementId: 'scene-findings', tag: 'findings' },
-      { elementId: 'scene-system-design', tag: 'system' },
-      { elementId: 'scene-limitations', tag: 'limitations' }
-    ];
+    const updateActive = () => {
+      const checkpoint = container.scrollTop + window.innerHeight * 0.35;
+      let next = SCENES[0];
 
-    const handleScroll = () => {
-      const scrollPos = container.scrollTop + (window.innerHeight * 0.5);
-      let currentTarget = 'intro';
-
-      for (const scene of scenes) {
-        const el = document.getElementById(scene.elementId);
-        if (el && el.offsetTop <= scrollPos) {
-          currentTarget = scene.tag;
+      for (const id of SCENES) {
+        const element = document.getElementById(id);
+        if (element && element.offsetTop <= checkpoint) {
+          next = id;
         }
       }
 
-      setActiveScene(currentTarget);
+      setActiveScene(next);
     };
 
-    container.addEventListener('scroll', handleScroll);
-    handleScroll();
-
-    return () => container.removeEventListener('scroll', handleScroll);
+    container.addEventListener('scroll', updateActive);
+    updateActive();
+    return () => container.removeEventListener('scroll', updateActive);
   }, []);
 
   return (
     <div className="research-shell">
       <NarrativeLayout activeScene={activeScene}>
-        <SceneHero appPath="/app" hasVisitedApp={hasVisitedApp} />
+        <SceneHero appPath="/app" />
         <SceneIntro />
         <SceneRQ />
         <SceneLiteratureCh1 />
@@ -76,7 +68,6 @@ export default function ResearchLanding() {
         <SceneSystemDesign appPath="/app" />
         <SceneLimitations appPath="/app" />
       </NarrativeLayout>
-      <CitationPopup />
     </div>
   );
 }

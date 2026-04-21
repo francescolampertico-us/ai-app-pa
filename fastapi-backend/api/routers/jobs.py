@@ -108,7 +108,7 @@ def _recover_result_data(output_dir: Path) -> dict | None:
 
 
 def _reconcile_job_from_output(job_id: str, job: dict) -> dict:
-    if not job or job.get("status") not in {"pending"}:
+    if not job or job.get("status") not in {"pending", "processing"}:
         return job
     output_dir = JOBS_OUTPUT_ROOT / job_id
     if not output_dir.exists():
@@ -119,14 +119,27 @@ def _reconcile_job_from_output(job_id: str, job: dict) -> dict:
         return job
 
     created_at = _parse_iso_datetime(job.get("created_at"))
-    latest_mtime = max(datetime.datetime.fromtimestamp(p.stat().st_mtime) for p in files)
+    if created_at:
+        # Ignore files written at job creation time so uploaded inputs do not
+        # masquerade as finished outputs for long-running jobs.
+        recovered_files = [
+            p for p in files
+            if (datetime.datetime.fromtimestamp(p.stat().st_mtime) - created_at).total_seconds() >= 5
+        ]
+    else:
+        recovered_files = files
+
+    if not recovered_files:
+        return job
+
+    latest_mtime = max(datetime.datetime.fromtimestamp(p.stat().st_mtime) for p in recovered_files)
     now = datetime.datetime.now()
     if created_at and (now - created_at).total_seconds() < 15:
         return job
     if (now - latest_mtime).total_seconds() < 10:
         return job
 
-    artifacts = [build_artifact(str(p), job_id, idx) for idx, p in enumerate(files)]
+    artifacts = [build_artifact(str(p), job_id, idx) for idx, p in enumerate(recovered_files)]
     result_data = job.get("result_data") or _recover_result_data(output_dir)
     message = job.get("message") or "Job completed."
     if not message.lower().startswith("job completed"):

@@ -1,0 +1,35 @@
+export const REFERENCE_LABELS = {
+  bitonti2023: 'Bitonti (2023)',
+  fiscalnote2026: 'FiscalNote (2026)',
+  oecd2021: 'OECD (2021)',
+  quorum2025: 'Quorum (2025)',
+  votervoice2025: 'VoterVoice (2025)',
+  bcg2025: 'BCG (2025)',
+  eloundou2023: 'Eloundou et al. (2023)',
+  noy2023: 'Noy and Zhang (2023)',
+  mertens2026: 'Mertens et al. (2026)',
+  buhmann2025: 'Buhmann et al. (2026)',
+  rettig2023: 'Rettig and Mickeleit (2023)',
+  section2026: 'Section (2026)',
+  yue2024: 'Yue et al. (2024)',
+  workday2025: 'Workday (2026)',
+  dellacqua2023: "Dell'Acqua et al. (2026)",
+  mollick2024: 'Mollick (2024)',
+  ray2025: 'Ray (2025)',
+  shao2025: 'Shao et al. (2025)',
+  friis2025: 'Friis and Riley (2025)',
+  digiacomo2025: 'Di Giacomo (2025)',
+  lock2025: 'Lock et al. (2025)',
+  lebenbauer2024: 'Lebenbauer (2024)',
+  charles2022: 'Charles et al. (2022)',
+  primaryData2026: 'Primary qualitative data (2026)',
+  managerClyde2026: 'Interview: Manager, Clyde (2026)',
+  founderChangeAgent2026: 'Interview: Founder, Change Agent (2026)',
+  partnerTiber2026: 'Interview: Partner, Tiber Creek Group (2026)',
+  partnerBeekeeper2026: 'Interview: Partner, Beekeeper Group (2026)',
+  vpWoodwell2026: 'Interview: VP, Woodwell Climate Research Center (2026)',
+};
+
+export function citationTitle(refs = []) {
+  return refs.map((ref) => REFERENCE_LABELS[ref] || ref).join('\n');
+}
