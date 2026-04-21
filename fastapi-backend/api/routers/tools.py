@@ -763,9 +763,12 @@ def _handle_legislative_tracker(job_id: str, values: dict[str, list[str]], uploa
         )
         return
 
-    from legiscan_client import LegiScanClient
-    from report import ReportGenerator
-    from watchlist import WatchlistManager
+    legiscan_mod = _load_module("legiscan_client", exec_dir / "legiscan_client.py")
+    LegiScanClient = legiscan_mod.LegiScanClient
+    report_mod = _load_module("report", exec_dir / "report.py")
+    ReportGenerator = report_mod.ReportGenerator
+    watchlist_mod = _load_module("watchlist", exec_dir / "watchlist.py")
+    WatchlistManager = watchlist_mod.WatchlistManager
 
     LEGISLATIVE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     watchlist = WatchlistManager(watchlist_path=str(LEGISLATIVE_CACHE_DIR / "watchlist.json"))

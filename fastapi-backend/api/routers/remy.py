@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -21,11 +20,12 @@ class RemyChatRequest(BaseModel):
 
 @router.post("/chat")
 async def chat_with_remy(req: RemyChatRequest):
-    if str(TOOLKIT_APP) not in sys.path:
-        sys.path.insert(0, str(TOOLKIT_APP))
-
     try:
-        from remy_assistant import chat_with_remy as run_remy  # type: ignore
+        import importlib.util as _ilu
+        _spec = _ilu.spec_from_file_location("remy_assistant", TOOLKIT_APP / "remy_assistant.py")
+        _mod = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        run_remy = _mod.chat_with_remy
 
         response = run_remy(
             user_message=req.message,
