@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DownloadSimpleIcon as DownloadSimple, ArrowRightIcon as ArrowRight, SpinnerGapIcon as SpinnerGap } from '@phosphor-icons/react';
+import { API } from '../../hooks/useFastApiJob';
 
 export default function ToolPage({ title, description, toolId, inputs = [] }) {
   const [formData, setFormData] = useState(() => {
@@ -24,7 +25,7 @@ export default function ToolPage({ title, description, toolId, inputs = [] }) {
     Object.entries(formData).forEach(([k, v]) => payload.append(k, v));
     if (file) payload.append('file', file);
     try {
-      const res  = await fetch(`http://localhost:8000/api/tools/execute/${toolId}`, { method: 'POST', body: payload });
+      const res  = await fetch(`${API}/api/tools/execute/${toolId}`, { method: 'POST', body: payload });
       const data = await res.json();
       if (data.job_id) setJob({ id: data.job_id, status: 'pending', progress: 0, message: 'Queued' });
     } catch {
@@ -36,7 +37,7 @@ export default function ToolPage({ title, description, toolId, inputs = [] }) {
     if (!job || !['pending','processing'].includes(job.status)) return;
     const iv = setInterval(async () => {
       try {
-        const res  = await fetch(`http://localhost:8000/api/jobs/${job.id}/status`);
+        const res  = await fetch(`${API}/api/jobs/${job.id}/status`);
         const data = await res.json();
         setJob(data);
         if (['completed','failed'].includes(data.status)) { setLoading(false); clearInterval(iv); }
@@ -47,7 +48,7 @@ export default function ToolPage({ title, description, toolId, inputs = [] }) {
 
   const download = async () => {
     if (!job?.download_url) return;
-    const res  = await fetch(`http://localhost:8000${job.download_url}`);
+    const res  = await fetch(`${API}${job.download_url}`);
     const blob = await res.blob();
     const url  = URL.createObjectURL(blob);
     const a    = Object.assign(document.createElement('a'), { href: url, download: `strategitect_${toolId}_${job.id.slice(0,6)}.docx` });

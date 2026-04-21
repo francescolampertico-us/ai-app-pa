@@ -6,7 +6,7 @@ import ModelSelector from '../components/ModelSelector';
 import StyledMarkdown from '../components/StyledMarkdown';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 
-const API = 'http://localhost:8000';
+import { API } from '../hooks/useFastApiJob';
 const CUR_YEAR = new Date().getFullYear();
 const ALL_YEARS = Array.from({ length: CUR_YEAR - 1999 }, (_, i) => CUR_YEAR - i);
 
