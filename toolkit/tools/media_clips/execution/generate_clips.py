@@ -1,7 +1,7 @@
 import os
 import datetime
 import subprocess # For AppleScript
-import multiprocessing as mp
+import threading
 import queue
 from gnews import GNews
 from docx import Document
@@ -73,18 +73,16 @@ def _gnews_fetch_worker(query: str, period: str, max_results: int, result_queue)
 
 def _fetch_news_with_timeout(query: str, period: str, max_results: int, timeout_seconds: int = QUERY_FETCH_TIMEOUT_SECONDS, retries: int = QUERY_FETCH_RETRIES):
     for attempt in range(retries + 1):
-        result_queue = mp.Queue()
-        proc = mp.Process(
+        result_queue = queue.Queue()
+        t = threading.Thread(
             target=_gnews_fetch_worker,
             args=(query, period, max_results, result_queue),
             daemon=True,
         )
-        proc.start()
-        proc.join(timeout_seconds)
+        t.start()
+        t.join(timeout_seconds)
 
-        if proc.is_alive():
-            proc.terminate()
-            proc.join(5)
+        if t.is_alive():
             print(f'GNews fetch timed out for query {query!r} (attempt {attempt + 1}/{retries + 1})')
             continue
 
