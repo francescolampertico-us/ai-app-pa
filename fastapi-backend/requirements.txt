@@ -16,7 +16,6 @@ plotly>=5.0.0
 gnews>=0.3.0
 googlenewsdecoder>=0.1.4
 trafilatura>=1.6.0
-newspaper3k>=0.2.8
+newspaper4k>=0.9.3
 rapidfuzz>=3.5.0
 pytz
-urllib3<2
