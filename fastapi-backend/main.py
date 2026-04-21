@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
-# Load credentials from the toolkit directory where they are securely stored
+# Load credentials: try toolkit/.env for local dev; production uses platform env vars
 dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "toolkit", ".env")
-load_dotenv(dotenv_path)
+load_dotenv(dotenv_path, override=False)
 
 from api.routers import jobs, tools, remy
 
