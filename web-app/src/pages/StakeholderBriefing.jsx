@@ -86,11 +86,11 @@ export default function StakeholderBriefing() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
+        <div className="app-kicker">
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
         </div>
-        <h1 data-testid="page-title-stakeholder-briefing" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Stakeholder Briefing</h1>
-        <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '70ch', fontWeight: 300 }}>
+        <h1 data-testid="page-title-stakeholder-briefing" className="app-page-title">Stakeholder Briefing</h1>
+        <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Generates a pre-meeting briefing with bio, policy positions, suggested talking points, optional disclosure records, and optional recent news.
         </p>
         <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
@@ -206,7 +206,7 @@ export default function StakeholderBriefing() {
             {activeTab === 'Profile' && (
               <div className="space-y-5">
                 <div>
-                  <h2 className="display" style={{ fontSize: 28, color: '#A78BFA' }}>{rd.header?.stakeholder_name}</h2>
+                  <h2 className="app-section-title" style={{ fontSize: 28 }}>{rd.header?.stakeholder_name}</h2>
                   {rd.header?.organization && <p className="text-slate-400 mt-2">{rd.header.organization}</p>}
                 </div>
                 <div className="flex flex-wrap gap-3 text-xs uppercase tracking-wider">
@@ -233,7 +233,7 @@ export default function StakeholderBriefing() {
                 )}
                 {rd.key_questions?.length > 0 && (
                   <div>
-                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: '#c4b5fd', marginBottom: 12 }}>Key Questions To Ask</h3>
+                    <h3 className="app-subsection-title">Key Questions To Ask</h3>
                     <div className="space-y-3">
                       {rd.key_questions.map((question, index) => (
                         <div key={index} className="rounded-xl border border-white/10 bg-black/20 px-5 py-4">
@@ -274,7 +274,7 @@ export default function StakeholderBriefing() {
               <div className="space-y-6 text-sm text-slate-300">
                 {curatedDisclosures.length > 0 && (
                   <div>
-                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 12 }}>Curated Disclosure Intelligence</h3>
+                    <h3 className="app-subsection-title">Curated Disclosure Intelligence</h3>
                     <div className="space-y-3">
                       {curatedDisclosures.map((item, index) => (
                         <div key={index} className="rounded-xl border border-white/10 bg-black/20 px-5 py-4">
@@ -288,7 +288,7 @@ export default function StakeholderBriefing() {
                 )}
                 {disclosures.lda_entity?.length > 0 && (
                   <div>
-                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 12 }}>LDA Lobbying (Stakeholder Activity)</h3>
+                    <h3 className="app-subsection-title">LDA Lobbying (Stakeholder Activity)</h3>
                     <DisclosureTable
                       columns={[
                         { key: 'registrant_name', label: 'Registrant' },
@@ -302,7 +302,7 @@ export default function StakeholderBriefing() {
                 )}
                 {disclosures.lda_topic?.length > 0 && (
                   <div>
-                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 12 }}>Lobbying Activity On Meeting Topic</h3>
+                    <h3 className="app-subsection-title">Lobbying Activity On Meeting Topic</h3>
                     <p className="text-slate-400 text-sm mb-3">Organizations actively lobbying on the issue you&apos;re meeting about.</p>
                     <DisclosureTable
                       columns={[
@@ -318,7 +318,7 @@ export default function StakeholderBriefing() {
                 )}
                 {(disclosures.fara?.registrants?.length > 0 || disclosures.fara?.foreign_principals?.length > 0) && (
                   <div>
-                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 12 }}>FARA Records</h3>
+                    <h3 className="app-subsection-title">FARA Records</h3>
                     {disclosures.fara?.registrants?.length > 0 && (
                       <div className="space-y-3 mb-5">
                         <p className="text-slate-400 text-sm">Registrants</p>
@@ -341,7 +341,7 @@ export default function StakeholderBriefing() {
                 )}
                 {(disclosures.irs990?.organizations?.length > 0 || disclosures.irs990?.filings?.length > 0) && (
                   <div>
-                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 12 }}>IRS 990 Records</h3>
+                    <h3 className="app-subsection-title">IRS 990 Records</h3>
                     {disclosures.irs990?.organizations?.length > 0 && (
                       <div className="space-y-3 mb-5">
                         <p className="text-slate-400 text-sm">Organizations</p>

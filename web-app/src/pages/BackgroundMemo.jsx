@@ -81,11 +81,11 @@ export default function BackgroundMemo() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
+        <div className="app-kicker">
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
         </div>
-        <h1 data-testid="page-title-background-memo" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Background Memo</h1>
-        <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '70ch', fontWeight: 300 }}>
+        <h1 data-testid="page-title-background-memo" className="app-page-title">Background Memo</h1>
+        <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Generates a structured first-draft background memo on a client, organization, policy issue, or individual, with optional file grounding and automatic disclosure research.
         </p>
         <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
@@ -102,7 +102,7 @@ export default function BackgroundMemo() {
             <div>
               <label className="field-label">Subject</label>
               <input data-testid="input-background-subject" value={subject} onChange={(event) => setSubject(event.target.value)}
-                className="field" placeholder="e.g. Jagello 2000, Giordano Riello Group, AI Safety Act" required />
+                className="field" placeholder="e.g. NATO, Pfizer, American Clean Energy Association" required />
             </div>
             <div>
               <label className="field-label">Memo Date</label>
@@ -193,12 +193,12 @@ export default function BackgroundMemo() {
                 </div>
 
                 <section>
-                  <h2 className="display" style={{ fontSize: 26, color: '#A78BFA', marginBottom: 12 }}>Overview</h2>
+                  <h2 className="app-section-title">Overview</h2>
                   <p className="text-slate-300 leading-7">{rd.overview}</p>
                 </section>
 
                 <section>
-                  <h2 className="display" style={{ fontSize: 26, color: '#A78BFA', marginBottom: 12 }}>Fast Facts</h2>
+                  <h2 className="app-section-title">Fast Facts</h2>
                   <div className="space-y-3">
                     {(rd.fast_facts || []).map((fact) => (
                       <p key={fact} className="text-slate-300 leading-7"><strong className="text-white">• {fact}</strong></p>
@@ -208,10 +208,10 @@ export default function BackgroundMemo() {
 
                 {(rd.sections || []).map((section) => (
                   <section key={section.heading}>
-                    <h2 className="display" style={{ fontSize: 26, color: '#A78BFA', marginBottom: 12 }}>{section.heading}</h2>
+                    <h2 className="app-section-title">{section.heading}</h2>
                     {(section.subsections || []).map((subsection, index) => (
                       <div key={`${section.heading}-${index}`} className="space-y-4 mb-5">
-                        {subsection.heading && <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#c4b5fd', marginBottom: 8 }}>{subsection.heading}</h3>}
+                        {subsection.heading && <h3 className="app-subsection-title" style={{ marginBottom: 8 }}>{subsection.heading}</h3>}
                         {(subsection.paragraphs || []).map((paragraph, paragraphIndex) => (
                           <p key={paragraphIndex} className="text-slate-300 leading-7">{paragraph}</p>
                         ))}
@@ -221,7 +221,7 @@ export default function BackgroundMemo() {
                 ))}
 
                 <section>
-                  <h2 className="display" style={{ fontSize: 26, color: '#A78BFA', marginBottom: 12 }}>Links</h2>
+                  <h2 className="app-section-title">Links</h2>
                   <div className="space-y-2">
                     {(rd.links || []).map((link) => (
                       <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer"

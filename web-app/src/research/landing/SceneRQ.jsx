@@ -32,12 +32,11 @@ export default function SceneRQ() {
             }}
           >
             <h2
+              className="card-title-editorial"
               style={{
-                fontFamily: 'var(--font-serif)',
                 fontSize: 'clamp(1.52rem, 1.95vw, 2.15rem)',
                 lineHeight: 1.22,
                 letterSpacing: '-0.04em',
-                color: '#fff',
                 textAlign: 'center',
                 margin: 0,
                 marginInline: 'auto',
@@ -64,26 +63,15 @@ export default function SceneRQ() {
                 }}
               >
                 <div
+                  className="card-metric"
                   style={{
-                    fontFamily: 'var(--font-serif)',
                     fontSize: '1.45rem',
-                    lineHeight: 1,
-                    color: 'var(--text-accent)',
                     marginBottom: '1.35rem',
                   }}
                 >
                   0{index + 1}
                 </div>
-                <p
-                  style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '0.95rem',
-                    lineHeight: 1.72,
-                    color: '#f8fafc',
-                    margin: 0,
-                    maxWidth: '27ch',
-                  }}
-                >
+                <p className="card-body-soft" style={{ maxWidth: '27ch' }}>
                   {objective}
                 </p>
               </motion.article>

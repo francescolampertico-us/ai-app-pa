@@ -378,11 +378,11 @@ export default function StakeholderMap() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
+        <div className="app-kicker">
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
         </div>
-        <h1 data-testid="page-title-stakeholder-map" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Stakeholder Map</h1>
-        <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '72ch', fontWeight: 300 }}>
+        <h1 data-testid="page-title-stakeholder-map" className="app-page-title">Stakeholder Map</h1>
+        <p className="app-page-intro">
           Discovers and classifies policy actors from lobbying filings, bill sponsorships, and supplemental web evidence, then returns an interactive graph and directional network analysis.
         </p>
         <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
@@ -483,7 +483,7 @@ export default function StakeholderMap() {
                     {/* ── Engagement Priority ──────────────────────────────── */}
                     <section className="space-y-4">
                       <div>
-                        <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd' }}>Engagement Priority</h3>
+                        <h3 className="app-subsection-title">Engagement Priority</h3>
                         <p className="text-sm text-slate-400 mt-1">
                           Ranked by influence tier then LDA spend. Focuses outreach on the actors who matter most.
                         </p>
@@ -516,7 +516,7 @@ export default function StakeholderMap() {
 
                     {/* ── Bridge Actors ────────────────────────────────────── */}
                     <section className="space-y-3">
-                      <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd' }}>Bridge Actors</h3>
+                      <h3 className="app-subsection-title">Bridge Actors</h3>
                       <p className="text-sm text-slate-400">
                         {METRIC_HELP.bridgeRole}
                       </p>
@@ -547,7 +547,7 @@ export default function StakeholderMap() {
                     {analytics.has_edges && (
                       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="space-y-3">
-                          <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd' }}>Top by Bridge Role</h3>
+                          <h3 className="app-subsection-title">Top by Bridge Role</h3>
                           <p className="text-sm text-slate-400">{METRIC_HELP.bridgeRole}</p>
                           <Table
                             columns={[
@@ -559,7 +559,7 @@ export default function StakeholderMap() {
                           />
                         </div>
                         <div className="space-y-3">
-                          <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd' }}>Top by Connection Reach</h3>
+                          <h3 className="app-subsection-title">Top by Connection Reach</h3>
                           <p className="text-sm text-slate-400">{METRIC_HELP.connectionReach}</p>
                           <Table
                             columns={[
@@ -575,7 +575,7 @@ export default function StakeholderMap() {
 
                     {/* ── Network metrics ──────────────────────────────────── */}
                     <section className="space-y-4">
-                      <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd' }}>Network Metrics</h3>
+                      <h3 className="app-subsection-title">Network Metrics</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <SummaryMetric label="Network Density" value={Number(analytics.network_density || 0).toFixed(3)} />
                         <SummaryMetric label="Structural Communities" value={analytics.communities || 0} />
@@ -587,7 +587,7 @@ export default function StakeholderMap() {
                     {/* ── Multi-Venue Actors ───────────────────────────────── */}
                     {analytics.multi_venue_actors?.length > 0 && (
                       <section className="space-y-3">
-                        <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd' }}>Multi-Venue Actors</h3>
+                        <h3 className="app-subsection-title">Multi-Venue Actors</h3>
                         <p className="text-sm text-slate-400">
                           Active in both administrative (LDA) and legislative (LegiScan) venues — consistent with higher-influence advocacy.
                         </p>
@@ -633,7 +633,7 @@ export default function StakeholderMap() {
                 <Table columns={allActorColumns} rows={actors} />
                 {relationships.length > 0 && (
                   <section className="space-y-3">
-                    <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd' }}>Relationships</h3>
+                    <h3 className="app-subsection-title">Relationships</h3>
                     <Table
                       columns={[
                         { key: 'from_name', label: 'From' },
@@ -686,7 +686,7 @@ export default function StakeholderMap() {
                     {/* Immediate Actions */}
                     {strategicAnalysis.immediate_actions?.length > 0 && (
                       <section className="space-y-3">
-                        <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd' }}>Immediate Actions</h3>
+                        <h3 className="app-subsection-title">Immediate Actions</h3>
                         <div className="space-y-2">
                           {strategicAnalysis.immediate_actions.map((action, i) => {
                             const actionText = typeof action === 'string'
@@ -738,7 +738,7 @@ export default function StakeholderMap() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                       {strategicAnalysis.coalition_opportunities?.length > 0 && (
                         <section className="space-y-3">
-                          <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd' }}>Coalition Opportunities</h3>
+                          <h3 className="app-subsection-title">Coalition Opportunities</h3>
                           <ul className="space-y-2">
                             {strategicAnalysis.coalition_opportunities.map((opp, i) => {
                               const text = typeof opp === 'string' ? opp : opp.opportunity;
@@ -766,7 +766,7 @@ export default function StakeholderMap() {
                       )}
                       {strategicAnalysis.risks?.length > 0 && (
                         <section className="space-y-3">
-                          <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd' }}>Risks</h3>
+                          <h3 className="app-subsection-title">Risks</h3>
                           <ul className="space-y-2">
                             {strategicAnalysis.risks.map((risk, i) => {
                               const text = typeof risk === 'string' ? risk : risk.risk;
@@ -797,7 +797,7 @@ export default function StakeholderMap() {
                     {/* Swing actor strategy */}
                     {strategicAnalysis.swing_actor_strategy && (
                       <section>
-                        <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd', marginBottom: 8 }}>Swing Actor Strategy</h3>
+                        <h3 className="app-subsection-title" style={{ marginBottom: 8 }}>Swing Actor Strategy</h3>
                         <p style={{ color: '#cbd5e1', fontSize: 14, lineHeight: 1.65 }}>
                           {typeof strategicAnalysis.swing_actor_strategy === 'string'
                             ? strategicAnalysis.swing_actor_strategy
@@ -820,14 +820,14 @@ export default function StakeholderMap() {
                     {/* Issue context */}
                     {rd.issue_summary && (
                       <section style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16 }}>
-                        <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd', marginBottom: 8 }}>Issue Overview</h3>
+                        <h3 className="app-subsection-title" style={{ marginBottom: 8 }}>Issue Overview</h3>
                         <p style={{ color: '#94a3b8', fontSize: 13, lineHeight: 1.65 }}>{rd.issue_summary}</p>
                       </section>
                     )}
 
                     {rd.key_coalitions?.length > 0 && (
                       <section>
-                        <h3 style={{ fontFamily: "'DM Serif Display', serif", color: '#c4b5fd', marginBottom: 8 }}>Known Coalitions</h3>
+                        <h3 className="app-subsection-title" style={{ marginBottom: 8 }}>Known Coalitions</h3>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                           {rd.key_coalitions.map((c) => (
                             <span key={c} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 6, padding: '3px 10px', fontSize: 12, color: '#a5b4fc' }}>{c}</span>

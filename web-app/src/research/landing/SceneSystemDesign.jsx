@@ -360,19 +360,17 @@ export default function SceneSystemDesign({ appPath = '/app' }) {
     <section className="scene section-main" id="scene-system-design">
       <div style={{ width: '100%', maxWidth: '1360px', margin: '0 auto' }}>
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '4rem', marginBottom: '2rem', letterSpacing: '-1.12px' }}>
-            From Research to Prototype
-          </h2>
+          <h2 className="section-title">From Research to Prototype</h2>
           <div style={{ color: 'var(--text-accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2.5rem', fontSize: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '2rem' }}>
             Integrating Generative AI into Public Affairs
           </div>
           <div style={{ display: 'grid', gap: '1.1rem', marginBottom: '2.6rem', maxWidth: '82ch' }}>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '1.125rem', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+            <p className="section-lead">
               The board below shows how the research was translated into a prototype: literature defines the main areas,
               findings refine them, tools are selected, those tools are embedded into workflow, and the resulting system
               is adapted to practice.
             </p>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '1.05rem', color: '#e2e8f0', lineHeight: 1.7 }}>
+            <p className="section-note" style={{ color: '#e2e8f0' }}>
               The system is meant to support professional work, not replace professional judgment.
             </p>
           </div>

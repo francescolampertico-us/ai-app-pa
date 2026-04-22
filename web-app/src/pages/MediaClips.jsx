@@ -275,11 +275,11 @@ export default function MediaClips() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
+        <div className="app-kicker">
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
         </div>
-        <h1 data-testid="page-title-media-clips" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Media Clips</h1>
-        <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '72ch', fontWeight: 300 }}>
+        <h1 data-testid="page-title-media-clips" className="app-page-title">Media Clips</h1>
+        <p className="app-page-intro">
           Search Google News with keyword or Boolean queries, review and clean extracted article text, then rebuild the final report and email draft files.
         </p>
         <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
@@ -477,7 +477,7 @@ export default function MediaClips() {
       )}
 
       <section data-testid="media-clip-cleaner-panel" className="glass-card p-8 space-y-5 mt-8">
-        <h2 data-testid="standalone-clip-cleaner-title" style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: '#A78BFA' }}>Clip Cleaner</h2>
+        <h2 data-testid="standalone-clip-cleaner-title" className="app-panel-title">Clip Cleaner</h2>
         <p className="text-slate-400 text-sm">
           Paste raw article text to strip ads, navigation, and boilerplate. Use standalone or as part of the clips workflow below.
         </p>
@@ -557,7 +557,7 @@ export default function MediaClips() {
           </div>
 
           <section className="glass-card p-8 space-y-4">
-            <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: '#A78BFA' }}>Review Articles</h2>
+            <h2 className="app-panel-title">Review Articles</h2>
             <p className="text-slate-400 text-sm">
               The initial run does a light cleanup for speed. Click any article row to expand its inline editor, then edit, paste, clean further, or remove it.
             </p>
@@ -688,7 +688,7 @@ export default function MediaClips() {
           </section>
 
           <section className="glass-card p-8 space-y-5">
-            <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: '#A78BFA' }}>Build Final Report</h2>
+            <h2 className="app-panel-title">Build Final Report</h2>
             <p className="text-slate-400 text-sm">
               Generates the final DOCX report and an email draft (plain text + HTML). Download buttons appear below after the job completes.
             </p>

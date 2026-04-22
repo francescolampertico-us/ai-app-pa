@@ -79,7 +79,7 @@ function Message({ msg }) {
 export default function Remy() {
   const [messages, setMessages] = useState([{
     role: 'assistant',
-    content: "Hi — I'm Remy. Tell me the objective and I'll route you to the right tool, collect any missing inputs, and run it when ready.\n\nTry: \"Run a background memo on Jagello 2000 with sections: Corporate Overview, Leadership, U.S. Presence, Policy Positions.\"",
+    content: "Hi — I'm Remy. Tell me the objective and I'll route you to the right tool, collect any missing inputs, and run it when ready.\n\nTry: \"Run a background memo on NATO with sections: Overview, Leadership, U.S. Relations, Policy Positions.\"",
     tool_events: [],
   }]);
   const [input, setInput]     = useState('');

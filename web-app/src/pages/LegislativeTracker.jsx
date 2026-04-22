@@ -201,11 +201,11 @@ export default function LegislativeTracker() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
+        <div className="app-kicker">
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
         </div>
-        <h1 data-testid="page-title-legislative-tracker" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Legislative Tracker</h1>
-        <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '70ch', fontWeight: 300 }}>
+        <h1 data-testid="page-title-legislative-tracker" className="app-page-title">Legislative Tracker</h1>
+        <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Search, track, and summarize legislation across federal and state jurisdictions, then maintain a live watchlist.
         </p>
         <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>

@@ -382,7 +382,7 @@ function Report({ text }) {
             Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
           </div>
           <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-          <h2 className="display" style={{ fontSize: 22, color: '#fff' }}>Summary Report</h2>
+          <h2 className="app-surface-title">Summary Report</h2>
         </div>
         <button onClick={() => downloadText(text, 'disclosure_report.md')}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-violet-300 transition-colors"
@@ -539,11 +539,11 @@ export default function InfluenceTracker() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
              style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
+        <div className="app-kicker">
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect &nbsp;·&nbsp; TOOL
         </div>
-        <h1 data-testid="page-title-influence-tracker" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Influence Disclosure Tracker</h1>
-        <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '60ch', fontWeight: 300 }}>
+        <h1 data-testid="page-title-influence-tracker" className="app-page-title">Influence Disclosure Tracker</h1>
+        <p className="app-page-intro" style={{ maxWidth: '60ch' }}>
           Retrieves and normalizes LDA lobbying, FARA foreign agent, and IRS 990 disclosure records — producing filterable tables and a markdown summary report.
         </p>
         <div className="mt-3">
@@ -707,7 +707,7 @@ export default function InfluenceTracker() {
 
             {(matchedNames.clients.length > 0 || matchedNames.registrants.length > 0) && (
               <div className="glass-card p-8">
-                <h2 className="display mb-4" style={{ fontSize: 22, color: '#fff' }}>Review Matched Entities</h2>
+                <h2 className="app-surface-title">Review Matched Entities</h2>
                 <p style={{ fontFamily: 'Inter', fontSize: 13, color: '#A1A1AA', marginBottom: 16 }}>
                   Deselect names you do not want included in the report and data tables.
                 </p>
@@ -773,7 +773,7 @@ export default function InfluenceTracker() {
             {/* LDA tables */}
             {(ldaFilings.length > 0 || ldaIssues.length > 0 || ldaLobbyists.length > 0) && (
               <div>
-                <h2 className="display mb-4" style={{ fontSize: 22, color: '#fff' }}>LDA Data Tables</h2>
+                <h2 className="app-surface-title">LDA Data Tables</h2>
                 <div className="flex flex-col gap-3">
                   <DataTable title="Filings & Spending" rows={ldaFilings}
                     headers={['Firm','Client','Year','Quarter','Type','Amount','Link']} filename="lda_filings.csv" />
@@ -788,7 +788,7 @@ export default function InfluenceTracker() {
             {/* FARA tables */}
             {(faraFPs.length > 0 || faraDocs.length > 0) && (
               <div>
-                <h2 className="display mb-4" style={{ fontSize: 22, color: '#fff' }}>FARA Data Tables</h2>
+                <h2 className="app-surface-title">FARA Data Tables</h2>
                 <div className="flex flex-col gap-3">
                   <DataTable title="Foreign Principals" rows={faraFPs}
                     headers={['Foreign Principal','Country','Registrant','Registered','Terminated']} filename="fara_foreign_principals.csv" />
@@ -801,7 +801,7 @@ export default function InfluenceTracker() {
             {/* IRS 990 tables */}
             {irs990Filings.length > 0 && (
               <div>
-                <h2 className="display mb-4" style={{ fontSize: 22, color: '#fff' }}>IRS 990 Data Tables</h2>
+                <h2 className="app-surface-title">IRS 990 Data Tables</h2>
                 <div className="flex flex-col gap-3">
                   <DataTable title="IRS 990 Filings" rows={irs990Filings}
                     headers={['Organization','Year','Type','Revenue','Expenses','Assets','PDF']} filename="irs990_filings.csv" />

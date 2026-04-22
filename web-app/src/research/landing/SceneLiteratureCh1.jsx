@@ -126,7 +126,7 @@ export default function SceneLiteratureCh1() {
             Where GenAI is currently being integrated
             <CitationButton refs={['fiscalnote2026']} />
           </h3>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '1.18rem', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '2.5rem', maxWidth: '70ch' }}>
+          <p className="body-large" style={{ marginBottom: '2.5rem', maxWidth: '70ch' }}>
             Help with brainstorming and content generation dominate initial adoption.
           </p>
           <div style={{ display: 'grid', gap: '1.35rem' }}>
@@ -190,10 +190,8 @@ export default function SceneLiteratureCh1() {
                   flexDirection: 'column',
                 }}
               >
-                <h4 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.55rem', lineHeight: 1.24, margin: '0 0 1.35rem', color: '#fff' }}>
-                  {item.title}
-                </h4>
-                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                <h4 className="card-title-editorial" style={{ marginBottom: '1.35rem' }}>{item.title}</h4>
+                <p className="card-body-soft" style={{ lineHeight: 1.6 }}>
                   {item.text}
                   <CitationButton refs={item.refs} />
                 </p>
@@ -211,10 +209,10 @@ export default function SceneLiteratureCh1() {
               textAlign: 'center',
             }}
           >
-            <h4 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.7rem', margin: '0 0 1rem', color: '#fff' }}>
+            <h4 className="card-title-editorial" style={{ fontSize: '1.7rem', marginBottom: '1rem' }}>
               Strategic Planning and Decision Support
             </h4>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '1rem', color: '#d6d3f1', lineHeight: 1.65, margin: 0 }}>
+            <p className="card-body-strong" style={{ lineHeight: 1.65, textAlign: 'center' }}>
               Brings together policy monitoring, stakeholder intelligence, sentiment tracking, and drafted materials to
               support prioritization, scenario analysis, timing, and strategic choice.
               <CitationButton refs={['bitonti2023', 'digiacomo2025', 'buhmann2025']} />
@@ -241,10 +239,10 @@ export default function SceneLiteratureCh1() {
                   flexDirection: 'column',
                 }}
               >
-                <h4 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1rem', lineHeight: 1.45, margin: '0 0 1.1rem', color: '#e2e8f0' }}>
+                <h4 className="card-title-editorial" style={{ fontSize: '1.22rem', lineHeight: 1.3, marginBottom: '1.05rem' }}>
                   {item.title}
                 </h4>
-                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.92rem', color: '#7f8ca3', lineHeight: 1.65, margin: 0 }}>
+                <p className="card-body-soft" style={{ fontSize: '0.92rem', color: '#7f8ca3', lineHeight: 1.65 }}>
                   {item.text}
                   <CitationButton refs={item.refs} />
                 </p>
@@ -263,34 +261,40 @@ export default function SceneLiteratureCh1() {
                 <div
                   key={item.title}
                   style={{
-                    display: 'grid',
-                    gridTemplateRows: '1fr auto',
-                    gap: '0.9rem',
+                    minHeight: '300px',
+                    padding: '1.9rem 1.65rem 1.5rem',
+                    borderRadius: '22px',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    background: 'rgba(20,13,33,0.52)',
+                    display: 'flex',
+                    flexDirection: 'column',
                   }}
                 >
                   <div
                     style={{
-                      minHeight: '248px',
                       display: 'flex',
                       flexDirection: 'column',
-                      paddingBottom: '0.35rem',
-                      borderBottom: '1px solid rgba(167,139,250,0.24)',
+                      flex: 1,
                     }}
                   >
-                    <h4 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.65rem', lineHeight: 1.18, margin: '0 0 1rem', color: '#fff' }}>
+                    <h4 className="card-title-editorial" style={{ maxWidth: '11ch' }}>
                       {item.title}
                     </h4>
-                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                    <p className="card-body-soft">
                       {item.text}
                       <CitationButton refs={item.refs} />
                     </p>
                   </div>
                   <div
                     style={{
-                    display: 'flex',
+                      display: 'flex',
                       alignItems: 'center',
+                      marginTop: '1.5rem',
+                      paddingTop: '1.25rem',
+                      borderTop: '1px solid rgba(167,139,250,0.18)',
                       fontFamily: 'var(--font-sans)',
-                      fontSize: '1.08rem',
+                      fontSize: '0.96rem',
+                      lineHeight: 1.35,
                       color: 'var(--text-accent)',
                     }}
                   >

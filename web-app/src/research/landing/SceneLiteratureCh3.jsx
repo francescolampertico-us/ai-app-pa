@@ -417,11 +417,11 @@ export default function SceneLiteratureCh3() {
               }}
             >
               <h4 className="panel-heading" style={{ color: 'var(--text-accent)', marginBottom: '1rem' }}>Centaur</h4>
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '1.125rem', color: '#fff', fontWeight: 600, marginBottom: '1rem' }}>
+              <p className="card-body-strong" style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem' }}>
                 A strategic division of labor.
                 <CitationButton refs={['dellacqua2023', 'mollick2024']} />
               </p>
-              <p style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <p className="card-body-soft" style={{ lineHeight: 1.6 }}>
                 The human switches between human-led and AI-led sub-tasks based on their relative strengths.
               </p>
             </motion.div>
@@ -437,11 +437,11 @@ export default function SceneLiteratureCh3() {
               }}
             >
               <h4 className="panel-heading" style={{ color: 'var(--text-accent)', marginBottom: '1rem' }}>Cyborg</h4>
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '1.125rem', color: '#fff', fontWeight: 600, marginBottom: '1rem' }}>
+              <p className="card-body-strong" style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem' }}>
                 A fluid integration of human and AI work.
                 <CitationButton refs={['dellacqua2023', 'mollick2024']} />
               </p>
-              <p style={{ fontFamily: 'var(--font-sans)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <p className="card-body-soft" style={{ lineHeight: 1.6 }}>
                 The human and the AI move back and forth within the same task at the micro-level.
               </p>
             </motion.div>

@@ -114,7 +114,7 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="w-16 md:w-72 border-r border-white/5 flex flex-col py-8 px-3 z-50 shrink-0 backdrop-blur-xl bg-[#09090B]/90">
+    <aside className="w-16 md:w-72 h-[100dvh] border-r border-white/5 flex flex-col py-8 px-3 z-50 shrink-0 backdrop-blur-xl bg-[#09090B]/90 overflow-hidden">
       <div className="flex flex-col gap-6 min-h-0 flex-1 overflow-y-auto pr-1">
         {/* Wordmark */}
         <div className="px-1 hidden md:block">
@@ -152,6 +152,6 @@ export default function Sidebar() {
           ))}
         </nav>
       </div>
-    </div>
+    </aside>
   );
 }

@@ -30,8 +30,8 @@ const PHASES = [
         },
         {
           name: 'Craig Johnson',
-          role: 'Founder and Managing Partner, Unfiltered Media',
-          organization: 'Co-Founder and Co-CEO, Change Agent'
+          role: 'Founder & Managing Partner; Co-Founder & Co-CEO',
+          organization: 'Unfiltered Media; Change Agent'
         }
       ],
       notes:
@@ -54,11 +54,21 @@ const PHASES = [
     phase: 'PHASE 4',
     title: 'Testing and Iterative Refinement',
     method: 'Prototype Testing and Output Review',
-    body: 'Testing of the integrated application through representative task scenarios. Focused on interface usability, system performance, and the quality of generated results, reviewed against professional deliverables. Used to improve the application’s alignment with Public Affairs expectations and needs.',
+    body: 'Qualitative testing of the integrated application through representative task scenarios. Focused on interface usability, system performance, and the quality of generated results, reviewed against professional deliverables. Used to improve the application’s alignment with Public Affairs expectations and needs.',
   },
 ];
 
 export default function SceneMethodology() {
+  const getInterviewCardStyle = (index, total) => {
+    if (total === 5) {
+      if (index < 3) return { gridColumn: 'span 2' };
+      if (index === 3) return { gridColumn: '2 / span 2' };
+      if (index === 4) return { gridColumn: '4 / span 2' };
+    }
+
+    return { gridColumn: 'span 2' };
+  };
+
   return (
     <section className="scene section-flow" id="scene-methodology">
       <div className="section-inner">
@@ -126,15 +136,16 @@ export default function SceneMethodology() {
                       <div
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                          gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
                           gap: '0.75rem',
                           marginBottom: '1rem'
                         }}
                       >
-                        {item.details.interviewBase.map((person) => (
+                        {item.details.interviewBase.map((person, personIndex) => (
                           <div
                             key={person.name}
                             style={{
+                              ...getInterviewCardStyle(personIndex, item.details.interviewBase.length),
                               border: '1px solid rgba(255,255,255,0.08)',
                               background: 'rgba(255,255,255,0.03)',
                               borderRadius: '14px',
@@ -142,38 +153,9 @@ export default function SceneMethodology() {
                               boxShadow: 'inset 0 0 12px rgba(167, 139, 250, 0.04)'
                             }}
                           >
-                            <div
-                              style={{
-                                fontFamily: 'var(--font-serif)',
-                                fontSize: '1rem',
-                                color: '#f8fafc',
-                                lineHeight: 1.25,
-                                marginBottom: '0.35rem'
-                              }}
-                            >
-                              {person.name}
-                            </div>
-                            <div
-                              style={{
-                                fontFamily: 'var(--font-sans)',
-                                fontSize: '0.84rem',
-                                color: '#e2e8f0',
-                                lineHeight: 1.5,
-                                marginBottom: '0.22rem'
-                              }}
-                            >
-                              {person.role}
-                            </div>
-                            <div
-                              style={{
-                                fontFamily: 'var(--font-sans)',
-                                fontSize: '0.8rem',
-                                color: '#a5b4fc',
-                                lineHeight: 1.45
-                              }}
-                            >
-                              {person.organization}
-                            </div>
+                            <div className="card-person-name">{person.name}</div>
+                            <div className="card-person-role">{person.role}</div>
+                            <div className="card-person-org">{person.organization}</div>
                           </div>
                         ))}
                       </div>
@@ -190,7 +172,7 @@ export default function SceneMethodology() {
                       >
                         Supplementary Notes
                       </div>
-                      <p style={{ margin: 0, color: '#cbd5e1', fontSize: '0.92rem', lineHeight: 1.7 }}>{item.details.notes}</p>
+                      <p className="card-body-strong" style={{ fontSize: '0.92rem', lineHeight: 1.7 }}>{item.details.notes}</p>
                     </div>
                   </details>
                 ) : null}

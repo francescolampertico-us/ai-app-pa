@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const LIMITATIONS = [
   ['Limited Interview Sample', 'The qualitative phase was based on a small number of professionals, so the findings are exploratory rather than broadly generalizable.'],
@@ -115,6 +116,27 @@ const REFERENCES = [
   },
 ];
 
+const APPENDIX_ITEMS = [
+  {
+    title: 'Interview Base Overview',
+    description:
+      'Overview of the five formal interview participants and the distinction between formal interview evidence and supplementary field notes.',
+    href: '/appendix/interviews/interview-base-overview',
+  },
+  {
+    title: 'Interview Protocol and Analytical Focus',
+    description:
+      'Short methodological note describing the recurring question areas, interview structure, and how the material was used analytically in the capstone.',
+    href: '/appendix/interviews/interview-protocol-and-analytical-focus',
+  },
+  {
+    title: 'Selected Interview Excerpts',
+    description:
+      'Selective supporting excerpts and summary observations documenting the qualitative basis of the findings and system design.',
+    href: '/appendix/interviews/selected-interview-excerpts',
+  },
+];
+
 export default function SceneLimitations({ appPath = '/app' }) {
   return (
     <>
@@ -163,9 +185,9 @@ export default function SceneLimitations({ appPath = '/app' }) {
                       {String(index + 1).padStart(2, '0')}.
                     </div>
                     <h3
+                      className="card-title-editorial"
                       style={{
                         margin: 0,
-                        fontFamily: 'var(--font-serif)',
                         fontSize: '1.28rem',
                         lineHeight: 1.42,
                         color: '#e7e5e4',
@@ -174,16 +196,7 @@ export default function SceneLimitations({ appPath = '/app' }) {
                       {title}
                     </h3>
                   </div>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: '0.98rem',
-                      lineHeight: 1.72,
-                      color: '#94a3b8',
-                      maxWidth: '24ch',
-                    }}
-                  >
+                  <p className="card-body-soft" style={{ maxWidth: '24ch' }}>
                     {text}
                   </p>
                 </motion.article>
@@ -316,27 +329,78 @@ export default function SceneLimitations({ appPath = '/app' }) {
       <section className="scene section-flow" id="scene-appendix">
         <div className="section-inner">
           <h2 className="section-title">Appendix</h2>
-          <div className="glass-card conclusion-card" style={{ padding: '2.35rem 2.5rem 2.4rem' }}>
-            <h3 className="panel-heading" style={{ marginBottom: '1rem', fontSize: 'clamp(1.2rem, 1.5vw, 1.55rem)' }}>
-              Project Materials
-            </h3>
-            <p className="body-medium" style={{ margin: 0 }}>
-              Repository for the capstone prototype and landing page:
-            </p>
-            <a
-              href="https://github.com/francescolampertico-us/ai-app-pa"
-              target="_blank"
-              rel="noreferrer"
-              className="hero-button"
-              style={{
-                width: 'fit-content',
-                marginTop: '0.8rem',
-                padding: '0.82rem 1.2rem',
-                fontSize: '0.72rem',
-              }}
-            >
-              Open GitHub Repository
-            </a>
+          <div style={{ display: 'grid', gap: '1.5rem' }}>
+            <div className="glass-card conclusion-card" style={{ padding: '2.35rem 2.5rem 2.4rem' }}>
+              <h3 className="panel-heading" style={{ marginBottom: '1rem', fontSize: 'clamp(1.2rem, 1.5vw, 1.55rem)' }}>
+                Interview Materials
+              </h3>
+              <p className="body-medium" style={{ margin: '0 0 1.4rem' }}>
+                The appendix includes derivative materials prepared from the interview corpus used in the qualitative phase.
+                These files are provided for documentation and appendix use; the original transcripts and notes remain
+                separate from the published landing page.
+              </p>
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                {APPENDIX_ITEMS.map((item) => (
+                  <div
+                    key={item.title}
+                    style={{
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '18px',
+                      background: 'rgba(255,255,255,0.025)',
+                      padding: '1.2rem 1.25rem',
+                    }}
+                  >
+                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.08rem', color: '#f5f3ff', marginBottom: '0.45rem' }}>
+                      {item.title}
+                    </div>
+                    <p className="body-medium" style={{ margin: '0 0 0.9rem', color: '#cbd5e1' }}>
+                      {item.description}
+                    </p>
+                    <Link
+                      to={item.href}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        color: '#c4b5fd',
+                        textDecoration: 'underline',
+                        textUnderlineOffset: '3px',
+                        textDecorationColor: 'rgba(196, 181, 253, 0.45)',
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: '0.82rem',
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      Open Document
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass-card conclusion-card" style={{ padding: '2.35rem 2.5rem 2.4rem' }}>
+              <h3 className="panel-heading" style={{ marginBottom: '1rem', fontSize: 'clamp(1.2rem, 1.5vw, 1.55rem)' }}>
+                Project Materials
+              </h3>
+              <p className="body-medium" style={{ margin: 0 }}>
+                Repository for the capstone prototype and landing page:
+              </p>
+              <a
+                href="https://github.com/francescolampertico-us/ai-app-pa"
+                target="_blank"
+                rel="noreferrer"
+                className="hero-button"
+                style={{
+                  width: 'fit-content',
+                  marginTop: '0.8rem',
+                  padding: '0.82rem 1.2rem',
+                  fontSize: '0.72rem',
+                }}
+              >
+                Open GitHub Repository
+              </a>
+            </div>
           </div>
         </div>
       </section>

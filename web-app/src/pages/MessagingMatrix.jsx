@@ -81,11 +81,11 @@ export default function MessagingMatrix() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
+        <div className="app-kicker">
           Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
         </div>
-        <h1 data-testid="page-title-messaging-matrix" className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>Messaging Deliverables</h1>
-        <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '72ch', fontWeight: 300 }}>
+        <h1 data-testid="page-title-messaging-matrix" className="app-page-title">Messaging Deliverables</h1>
+        <p className="app-page-intro">
           Builds reusable advocacy message outputs and platform-specific deliverables from a core policy position, optional proof points, supporting documents, and audience guidance.
         </p>
         <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
@@ -205,7 +205,7 @@ export default function MessagingMatrix() {
               <div className="space-y-6">
                 {house.target_audiences?.length > 0 && <p className="text-slate-300"><strong className="text-white">Target Audiences:</strong> {house.target_audiences.join(', ')}</p>}
                 <div>
-                  <h2 className="display" style={{ fontSize: 26, color: '#A78BFA', marginBottom: 12 }}>Overarching Message</h2>
+                  <h2 className="app-section-title">Overarching Message</h2>
                   <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-5 py-4 text-violet-100">
                     {house.overarching_message || house.core_message}
                   </div>

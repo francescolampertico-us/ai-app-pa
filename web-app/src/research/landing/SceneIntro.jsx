@@ -57,30 +57,9 @@ export default function SceneIntro() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
             {problemCards.map((item) => (
               <motion.article key={item.subtitle} {...hoverProps} style={cardStyle}>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '0.875rem',
-                    color: '#64748b',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  {item.subtitle}
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-serif)',
-                    color: 'var(--text-accent)',
-                    fontSize: '2.9rem',
-                    marginBottom: '0.65rem',
-                    lineHeight: 1,
-                  }}
-                >
-                  {item.stat}
-                </div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.875rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+                <div className="card-kicker">{item.subtitle}</div>
+                <div className="card-metric">{item.stat}</div>
+                <div className="card-caption">
                   {item.text}
                   <CitationButton refs={item.refs} />
                 </div>
@@ -106,30 +85,9 @@ export default function SceneIntro() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
             {promiseCards.map((item) => (
               <motion.article key={item.subtitle} {...hoverProps} style={cardStyle}>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '0.875rem',
-                    color: '#64748b',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  {item.subtitle}
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-serif)',
-                    color: 'var(--text-accent)',
-                    fontSize: '2.9rem',
-                    marginBottom: '0.65rem',
-                    lineHeight: 1,
-                  }}
-                >
-                  {item.stat}
-                </div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: '0.875rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+                <div className="card-kicker">{item.subtitle}</div>
+                <div className="card-metric">{item.stat}</div>
+                <div className="card-caption">
                   {item.text}
                   <CitationButton refs={item.refs} />
                 </div>

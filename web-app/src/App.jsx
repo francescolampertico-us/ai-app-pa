@@ -14,6 +14,7 @@ import StakeholderBriefing from './pages/StakeholderBriefing';
 import MediaListBuilder from './pages/MediaListBuilder';
 import Remy from './pages/Remy';
 import ResearchLanding from './research/ResearchLanding';
+import AppendixDocumentPage from './research/landing/AppendixDocumentPage';
 
 const TOOL_UI = {
   media_clips: {
@@ -196,18 +197,18 @@ function Dashboard() {
         </p>
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-4">
           <div className="glass p-5">
-            <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'rgba(167,139,250,0.55)', marginBottom: 10 }}>
+            <div className="app-meta-label">
               Strategic Planning & Decision Support
             </div>
-            <p style={{ fontFamily: 'Inter', fontSize: 13, color: '#a1a1aa', lineHeight: 1.7, fontWeight: 300 }}>
+            <p className="app-copy">
               Research prototype for bounded AI augmentation in Public Affairs. Outputs require professional review before external use.
             </p>
           </div>
           <div className="glass p-5">
-            <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'rgba(167,139,250,0.55)', marginBottom: 10 }}>
+            <div className="app-meta-label">
               Tailored Workflow
             </div>
-            <p style={{ fontFamily: 'Inter', fontSize: 13, color: '#a1a1aa', lineHeight: 1.7, fontWeight: 300 }}>
+            <p className="app-copy">
               Built from applied research, coursework, notes, writing practice, and project-specific reference materials developed during the capstone. Remy remains a secondary orchestration layer.
             </p>
           </div>
@@ -229,10 +230,10 @@ function Dashboard() {
           return (
             <section key={section.id} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'rgba(167,139,250,0.55)' }}>
+                <div className="app-meta-label" style={{ marginBottom: 0 }}>
                   {section.title}
                 </div>
-                <p style={{ fontFamily: 'Inter', fontSize: 13, color: '#71717A', lineHeight: 1.7, fontWeight: 300, maxWidth: '72ch' }}>
+                <p className="app-copy" style={{ color: '#71717A', maxWidth: '72ch' }}>
                   {section.description}
                 </p>
               </div>
@@ -307,7 +308,7 @@ function AppLayout() {
   }, []);
 
   return (
-    <div className="flex min-h-[100dvh] w-full text-white overflow-hidden" style={{ background: '#09090B' }}>
+    <div className="flex h-[100dvh] w-full text-white overflow-hidden" style={{ background: '#09090B' }}>
       <Sidebar />
       <main className="flex-1 overflow-y-auto relative flex flex-col">
         <div
@@ -325,6 +326,7 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<ResearchLanding />} />
+        <Route path="/appendix/interviews/:docId" element={<AppendixDocumentPage />} />
 
         <Route path="/app" element={<AppLayout />}>
           <Route index element={<Dashboard />} />

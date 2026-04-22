@@ -15,9 +15,9 @@ const FINDINGS = [
     quotes: [
       {
         text:
-          '“DC’s run by a lot of people who don’t know tech. They have spent their entire adult lives making just insane buckets of money on just being able to call someone.”',
-        attribution: 'Founder and Managing Partner, Unfiltered Media; Co-Founder and Co-CEO, Change Agent',
-        refs: ['founderChangeAgent2026'],
+          '“For decades, personal knowledge has been your commodity… there’s already this sort of pushback when it comes to integrating AI, when your value proposition is the relationships that you have.”',
+        attribution: 'Manager, Clyde',
+        refs: ['managerClyde2026'],
       },
       {
         text:
@@ -38,15 +38,15 @@ const FINDINGS = [
     quotes: [
       {
         text:
-          '“We have created custom research tools that can do, we have estimated, 40 to 60 hours of work in one hour to sit down and basically produce the amount of work that a couple of people would do.”',
-        attribution: 'Managing Director, Clyde',
-        refs: ['managerClyde2026'],
+          '“I always need a starter dough. I don’t care if it’s for a press release… or a speech or something… I’m a good editor and if you give me a paragraph, I can then build it out into like 20. But I need that… almost like a prompt.”',
+        attribution: 'Partner, Tiber Creek Group',
+        refs: ['partnerTiber2026'],
       },
       {
         text:
-          '“I’ll use it as like the draft to get started. You know, synthesize this article... summarizing the research that we’ve done related to certain things is really helpful... it helps give me a place to start.”',
-        attribution: 'Vice President of Policy & Government Relations, Woodwell Climate Research Center',
-        refs: ['vpWoodwell2026'],
+          '“We have created custom research tools that can do—we have estimated—40 to 60 hours of work in one hour to sit down and basically produce the amount of work that a couple of people would do.”',
+        attribution: 'Manager, Clyde',
+        refs: ['managerClyde2026'],
       },
     ],
     refs: ['primaryData2026'],
@@ -67,9 +67,9 @@ const FINDINGS = [
       },
       {
         text:
-          '“That is a high risk, right? Because my value as a senior communicator, my value is the counsel I give.”',
-        attribution: 'Managing Director, Clyde',
-        refs: ['managerClyde2026'],
+          '“I think AI never gets us anything that’s like, ready to launch or ready to like, show the client as a final deliverable… So they’re like rough drafts.”',
+        attribution: 'Partner, Beekeeper Group',
+        refs: ['partnerBeekeeper2026'],
       },
     ],
     refs: ['primaryData2026'],
@@ -84,14 +84,14 @@ const FINDINGS = [
     quotes: [
       {
         text:
-          '“We’ve also invested heavily in market differentiation tools in the GEO space... how do you begin to change what the AI says about your client? ... the biggest battle we have is AI reputation.”',
-        attribution: 'Managing Director, Clyde',
+          '“They’ve created political duplicates of public figures… if you want to know what Mark Rubio’s opinion is on something, they’ve got a digital duplicate who’s, like, 81% accurate… that speeds up the process… to get you to the next level faster.”',
+        attribution: 'Manager, Clyde',
         refs: ['managerClyde2026'],
       },
       {
         text:
           '“You filter each of those issues through those emotions into a matrix of like a hundred different ads and then you see which one sticks.”',
-        attribution: 'Founder and Managing Partner, Unfiltered Media; Co-Founder and Co-CEO, Change Agent',
+        attribution: 'Founder and Co-CEO, Change Agent',
         refs: ['founderChangeAgent2026'],
       },
     ],
@@ -143,60 +143,77 @@ export default function SceneFindings() {
                   background: 'rgba(20,13,33,0.88)',
                   color: 'inherit',
                   cursor: 'pointer',
+                  position: 'relative',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
-                  <div
-                    style={{
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: '0.95rem',
-                      letterSpacing: '0.16em',
-                      textTransform: 'uppercase',
-                      color: 'var(--text-accent)',
-                      marginBottom: expanded ? '1.6rem' : '2rem',
-                    }}
-                  >
-                    {item.label}
-                  </div>
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '2rem',
+                    right: '2rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
                   {expanded ? <ChevronDown size={28} color="#94a3b8" /> : <ChevronRight size={28} color="#94a3b8" />}
                 </div>
 
-                <h3
-                  className="panel-heading"
-                  style={{
-                    fontSize: expanded ? '2.35rem' : '2.1rem',
-                    lineHeight: 1.08,
-                    margin: '0 0 1.7rem',
-                  }}
-                >
-                  {item.title}
-                </h3>
+                <div style={{ paddingRight: '3.4rem' }}>
+                  <div
+                    className="card-label-accent"
+                    style={{
+                      marginBottom: expanded ? '1.4rem' : '1.75rem',
+                      display: 'inline-flex',
+                      gap: '0.55rem',
+                      alignItems: 'baseline',
+                      fontVariantNumeric: 'tabular-nums',
+                      lineHeight: 1,
+                    }}
+                  >
+                    <span>Finding</span>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        minWidth: '2.35ch',
+                        textAlign: 'left',
+                        lineHeight: 1,
+                        transform: 'translateY(-0.1em)',
+                      }}
+                    >
+                      {item.label.slice(-2)}
+                    </span>
+                  </div>
 
-                <p
-                  style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: expanded ? '1.05rem' : '1rem',
-                    lineHeight: 1.6,
-                    color: '#f8fafc',
-                    margin: expanded ? '0 0 2.1rem' : 0,
-                    maxWidth: expanded ? 'none' : '28ch',
-                  }}
-                >
-                  {item.summary}
-                </p>
+                  <h3
+                    className="panel-heading"
+                    style={{
+                      fontSize: '2.1rem',
+                      lineHeight: 1.08,
+                      margin: '0 0 1.55rem',
+                    }}
+                  >
+                    {item.title}
+                  </h3>
+
+                  <p
+                    className="card-body-soft"
+                    style={{
+                      fontSize: expanded ? '1rem' : '0.98rem',
+                      lineHeight: 1.62,
+                      margin: expanded ? '0 0 2.1rem' : 0,
+                      maxWidth: expanded ? 'none' : '29ch',
+                      minHeight: expanded ? 'auto' : '8.1rem',
+                    }}
+                  >
+                    {item.summary}
+                  </p>
+                </div>
 
                 {expanded ? (
                   <div>
                     <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', marginBottom: '2rem' }} />
-                    <p
-                      style={{
-                        fontFamily: 'var(--font-sans)',
-                        fontSize: '1rem',
-                        lineHeight: 1.7,
-                        color: 'var(--text-secondary)',
-                        margin: '0 0 2rem',
-                      }}
-                    >
+                    <p className="card-body-soft" style={{ fontSize: '1rem', lineHeight: 1.7, margin: '0 0 2rem' }}>
                       {item.detail}
                       <CitationButton refs={item.refs} />
                     </p>
@@ -212,25 +229,10 @@ export default function SceneFindings() {
                             borderLeft: '3px solid rgba(167,139,250,0.6)',
                           }}
                         >
-                          <div
-                            style={{
-                              fontFamily: 'var(--font-serif)',
-                              fontSize: '1rem',
-                              lineHeight: 1.55,
-                              color: '#e5e7eb',
-                              marginBottom: '1.2rem',
-                            }}
-                          >
+                          <div className="card-quote">
                             {quote.text}
                           </div>
-                          <div
-                            style={{
-                              fontFamily: 'var(--font-sans)',
-                              fontSize: '0.92rem',
-                              lineHeight: 1.5,
-                              color: '#71829f',
-                            }}
-                          >
+                          <div className="card-attribution">
                             — {quote.attribution}
                             <CitationButton refs={quote.refs} />
                           </div>
@@ -257,30 +259,20 @@ export default function SceneFindings() {
             background: 'rgba(20,13,33,0.88)',
           }}
         >
-          <div
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: '0.95rem',
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: 'var(--text-accent)',
-              marginBottom: '1.7rem',
-            }}
-          >
+          <div className="card-label-accent" style={{ marginBottom: '1.7rem' }}>
             Underlying Theme
           </div>
-          <h3 className="subsection-heading" style={{ margin: '0 0 1.5rem' }}>
-            Personalization as a condition of value
-          </h3>
-          <p
+          <h3
+            className="panel-heading"
             style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: '1.05rem',
-              lineHeight: 1.7,
-              color: 'var(--text-secondary)',
-              margin: 0,
+              fontSize: '2.1rem',
+              lineHeight: 1.08,
+              margin: '0 0 1.5rem',
             }}
           >
+            Personalization as a condition of value
+          </h3>
+          <p className="card-body-soft" style={{ fontSize: '1rem', lineHeight: 1.62 }}>
             AI becomes more valuable when it is tailored to professional context. Practitioners did not describe the
             greatest value in generic outputs alone, but in systems that could reflect specific writing styles, client
             preferences, internal knowledge, stakeholder context, and evolving strategic needs.

@@ -166,7 +166,7 @@ export default function SceneLiteratureCh2() {
           >
             Generative AI does not improve performance uniformly across professional tasks. Its strongest gains appear
             when tasks fit current model capabilities, while performance can weaken when tasks fall beyond them.
-            <CitationButton refs={['dellacqua2023', 'workday2025']} />
+            <CitationButton refs={['dellacqua2023', 'noy2023', 'mertens2026', 'mollick2024']} />
           </p>
 
           <div
@@ -302,7 +302,7 @@ export default function SceneLiteratureCh2() {
               >
                 AI improves speed, task completion, and output quality.
                 <span style={{ pointerEvents: 'auto', display: 'inline-block' }}>
-                  <CitationButton refs={['noy2023', 'mertens2026']} />
+                  <CitationButton refs={['dellacqua2023', 'mollick2024']} />
                 </span>
               </p>
             </motion.div>
@@ -359,7 +359,7 @@ export default function SceneLiteratureCh2() {
               >
                 AI output is inaccurate, less useful, and degrades human performance.
                 <span style={{ pointerEvents: 'auto', display: 'inline-block' }}>
-                  <CitationButton refs={['dellacqua2023', 'workday2025']} />
+                  <CitationButton refs={['dellacqua2023', 'mollick2024']} />
                 </span>
               </p>
             </motion.div>

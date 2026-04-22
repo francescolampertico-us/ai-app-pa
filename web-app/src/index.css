@@ -34,6 +34,85 @@
 @layer components {
   .display { font-family: 'DM Serif Display', serif; line-height: 1.1; letter-spacing: -0.02em; }
   .text-gradient { background: linear-gradient(135deg, #fff 0%, #a78bfa 50%, #e879f9 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .app-kicker {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(167,139,250,0.5);
+    margin-bottom: 10px;
+  }
+  .app-page-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 42px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+  .app-page-intro {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    font-weight: 300;
+    color: #71717A;
+    max-width: 72ch;
+  }
+  .app-meta-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: rgba(167,139,250,0.55);
+    margin-bottom: 10px;
+  }
+  .app-copy {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.7;
+    font-weight: 300;
+    color: #a1a1aa;
+  }
+  .app-section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: #A78BFA;
+    margin-bottom: 12px;
+  }
+  .app-surface-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+  .app-subsection-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: #c4b5fd;
+    margin-bottom: 12px;
+  }
+  .app-panel-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: #A78BFA;
+    margin-bottom: 12px;
+  }
+  .app-wordmark-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 17px;
+    line-height: 1.2;
+    color: #fff;
+  }
 
   /* Glass card — obsidian style */
   .glass {

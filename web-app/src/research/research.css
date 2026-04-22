@@ -68,6 +68,31 @@
   scrollbar-width: none;
 }
 
+.research-shell .research-dashboard-link {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.9rem;
+  padding: 0.8rem 1.15rem;
+  border-radius: 999px;
+  background: rgba(14, 12, 24, 0.88);
+  border: 1px solid rgba(167, 139, 250, 0.32);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+  color: #f8fafc;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.research-shell .research-dashboard-link:hover {
+  border-color: rgba(167, 139, 250, 0.48);
+  color: #ffffff;
+}
+
 .research-shell .scroll-stage::-webkit-scrollbar {
   display: none;
 }
@@ -100,10 +125,21 @@
 .research-shell .toc-shell {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  padding: 2rem 1.1rem 2rem 1.5rem;
+}
+
+.research-shell .toc-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   justify-content: center;
   gap: 1.5rem;
-  width: 100%;
-  padding: 2rem 1.1rem 2rem 1.5rem;
+}
+
+.research-shell .toc-footer {
+  padding-top: 1.4rem;
 }
 
 .research-shell .toc-kicker {
@@ -240,6 +276,11 @@
   .research-shell .scene {
     padding: 4.5rem 1.5rem;
   }
+
+  .research-shell .research-dashboard-link {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+  }
 }
 
 .research-shell .section-inner {
@@ -288,6 +329,20 @@
   margin: 0 0 1rem;
 }
 
+.research-shell .section-lead {
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+
+.research-shell .section-note {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
 .research-shell .body-large {
   font-family: var(--font-sans);
   font-size: 1.15rem;
@@ -300,6 +355,113 @@
   font-size: 0.98rem;
   line-height: 1.72;
   color: var(--text-secondary);
+}
+
+.research-shell .card-title-editorial {
+  font-family: var(--font-serif);
+  font-size: 1.56rem;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin: 0 0 1.15rem;
+}
+
+.research-shell .card-title-ui {
+  font-family: var(--font-sans);
+  font-size: 1.18rem;
+  line-height: 1.35;
+  font-weight: 650;
+  color: #e2e8f0;
+  margin: 0 0 1rem;
+}
+
+.research-shell .card-body-soft {
+  font-family: var(--font-sans);
+  font-size: 0.96rem;
+  line-height: 1.68;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.research-shell .card-body-strong {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.64;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.research-shell .card-kicker {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0 0 0.75rem;
+}
+
+.research-shell .card-metric {
+  font-family: var(--font-serif);
+  font-size: 2.9rem;
+  line-height: 1;
+  color: var(--text-accent);
+  margin: 0 0 0.65rem;
+}
+
+.research-shell .card-caption {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.research-shell .card-label-accent {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.research-shell .card-quote {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: #e5e7eb;
+  margin: 0 0 1.2rem;
+}
+
+.research-shell .card-attribution {
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #71829f;
+}
+
+.research-shell .card-person-name {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.25;
+  color: #f8fafc;
+  margin: 0 0 0.35rem;
+}
+
+.research-shell .card-person-role {
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: #e2e8f0;
+  margin: 0 0 0.22rem;
+}
+
+.research-shell .card-person-org {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #a5b4fc;
+  margin: 0;
 }
 
 .research-shell .section-kicker {
