@@ -84,12 +84,14 @@ export default function MessagingMatrix() {
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
         <h1 data-testid="page-title-messaging-matrix" data-tour="messaging-matrix-title-heading" className="app-page-title">Messaging Deliverables</h1>
-        <p className="app-page-intro">
-          Builds reusable advocacy message outputs and platform-specific deliverables from a core policy position, optional proof points, supporting documents, and audience guidance.
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <ModelSelector value={llmModel} onChange={setLlmModel} />
-          <div data-tour="tour-button-messaging-matrix"><ToolTourButton tourId={TOOL_TOUR_IDS.messagingMatrix} /></div>
+        <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <p className="app-page-intro">
+            Builds reusable advocacy message outputs and platform-specific deliverables from a core policy position, optional proof points, supporting documents, and audience guidance.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 md:justify-end">
+            <ModelSelector value={llmModel} onChange={setLlmModel} />
+            <div data-tour="tour-button-messaging-matrix"><ToolTourButton tourId={TOOL_TOUR_IDS.messagingMatrix} /></div>
+          </div>
         </div>
       </header>
 

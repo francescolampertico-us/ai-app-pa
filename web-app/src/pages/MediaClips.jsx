@@ -278,12 +278,14 @@ export default function MediaClips() {
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
         <h1 data-testid="page-title-media-clips" data-tour="media-clips-title-heading" className="app-page-title">Media Clips</h1>
-        <p className="app-page-intro">
-          Search Google News with keyword or Boolean queries, review and clean extracted article text, then rebuild the final report and email draft files.
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <ModelSelector value={llmModel} onChange={setLlmModel} />
-          <div data-tour="tour-button-media-clips"><ToolTourButton tourId={TOOL_TOUR_IDS.mediaClips} /></div>
+        <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <p className="app-page-intro">
+            Search Google News with keyword or Boolean queries, review and clean extracted article text, then rebuild the final report and email draft files.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 md:justify-end">
+            <ModelSelector value={llmModel} onChange={setLlmModel} />
+            <div data-tour="tour-button-media-clips"><ToolTourButton tourId={TOOL_TOUR_IDS.mediaClips} /></div>
+          </div>
         </div>
       </header>
 

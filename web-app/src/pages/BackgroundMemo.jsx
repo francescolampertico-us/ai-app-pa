@@ -84,12 +84,14 @@ export default function BackgroundMemo() {
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
         <h1 data-testid="page-title-background-memo" data-tour="background-memo-title-heading" className="app-page-title">Background Memo</h1>
-        <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
-          Generates a structured first-draft background memo on a client, organization, policy issue, or individual, with optional file grounding and automatic disclosure research.
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <ModelSelector value={llmModel} onChange={setLlmModel} />
-          <div data-tour="tour-button-background-memo"><ToolTourButton tourId={TOOL_TOUR_IDS.backgroundMemo} /></div>
+        <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
+            Generates a structured first-draft background memo on a client, organization, policy issue, or individual, with optional file grounding and automatic disclosure research.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 md:justify-end">
+            <ModelSelector value={llmModel} onChange={setLlmModel} />
+            <div data-tour="tour-button-background-memo"><ToolTourButton tourId={TOOL_TOUR_IDS.backgroundMemo} /></div>
+          </div>
         </div>
       </header>
 

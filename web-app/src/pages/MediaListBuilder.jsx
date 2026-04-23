@@ -247,12 +247,14 @@ export default function MediaListBuilder() {
           <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
             style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
           <h1 data-testid="page-title-media-list" data-tour="media-list-title-heading" className="app-page-title">Media List</h1>
-          <p className="app-page-intro" style={{ maxWidth: '68ch' }}>
-            Generates a targeted media list based on a policy issue, geographic scope, and media type filter, then returns Excel, markdown, and JSON outputs.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <ModelSelector value={llmModel} onChange={setLlmModel} />
-            <div data-tour="tour-button-media-list"><ToolTourButton tourId={TOOL_TOUR_IDS.mediaList} /></div>
+          <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <p className="app-page-intro" style={{ maxWidth: '68ch' }}>
+              Generates a targeted media list based on a policy issue, geographic scope, and media type filter, then returns Excel, markdown, and JSON outputs.
+            </p>
+            <div className="flex flex-wrap items-center gap-3 md:justify-end">
+              <ModelSelector value={llmModel} onChange={setLlmModel} />
+              <div data-tour="tour-button-media-list"><ToolTourButton tourId={TOOL_TOUR_IDS.mediaList} /></div>
+            </div>
           </div>
         </header>
 

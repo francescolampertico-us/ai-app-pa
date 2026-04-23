@@ -204,12 +204,14 @@ export default function LegislativeTracker() {
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
         <h1 data-testid="page-title-legislative-tracker" data-tour="legislative-tracker-title-heading" className="app-page-title">Legislative Tracker</h1>
-        <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
-          Search, track, and summarize legislation across federal and state jurisdictions, then maintain a live watchlist.
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <ModelSelector value={llmModel} onChange={setLlmModel} />
-          <div data-tour="tour-button-legislative-tracker"><ToolTourButton tourId={TOOL_TOUR_IDS.legislativeTracker} /></div>
+        <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
+            Search, track, and summarize legislation across federal and state jurisdictions, then maintain a live watchlist.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 md:justify-end">
+            <ModelSelector value={llmModel} onChange={setLlmModel} />
+            <div data-tour="tour-button-legislative-tracker"><ToolTourButton tourId={TOOL_TOUR_IDS.legislativeTracker} /></div>
+          </div>
         </div>
       </header>
 
