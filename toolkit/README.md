@@ -15,18 +15,18 @@ toolkit/
 
 ## Tool Catalog
 
-| ID | Tool | Version | Risk |
-|----|------|---------|------|
-| `media_clips` | Media Clips | 0.1.0 | yellow |
-| `media_clip_cleaner` | Media Clip Cleaner | 0.3.0 | green |
-| `influence_disclosure_tracker` | Influence Tracker | 0.2.0 | yellow |
-| `hearing_memo_generator` | Congressional Hearing Memo | 1.0.0 | yellow |
-| `legislative_tracker` | Legislative Tracker | 0.1.0 | yellow |
-| `messaging_matrix` | Messaging Matrix | 0.1.0 | yellow |
-| `stakeholder_briefing` | Stakeholder Briefing | 0.1.0 | yellow |
-| `media_list_builder` | Media List Builder | 0.1.0 | yellow |
-| `stakeholder_map` | Stakeholder Map | 0.1.0 | yellow |
-| `background_memo_generator` | Background Memo | 0.1.0 | yellow |
+| ID | Tool | Version |
+|----|------|---------|
+| `media_clips` | Media Clips | 0.1.0 |
+| `media_clip_cleaner` | Media Clip Cleaner | 0.3.0 |
+| `influence_disclosure_tracker` | Influence Tracker | 0.2.0 |
+| `hearing_memo_generator` | Congressional Hearing Memo | 1.0.0 |
+| `legislative_tracker` | Legislative Tracker | 0.1.0 |
+| `messaging_matrix` | Messaging Matrix | 0.1.0 |
+| `stakeholder_briefing` | Stakeholder Briefing | 0.1.0 |
+| `media_list_builder` | Media List Builder | 0.1.0 |
+| `stakeholder_map` | Stakeholder Map | 0.1.0 |
+| `background_memo_generator` | Background Memo | 0.1.0 |
 
 ## Adding a New Tool
 
