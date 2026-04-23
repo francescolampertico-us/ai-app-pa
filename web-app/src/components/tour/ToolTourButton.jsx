@@ -1,7 +1,7 @@
 import { CompassIcon as Compass } from '@phosphor-icons/react';
 import { useGuidedTour } from './useGuidedTour';
 
-export default function ToolTourButton({ tourId, label = 'How to Use' }) {
+export default function ToolTourButton({ tourId, label = 'Tour This Tool' }) {
   const { startTour } = useGuidedTour();
 
   return (
