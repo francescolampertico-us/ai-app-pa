@@ -203,7 +203,7 @@ export default function LegislativeTracker() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <h1 data-testid="page-title-legislative-tracker" className="app-page-title">Legislative Tracker</h1>
+        <h1 data-testid="page-title-legislative-tracker" data-tour="legislative-tracker-title-heading" className="app-page-title">Legislative Tracker</h1>
         <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Search, track, and summarize legislation across federal and state jurisdictions, then maintain a live watchlist.
         </p>
@@ -219,7 +219,7 @@ export default function LegislativeTracker() {
         message="This tool supports recurring monitoring and legislative synthesis, which the research identifies as a strong fit for AI augmentation. Search results and summaries may still be incomplete or source-constrained, so they should be treated as review-required inputs to strategy rather than final analysis."
       />
 
-      <div className="flex flex-wrap gap-3 mb-8">
+      <div data-tour="legislative-tracker-tabs" className="flex flex-wrap gap-3 mb-8">
         {['Search & Discover', 'Watchlist'].map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-lg border text-sm ${activeTab === tab ? 'bg-violet-500/20 border-violet-400/40 text-violet-200' : 'bg-white/5 border-white/10 text-slate-300'}`}>
@@ -232,7 +232,7 @@ export default function LegislativeTracker() {
         <div className="space-y-8">
           <form onSubmit={handleSearch} className="glass-card p-8 flex flex-col gap-5">
             {/* Search mode toggle */}
-            <div className="flex gap-6">
+            <div data-tour="legislative-tracker-search-mode" className="flex gap-6">
               {[['broad', 'Broad Search'], ['exact', 'Exact Title Match']].map(([mode, label]) => (
                 <label key={mode} className="flex items-center gap-2 cursor-pointer">
                   <input data-testid={`toggle-legislative-search-mode-${mode}`} type="radio" checked={searchMode === mode} onChange={() => setSearchMode(mode)} className="accent-violet-500" />
@@ -254,20 +254,20 @@ export default function LegislativeTracker() {
                   required
                 />
               </div>
-              <div>
+              <div data-tour="legislative-tracker-jurisdiction">
                 <label className="field-label">Jurisdiction</label>
                 <select data-testid="input-legislative-state" value={stateCode} onChange={(event) => setStateCode(event.target.value)} className="field">
                   {STATES.map((state) => <option key={state} value={state}>{state}</option>)}
                 </select>
               </div>
-              <div>
+              <div data-tour="legislative-tracker-year">
                 <label className="field-label">Year</label>
                 <select data-testid="input-legislative-year" value={year} onChange={(event) => setYear(event.target.value)} className="field">
                   <option value="">All years</option>
                   {YEARS.map(y => <option key={y} value={String(y)}>{y}</option>)}
                 </select>
               </div>
-              <div>
+              <div data-tour="legislative-tracker-results-limit">
                 <label className="field-label">Results</label>
                 <select data-testid="input-legislative-max-results" value={maxResults} onChange={(event) => setMaxResults(event.target.value)} className="field">
                   <option value="1">Best match only</option>
@@ -528,7 +528,7 @@ export default function LegislativeTracker() {
       )}
 
       {activeTab === 'Watchlist' && (
-        <div className="space-y-8">
+        <div data-tour="legislative-tracker-watchlist-panel" className="space-y-8">
           <div className="glass-card p-8 flex flex-wrap gap-3">
             <button data-testid="submit-legislative-watchlist-list" disabled={loading} onClick={() => runAction({ action: 'watchlist_list' })}
               className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed">Reload Watchlist</button>
