@@ -7,7 +7,6 @@ import ModelSelector from '../components/ModelSelector';
 import StyledMarkdown from '../components/StyledMarkdown';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 import ToolTourButton from '../components/tour/ToolTourButton';
-import ToolOutputPreview from '../components/tour/ToolOutputPreview';
 import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 export default function HearingMemo() {
@@ -194,19 +193,6 @@ export default function HearingMemo() {
       </form>
 
       <section data-tour="hearing-memo-output" className="mt-16">
-      {!job && (
-        <ToolOutputPreview
-          title="Output Preview"
-          summary="The hearing run returns pipeline status, memo preview, verification signals, and export buttons."
-          items={[
-            { title: 'Verification', copy: 'Flags and human checks surface before you rely on the draft.' },
-            { title: 'Memo preview', copy: 'The generated hearing memo renders inline for review.' },
-            { title: 'Downloads', copy: 'You can export the memo draft and verification file once the job completes.' },
-          ]}
-          downloads={['DOCX', 'TXT', 'Verification JSON']}
-        />
-      )}
-      {/* output block */}
       {job && (
         <AnimatePresence>
           <motion.div 

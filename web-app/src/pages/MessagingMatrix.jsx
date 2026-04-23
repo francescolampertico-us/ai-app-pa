@@ -7,7 +7,6 @@ import ModelSelector from '../components/ModelSelector';
 import StyledMarkdown from '../components/StyledMarkdown';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 import ToolTourButton from '../components/tour/ToolTourButton';
-import ToolOutputPreview from '../components/tour/ToolOutputPreview';
 import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const VARIANT_LABELS = {
@@ -175,18 +174,7 @@ export default function MessagingMatrix() {
                 <div className="progress-fill" style={{ width: `${job.progress || 0}%` }} />
               </div>
               </div>
-            ) : (
-              <ToolOutputPreview
-                title="Output Preview"
-                summary="When the tool runs, this side becomes the status area and then the message-map and deliverables surface."
-                items={[
-                  { title: 'Message map', copy: 'The core message, pillars, target audiences, and proof points appear first.' },
-                  { title: 'Draft variants', copy: 'Each selected deliverable gets its own tab once generation completes.' },
-                  { title: 'Downloads', copy: 'The finished run exposes export buttons for common handoff formats.' },
-                ]}
-                downloads={['Markdown', 'DOCX', 'JSON']}
-              />
-            )}
+            ) : null}
           </div>
 
           <button data-testid="submit-messaging-matrix" data-tour="messaging-matrix-submit" type="submit" disabled={loading || !position.trim() || selectedVariants.length === 0} className="btn-primary mt-auto">

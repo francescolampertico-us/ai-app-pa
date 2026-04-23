@@ -7,7 +7,6 @@ import { useFastApiJob } from '../hooks/useFastApiJob';
 import ModelSelector from '../components/ModelSelector';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 import ToolTourButton from '../components/tour/ToolTourButton';
-import ToolOutputPreview from '../components/tour/ToolOutputPreview';
 import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const SAVED_SEARCHES_KEY = 'mediaClips_savedSearches';
@@ -465,18 +464,7 @@ export default function MediaClips() {
               </div>
             )}
           </div>
-        ) : (
-          <ToolOutputPreview
-            title="Output Preview"
-            summary="A completed run gives you clip status, reviewable article text, cleaner tools, and rebuilt report exports."
-            items={[
-              { title: 'Job status', copy: 'The search and cleaner pipelines show progress independently when running.' },
-              { title: 'Article review', copy: 'You can inspect, edit, clean, or remove individual clips before rebuilding the report.' },
-              { title: 'Final report', copy: 'After review, the output includes report files and an email draft for circulation.' },
-            ]}
-            downloads={['Clips report', 'Email draft', 'Cleaner output']}
-          />
-        )}
+        ) : null}
       </div>
 
       {clipsJob.job?.result_data?.stdout && (

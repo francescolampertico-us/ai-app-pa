@@ -235,18 +235,26 @@
 .tour-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(9, 9, 11, 0.72);
+  background: transparent;
+}
+
+.tour-backdrop-pane {
+  position: fixed;
+  background: rgba(9, 9, 11, 0.58);
+  backdrop-filter: blur(7px) saturate(0.9);
+  -webkit-backdrop-filter: blur(7px) saturate(0.9);
+  pointer-events: none;
 }
 
 .tour-highlight {
   position: fixed;
   border-radius: 18px;
-  border: 1px solid rgba(167,139,250,0.82);
+  border: 2px solid rgba(167,139,250,0.92);
   background: transparent;
   box-shadow:
-    0 0 0 9999px rgba(9, 9, 11, 0.5),
-    0 0 0 1px rgba(255,255,255,0.06),
-    0 0 28px rgba(167,139,250,0.24);
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 0 0 10px rgba(167,139,250,0.08),
+    0 0 34px rgba(167,139,250,0.42);
   pointer-events: none;
 }
 
@@ -339,78 +347,6 @@
 
 .tour-button-primary:hover {
   background: rgba(109,40,217,1);
-}
-
-.tool-output-preview {
-  border-radius: 1rem;
-  border: 1px dashed rgba(255,255,255,0.12);
-  background: rgba(0,0,0,0.2);
-  padding: 1.25rem;
-}
-
-.tool-output-preview-label {
-  font-family: 'Inter', sans-serif;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(167,139,250,0.72);
-  margin-bottom: 0.55rem;
-}
-
-.tool-output-preview-summary {
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  line-height: 1.65;
-  color: #a1a1aa;
-}
-
-.tool-output-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.tool-output-preview-item {
-  border-radius: 0.9rem;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
-  padding: 0.9rem 0.95rem;
-}
-
-.tool-output-preview-item-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #f4f4f5;
-  margin-bottom: 0.35rem;
-}
-
-.tool-output-preview-item-copy {
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  line-height: 1.55;
-  color: #71717a;
-}
-
-.tool-output-preview-downloads {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.tool-output-preview-download-chip {
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
-  padding: 0.35rem 0.7rem;
-  font-family: 'Inter', sans-serif;
-  font-size: 11px;
-  color: #d4d4d8;
 }
 
 @media (max-width: 767px) {

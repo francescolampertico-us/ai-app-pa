@@ -76,6 +76,15 @@ export default function TourOverlay({
     [step?.placement, targetRect],
   );
 
+  const spotlight = targetRect
+    ? {
+        top: Math.max(0, targetRect.top - 10),
+        left: Math.max(0, targetRect.left - 10),
+        width: targetRect.width + 20,
+        height: targetRect.height + 20,
+      }
+    : null;
+
   if (!isActive || !step) return null;
 
   const highlightVisible = Boolean(targetRect);
@@ -85,13 +94,49 @@ export default function TourOverlay({
       <div className="tour-backdrop" onClick={onClose} />
 
       {highlightVisible && (
+        <>
+          <div
+            className="tour-backdrop-pane"
+            style={{ top: 0, left: 0, width: '100vw', height: spotlight.top }}
+          />
+          <div
+            className="tour-backdrop-pane"
+            style={{
+              top: spotlight.top,
+              left: 0,
+              width: spotlight.left,
+              height: spotlight.height,
+            }}
+          />
+          <div
+            className="tour-backdrop-pane"
+            style={{
+              top: spotlight.top,
+              left: spotlight.left + spotlight.width,
+              width: `calc(100vw - ${spotlight.left + spotlight.width}px)`,
+              height: spotlight.height,
+            }}
+          />
+          <div
+            className="tour-backdrop-pane"
+            style={{
+              top: spotlight.top + spotlight.height,
+              left: 0,
+              width: '100vw',
+              height: `calc(100vh - ${spotlight.top + spotlight.height}px)`,
+            }}
+          />
+        </>
+      )}
+
+      {highlightVisible && (
         <div
           className="tour-highlight"
           style={{
-            top: targetRect.top - 8,
-            left: targetRect.left - 8,
-            width: targetRect.width + 16,
-            height: targetRect.height + 16,
+            top: spotlight.top,
+            left: spotlight.left,
+            width: spotlight.width,
+            height: spotlight.height,
           }}
         />
       )}

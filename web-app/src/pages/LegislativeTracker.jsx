@@ -8,7 +8,6 @@ import ModelSelector from '../components/ModelSelector';
 import StyledMarkdown from '../components/StyledMarkdown';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 import ToolTourButton from '../components/tour/ToolTourButton';
-import ToolOutputPreview from '../components/tour/ToolOutputPreview';
 import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const STATES = ['US (Federal)', 'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'];
@@ -366,18 +365,7 @@ export default function LegislativeTracker() {
           )}
 
           <div data-tour="legislative-tracker-output" data-testid="status-legislative-tracker">
-            {job ? <StatusPanel job={job} /> : (
-              <ToolOutputPreview
-                title="Output Preview"
-                summary="Start with a bill search. Search results, bill summaries, watchlist actions, and downloads appear in this area."
-                items={[
-                  { title: 'Search results', copy: 'Matching bills list title, jurisdiction, date, and next-step actions.' },
-                  { title: 'Bill analysis', copy: 'Preview and detailed summaries render after you choose a specific bill.' },
-                  { title: 'Downloads', copy: 'Summaries, bill detail JSON, and watchlist materials can be exported.' },
-                ]}
-                downloads={['Summary Markdown', 'Bill detail JSON']}
-              />
-            )}
+            {job ? <StatusPanel job={job} /> : null}
           </div>
           {showDetailedWaitNotice && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-3 text-amber-200 text-sm">

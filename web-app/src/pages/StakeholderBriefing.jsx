@@ -6,7 +6,6 @@ import { useFastApiJob } from '../hooks/useFastApiJob';
 import ModelSelector from '../components/ModelSelector';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 import ToolTourButton from '../components/tour/ToolTourButton';
-import ToolOutputPreview from '../components/tour/ToolOutputPreview';
 import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 function DisclosureTable({ columns, rows }) {
@@ -177,16 +176,7 @@ export default function StakeholderBriefing() {
               </div>
             </div>
           ) : (
-            <ToolOutputPreview
-              title="Output Preview"
-              summary="The briefing view appears here after a run, starting with status and then the generated tabs."
-              items={[
-                { title: 'Profile', copy: 'You get a summary, role, key areas, and verification notes.' },
-                { title: 'Meeting prep', copy: 'Policy positions, talking points, and key questions are organized into tabs.' },
-                { title: 'Research context', copy: 'Disclosure and news tabs appear when those optional searches are enabled.' },
-              ]}
-              downloads={['DOCX', 'Markdown', 'JSON']}
-            />
+            null
           )}
 
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-amber-200 text-sm">

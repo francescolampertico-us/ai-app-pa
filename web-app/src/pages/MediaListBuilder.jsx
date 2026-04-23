@@ -7,7 +7,6 @@ import ModelSelector from '../components/ModelSelector';
 import { API } from '../hooks/useFastApiJob';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 import ToolTourButton from '../components/tour/ToolTourButton';
-import ToolOutputPreview from '../components/tour/ToolOutputPreview';
 import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const MEDIA_TYPES = [
@@ -372,16 +371,7 @@ export default function MediaListBuilder() {
                 </div>
               </div>
             ) : (
-              <ToolOutputPreview
-                title="Output Preview"
-                summary="A run returns a contact list, quality notes, optional pitch support, and downloadable files."
-                items={[
-                  { title: 'Status', copy: 'Progress and quality messages show up here while the list is being built.' },
-                  { title: 'Contacts', copy: 'The finished list organizes journalist names, outlets, roles, and source links.' },
-                  { title: 'Follow-up', copy: 'You can filter the list, open pitch drafting, and export the final contacts.' },
-                ]}
-                downloads={['Excel', 'Markdown', 'JSON']}
-              />
+              null
             )}
 
             {job?.status === 'completed' && contacts.length === 0 && (

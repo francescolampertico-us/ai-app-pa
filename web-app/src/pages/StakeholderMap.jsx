@@ -6,7 +6,6 @@ import { API, useFastApiJob } from '../hooks/useFastApiJob';
 import ModelSelector from '../components/ModelSelector';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 import ToolTourButton from '../components/tour/ToolTourButton';
-import ToolOutputPreview from '../components/tour/ToolOutputPreview';
 import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const ACTOR_TYPES = ['Legislators', 'Lobbyists', 'Corporations', 'Nonprofits'];
@@ -433,16 +432,7 @@ export default function StakeholderMap() {
               </div>
             </div>
           ) : (
-            <ToolOutputPreview
-              title="Output Preview"
-              summary="This panel becomes the status and summary area for the map, then the full network analysis renders below."
-              items={[
-                { title: 'Status', copy: 'Build progress appears first so you know the network job is active.' },
-                { title: 'Map summary', copy: 'Totals for actors, opponents, proponents, and relationships appear after completion.' },
-                { title: 'Analysis views', copy: 'Tabs expose the network, strategic analysis, actor tables, and downloads.' },
-              ]}
-              downloads={['Graph artifact', 'JSON', 'Report files']}
-            />
+            null
           )}
 
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-amber-200 text-sm">

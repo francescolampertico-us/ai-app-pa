@@ -6,7 +6,6 @@ import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 import StyledMarkdown from '../components/StyledMarkdown';
 import { Link } from 'react-router-dom';
 import ToolTourButton from '../components/tour/ToolTourButton';
-import ToolOutputPreview from '../components/tour/ToolOutputPreview';
 import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const MotionDiv = motion.div;
@@ -158,17 +157,6 @@ export default function Remy() {
         <AnimatePresence initial={false}>
           {messages.map((msg, i) => <Message key={i} msg={msg} />)}
         </AnimatePresence>
-        {!loading && messages.length <= 1 && (
-          <ToolOutputPreview
-            title="Conversation Preview"
-            summary="Remy replies here, can route to tools, and surfaces tool events or artifacts inline."
-            items={[
-              { title: 'Prompt', copy: 'Describe the task, subject, and desired output in one message.' },
-              { title: 'Routing', copy: 'Remy can ask clarifying questions or point you to the correct module.' },
-              { title: 'Artifacts', copy: 'When a tool runs, artifact links and status events appear in the conversation.' },
-            ]}
-          />
-        )}
         {loading && (
           <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3 items-center">
             <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center"

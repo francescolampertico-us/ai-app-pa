@@ -6,7 +6,6 @@ import ModelSelector from '../components/ModelSelector';
 import StyledMarkdown from '../components/StyledMarkdown';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 import ToolTourButton from '../components/tour/ToolTourButton';
-import ToolOutputPreview from '../components/tour/ToolOutputPreview';
 import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 import { API } from '../hooks/useFastApiJob';
@@ -659,21 +658,6 @@ export default function InfluenceTracker() {
             : <>Search Disclosures <ArrowRight size={18} /></>}
         </button>
       </form>
-
-      {!job && (
-        <section data-tour="influence-tracker-output" className="mb-8">
-          <ToolOutputPreview
-            title="Output Preview"
-            summary="This area becomes the disclosure results surface once the search runs."
-            items={[
-              { title: 'Status', copy: 'You see job progress while records are being retrieved and normalized.' },
-              { title: 'Structured tables', copy: 'LDA, FARA, and IRS 990 records render as filterable tables.' },
-              { title: 'Exports', copy: 'Markdown and CSV-style exports remain available for downstream work.' },
-            ]}
-            downloads={['Markdown report', 'CSV tables']}
-          />
-        </section>
-      )}
 
       {/* Progress */}
       {job && ['pending','processing'].includes(job.status) && (
