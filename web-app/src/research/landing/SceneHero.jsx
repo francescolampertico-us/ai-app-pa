@@ -310,7 +310,7 @@ export default function SceneHero({ appPath = '/app' }) {
           }}
         >
           Integrating <AccentTerm id="genai" onOpen={setActiveDef}>Generative AI</AccentTerm> into{' '}
-          <AccentTerm id="pa" onOpen={setActiveDef}>Public Affairs</AccentTerm> practice
+          <AccentTerm id="pa" onOpen={setActiveDef}>Public Affairs</AccentTerm> Practice
         </h2>
 
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
