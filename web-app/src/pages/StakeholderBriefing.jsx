@@ -88,7 +88,7 @@ export default function StakeholderBriefing() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <h1 data-testid="page-title-stakeholder-briefing" className="app-page-title">Stakeholder Briefing</h1>
+        <h1 data-testid="page-title-stakeholder-briefing" data-tour="stakeholder-briefing-title-heading" className="app-page-title">Stakeholder Briefing</h1>
         <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Generates a pre-meeting briefing with bio, policy positions, suggested talking points, optional disclosure records, and optional recent news.
         </p>
@@ -112,14 +112,14 @@ export default function StakeholderBriefing() {
               <input data-testid="input-stakeholder-name" data-tour="stakeholder-briefing-name" value={stakeholderName} onChange={(event) => setStakeholderName(event.target.value)}
                 className="field" placeholder="e.g. Sen. Maria Cantwell" required />
             </div>
-            <div>
+            <div data-tour="stakeholder-briefing-organization">
               <label className="field-label">Organization</label>
               <input data-testid="input-stakeholder-organization" value={organization} onChange={(event) => setOrganization(event.target.value)}
                 className="field" placeholder="e.g. Senate Commerce Committee" />
             </div>
           </div>
 
-          <div>
+          <div data-tour="stakeholder-briefing-meeting-purpose">
             <label className="field-label">Meeting Purpose</label>
             <textarea data-testid="input-stakeholder-meeting-purpose" value={meetingPurpose} onChange={(event) => setMeetingPurpose(event.target.value)}
               className="field resize-none" rows={4}

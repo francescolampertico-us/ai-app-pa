@@ -380,7 +380,7 @@ export default function StakeholderMap() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <h1 data-testid="page-title-stakeholder-map" className="app-page-title">Stakeholder Map</h1>
+        <h1 data-testid="page-title-stakeholder-map" data-tour="stakeholder-map-title-heading" className="app-page-title">Stakeholder Map</h1>
         <p className="app-page-intro">
           Discovers and classifies policy actors from lobbying filings, bill sponsorships, and supplemental web evidence, then returns an interactive graph and directional network analysis.
         </p>
