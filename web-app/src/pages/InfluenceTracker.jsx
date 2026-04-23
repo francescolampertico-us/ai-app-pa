@@ -535,7 +535,7 @@ export default function InfluenceTracker() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
              style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <h1 data-testid="page-title-influence-tracker" className="app-page-title">Influence Disclosure Tracker</h1>
+        <h1 data-testid="page-title-influence-tracker" data-tour="influence-tracker-title-heading" className="app-page-title">Influence Disclosure Tracker</h1>
         <p className="app-page-intro" style={{ maxWidth: '60ch' }}>
           Retrieves and normalizes LDA lobbying, FARA foreign agent, and IRS 990 disclosure records — producing filterable tables and a markdown summary report.
         </p>
@@ -564,7 +564,7 @@ export default function InfluenceTracker() {
         </div>
 
         {/* Search scope */}
-        <div>
+        <div data-tour="influence-tracker-scope">
           <label className="field-label">Search scope</label>
           <div className="flex flex-wrap gap-5 pt-1">
             {[['client','Client'],['registrant','Lobbying firm (registrant)'],['both','Both']].map(([v,l]) => (
@@ -579,7 +579,7 @@ export default function InfluenceTracker() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Years */}
-          <div>
+          <div data-tour="influence-tracker-years">
             <label className="field-label">Filing Years</label>
             <label className="flex items-center gap-2 mb-3 cursor-pointer">
               <input data-testid="toggle-influence-all-years" type="checkbox" checked={allYears} onChange={e => setAllYears(e.target.checked)} className="accent-violet-500" />
@@ -593,7 +593,7 @@ export default function InfluenceTracker() {
           </div>
 
           {/* Quarters */}
-          <div>
+          <div data-tour="influence-tracker-quarters">
             <label className="field-label">Quarters</label>
             <div className="flex gap-2 pt-1">
               {['Q1','Q2','Q3','Q4'].map(q => (
@@ -609,7 +609,7 @@ export default function InfluenceTracker() {
           </div>
 
           {/* Sources */}
-          <div>
+          <div data-tour="influence-tracker-sources">
             <label className="field-label">Data Sources</label>
             <div className="flex flex-wrap gap-2 pt-1 mb-3">
               {[['lda','LDA'],['fara','FARA'],['irs990','IRS 990']].map(([v,l]) => (

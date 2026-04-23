@@ -83,7 +83,7 @@ export default function BackgroundMemo() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <h1 data-testid="page-title-background-memo" className="app-page-title">Background Memo</h1>
+        <h1 data-testid="page-title-background-memo" data-tour="background-memo-title-heading" className="app-page-title">Background Memo</h1>
         <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Generates a structured first-draft background memo on a client, organization, policy issue, or individual, with optional file grounding and automatic disclosure research.
         </p>
@@ -107,7 +107,7 @@ export default function BackgroundMemo() {
               <input data-testid="input-background-subject" data-tour="background-memo-subject" value={subject} onChange={(event) => setSubject(event.target.value)}
                 className="field" placeholder="e.g. NATO, Pfizer, American Clean Energy Association" required />
             </div>
-            <div>
+            <div data-tour="background-memo-date">
               <label className="field-label">Memo Date</label>
               <input value={memoDate} onChange={(event) => setMemoDate(event.target.value)} className="field" />
             </div>
@@ -116,7 +116,7 @@ export default function BackgroundMemo() {
               <textarea data-testid="input-background-sections" data-tour="background-memo-sections" value={sectionsText} onChange={(event) => setSectionsText(event.target.value)}
                 className="field resize-none" rows={8} placeholder={'Corporate Overview\nKey Leadership\nU.S. Presence\nPolicy Positions'} required />
             </div>
-            <div>
+            <div data-tour="background-memo-context">
               <label className="field-label">Additional Context</label>
               <textarea data-testid="input-background-context" value={context} onChange={(event) => setContext(event.target.value)}
                 className="field resize-none" rows={4} placeholder="Key angles, background notes, or facts to anchor the memo..." />
@@ -124,7 +124,7 @@ export default function BackgroundMemo() {
           </div>
 
           <div className="glass-card p-8 flex flex-col gap-5">
-            <div>
+            <div data-tour="background-memo-source-files">
               <label className="field-label">Source Files</label>
               <input data-testid="input-background-files" type="file" multiple accept=".pdf,.docx,.txt,.md"
                 onChange={(event) => setUploadedFiles(Array.from(event.target.files || []))}
