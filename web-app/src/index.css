@@ -266,6 +266,8 @@
   background: rgba(24, 24, 27, 0.96);
   box-shadow: 0 24px 50px rgba(0,0,0,0.42);
   padding: 1rem 1rem 0.95rem;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
 }
 
 .tour-step-label {
@@ -297,6 +299,22 @@
 
 .tour-status {
   color: #a1a1aa;
+}
+
+.tour-image-frame {
+  margin-top: 0.9rem;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.02);
+}
+
+.tour-image {
+  display: block;
+  width: 100%;
+  max-height: 46vh;
+  object-fit: contain;
+  background: #09090b;
 }
 
 .tour-actions {

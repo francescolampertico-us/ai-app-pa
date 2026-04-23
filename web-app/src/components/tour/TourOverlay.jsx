@@ -72,8 +72,8 @@ export default function TourOverlay({
   }, [isActive, onClose]);
 
   const tooltipStyle = useMemo(
-    () => getTooltipPosition(targetRect, step?.placement),
-    [step?.placement, targetRect],
+    () => getTooltipPosition(targetRect, step?.placement, Boolean(step?.image)),
+    [step?.image, step?.placement, targetRect],
   );
 
   const spotlight = targetRect
@@ -154,6 +154,12 @@ export default function TourOverlay({
         </div>
         <h2 className="tour-title">{step.title}</h2>
         <p className="tour-body">{step.body}</p>
+
+        {step.image && (
+          <div className="tour-image-frame">
+            <img src={step.image} alt={step.imageAlt || step.title} className="tour-image" />
+          </div>
+        )}
 
         {step.target && !highlightVisible && (
           <p className="tour-status">Preparing the next step…</p>

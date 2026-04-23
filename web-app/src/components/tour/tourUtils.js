@@ -19,14 +19,18 @@ export function scrollTargetIntoView(element) {
   }
 }
 
-export function getTooltipPosition(rect, placement = 'bottom') {
-  const width = Math.min(360, window.innerWidth - 32);
+export function getTooltipPosition(rect, placement = 'bottom', hasImage = false) {
+  const width = Math.min(hasImage ? 780 : 360, window.innerWidth - 32);
   const gap = 18;
   const margin = 16;
+  const estimatedHeight = hasImage ? 560 : 280;
+  const clampTop = (value) => Math.min(Math.max(value, margin), Math.max(margin, window.innerHeight - estimatedHeight - margin));
+  const belowTop = rect ? rect.bottom + gap : null;
+  const aboveTop = rect ? rect.top - gap - estimatedHeight : null;
 
   if (!rect || placement === 'center') {
     return {
-      top: Math.max(margin, window.innerHeight / 2 - 120),
+      top: clampTop(window.innerHeight / 2 - (hasImage ? 260 : 120)),
       left: Math.max(margin, window.innerWidth / 2 - width / 2),
       width,
     };
@@ -36,8 +40,15 @@ export function getTooltipPosition(rect, placement = 'bottom') {
   const clampLeft = Math.min(Math.max(centeredLeft, margin), window.innerWidth - width - margin);
 
   if (placement === 'top') {
+    if (aboveTop !== null && aboveTop >= margin) {
+      return {
+        top: aboveTop,
+        left: clampLeft,
+        width,
+      };
+    }
     return {
-      top: Math.max(margin, rect.top - gap - 168),
+      top: clampTop(rect.bottom + gap),
       left: clampLeft,
       width,
     };
@@ -47,7 +58,7 @@ export function getTooltipPosition(rect, placement = 'bottom') {
     const left = rect.left - width - gap;
     if (left >= margin) {
       return {
-        top: Math.min(Math.max(rect.top, margin), window.innerHeight - 200),
+        top: clampTop(rect.top),
         left,
         width,
       };
@@ -58,7 +69,7 @@ export function getTooltipPosition(rect, placement = 'bottom') {
     const left = rect.right + gap;
     if (left + width <= window.innerWidth - margin) {
       return {
-        top: Math.min(Math.max(rect.top, margin), window.innerHeight - 200),
+        top: clampTop(rect.top),
         left,
         width,
       };
@@ -66,11 +77,11 @@ export function getTooltipPosition(rect, placement = 'bottom') {
   }
 
   const preferredTop = placement === 'bottom'
-    ? rect.bottom + gap
-    : rect.top - gap - 168;
+    ? (belowTop !== null && belowTop + estimatedHeight <= window.innerHeight - margin ? belowTop : aboveTop)
+    : (aboveTop !== null && aboveTop >= margin ? aboveTop : belowTop);
 
   return {
-    top: Math.min(Math.max(preferredTop, margin), window.innerHeight - 184),
+    top: clampTop(preferredTop ?? (window.innerHeight / 2 - estimatedHeight / 2)),
     left: clampLeft,
     width,
   };

@@ -277,7 +277,7 @@ export default function MediaClips() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <h1 data-testid="page-title-media-clips" className="app-page-title">Media Clips</h1>
+        <h1 data-testid="page-title-media-clips" data-tour="media-clips-title-heading" className="app-page-title">Media Clips</h1>
         <p className="app-page-intro">
           Search Google News with keyword or Boolean queries, review and clean extracted article text, then rebuild the final report and email draft files.
         </p>
@@ -344,7 +344,7 @@ export default function MediaClips() {
             <input data-testid="input-media-clips-topic" data-tour="media-clips-topic" value={topic} onChange={(event) => setTopic(event.target.value)} className="field" placeholder="e.g. India Media Clips" required />
           </div>
 
-          <div>
+          <div data-tour="media-clips-query-builder">
             <label className="field-label">Query Mode</label>
             <div className="flex flex-wrap gap-4 pt-2">
               {['Simple (keywords)', 'Advanced (Boolean)'].map((mode) => (
@@ -360,7 +360,7 @@ export default function MediaClips() {
             <>
               <div>
                 <label className="field-label">Keywords To Include</label>
-                <input data-testid="input-media-clips-include-keywords" value={includeKeywords} onChange={(event) => setIncludeKeywords(event.target.value)} className="field" placeholder="e.g. India, elections, Modi" />
+                <input data-testid="input-media-clips-include-keywords" data-tour="media-clips-keywords-input" value={includeKeywords} onChange={(event) => setIncludeKeywords(event.target.value)} className="field" placeholder="e.g. India, elections, Modi" />
               </div>
               <div>
                 <label className="field-label">Keywords To Exclude (Optional)</label>
@@ -395,7 +395,7 @@ export default function MediaClips() {
         </div>
 
         <div className="glass-card p-8 flex flex-col gap-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div data-tour="media-clips-filters" className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="field-label">Search Period</label>
               <select value={period} onChange={(event) => setPeriod(event.target.value)} className="field">
