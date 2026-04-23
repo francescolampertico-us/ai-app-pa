@@ -10,8 +10,7 @@ The qualitative component of the capstone was grounded in five semi-structured i
 | Anthony LaFauce | Managing Director | Clyde |
 | Mike Panetta | Partner | Beekeeper Group |
 | Jeffrey Shapiro | Partner | Tiber Creek Group |
-| Craig Johnson | Founder and Managing Partner | Unfiltered Media |
-| Craig Johnson | Co-Founder and Co-CEO | Change Agent |
+| Craig Johnson | Founder and Managing Partner; Co-Founder and Co-CEO | Unfiltered Media; Change Agent |
 
 ## Purpose of the Interviews
 
