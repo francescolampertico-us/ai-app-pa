@@ -210,10 +210,49 @@ export default function SceneHero({ appPath = '/app' }) {
               >
                 Architecture for PA Strategy
               </div>
+              <div
+                style={{
+                  fontSize: '0.28em',
+                  letterSpacing: '0.08em',
+                  color: 'rgba(167,139,250,0.38)',
+                  fontWeight: 400,
+                  fontFamily: 'var(--font-sans)',
+                  marginTop: '0.5em',
+                }}
+              >
+                Francesco Lampertico · AU · 2026
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
+
+      <AnimatePresence>
+        {titleState >= 5 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.4, ease: 'easeOut', delay: 0.3 }}
+            style={{
+              position: 'absolute',
+              top: '38%',
+              left: 0,
+              right: 0,
+              margin: '0 auto',
+              zIndex: 10,
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.78rem',
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: 'rgba(167,139,250,0.45)',
+              textAlign: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            Francesco Lampertico, 2026
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {titleState >= 5 && (
