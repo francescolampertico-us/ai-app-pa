@@ -66,10 +66,6 @@ Summary note: Anthony described growing interest in knowledge-based policy syste
 
 Summary note: Craig framed the next frontier less as simple task automation and more as message testing, strategic filtering, and understanding what communication approaches actually move audiences.
 
-### Grace Dahl, Signal Group (supplementary class note)
-
-Summary note: In the AI and Politics class, Grace Dahl described AI as both a tool and a channel, emphasizing AI reputation, persona-based testing, and visibility gaps as emerging issues for Public Affairs strategy.
-
 ## 5. Personalization and Adaptation to Practice
 
 ### Mike Panetta, Beekeeper Group

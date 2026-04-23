@@ -115,12 +115,12 @@ const REFERENCES = [
     url: 'https://arxiv.org/abs/2506.06576',
   },
   {
-    text: 'VoterVoice. (2025). The 2025 state of advocacy.',
-    url: 'https://info.votervoice.net/resources/2025-state-of-advocacy-report',
-  },
-  {
     text: 'Varone, F., Ingold, K., & Jourdain, C. (2017). Studying policy advocacy through social network analysis. European Political Science, 16(3), 322–334.',
     url: 'https://doi.org/10.1057/eps.2016.16',
+  },
+  {
+    text: 'VoterVoice. (2025). The 2025 state of advocacy.',
+    url: 'https://info.votervoice.net/resources/2025-state-of-advocacy-report',
   },
   {
     text: 'Yue, C. A., Men, L. R., Davis, D. Z., Mitson, R., Zhou, A., & Al Rawi, A. (2024). Public relations meets artificial intelligence: Assessing utilization and outcomes. Journal of Public Relations Research, 36(6), 513–534.',

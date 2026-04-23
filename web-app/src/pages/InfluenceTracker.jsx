@@ -535,7 +535,7 @@ export default function InfluenceTracker() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
              style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <h1 data-testid="page-title-influence-tracker" data-tour="influence-tracker-title-heading" className="app-page-title">Influence Disclosure Tracker</h1>
+        <h1 data-testid="page-title-influence-tracker" data-tour="influence-tracker-title-heading" className="app-page-title">Influence Tracker</h1>
         <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <p className="app-page-intro" style={{ maxWidth: '60ch' }}>
             Retrieves and normalizes LDA lobbying, FARA foreign agent, and IRS 990 disclosure records — producing filterable tables and a markdown summary report.
