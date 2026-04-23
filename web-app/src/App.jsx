@@ -242,7 +242,7 @@ function Dashboard() {
         <div className="text-slate-600 text-sm">Loading tools…</div>
       )}
 
-      <div className="flex flex-col gap-10">
+      <div data-tour="dashboard-tool-grid" className="flex flex-col gap-10">
         {WORKFLOW_SECTIONS.map((section) => {
           const sectionTools = section.toolIds
             .map((id) => (toolLookup[id] && TOOL_UI[id] ? { ...TOOL_UI[id], id } : null))

@@ -114,7 +114,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-16 md:w-64 h-[100dvh] border-r border-white/5 flex flex-col py-5 px-2.5 z-50 shrink-0 backdrop-blur-xl bg-[#09090B]/90 overflow-hidden">
+    <aside data-tour="app-sidebar" className="w-16 md:w-64 h-[100dvh] border-r border-white/5 flex flex-col py-5 px-2.5 z-50 shrink-0 backdrop-blur-xl bg-[#09090B]/90 overflow-hidden">
       <div className="flex flex-col gap-4 min-h-0 flex-1 pr-1">
         {/* Wordmark */}
         <div className="px-1 hidden md:block">
