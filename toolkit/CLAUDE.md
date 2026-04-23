@@ -1,9 +1,7 @@
 # CLAUDE.md — Public Affairs AI Toolkit
 
 ## Project context
-Capstone project building AI-powered tools for public affairs professionals. Every tool maps to a workflow from the DiGiacomo (2025) PA management framework.
-
-**Deadline:** April 26, 2026 — ~20 days remaining.
+Capstone project building AI-powered tools for public affairs professionals. Grounded in 5 expert interviews and a 28-source literature review on generative AI in PA practice.
 
 ## Repository structure
 ```
@@ -20,10 +18,11 @@ Every tool follows Directive-Orchestration-Execution:
 - **Execution:** Tool produces verified output (docx, CSV, markdown)
 
 ## LLM model policy
-- **`gpt-4.1-mini`** — default for almost everything: extraction passes, structured outputs, tool calls, variants, clip cleaner, hearing memo draft pass
-- **`gpt-4.1`** — final high-stakes synthesis only: background memo, stakeholder briefing, messaging strategy (Message House), legislative tracker synthesis pass, hearing memo polish pass
+Uses ChangeAgent (OpenAI-compatible endpoint). Two-tier approach:
+- **Fast model** — default for extraction passes, structured outputs, tool calls, variants, clip cleaner, hearing memo draft pass
+- **Full model** — final high-stakes synthesis only: background memo, stakeholder briefing, messaging strategy, legislative tracker synthesis pass, hearing memo polish pass
 
-The hearing memo uses a two-pass architecture: mini for extraction, 4.1 for final prose polish.
+The hearing memo uses a two-pass architecture: fast model for extraction, full model for final prose polish.
 
 ## Frontend: Vite + React
 **Entry:** `cd web-app && npm run dev` (http://localhost:5173)
@@ -47,7 +46,7 @@ Pages:
 **Entry:** `python3 tools/<tool_id>/execution/run.py --help`
 
 ### Tools built (10)
-Media Clips, Media Clip Cleaner, Influence Disclosure Tracker, Hearing Memo, Legislative Tracker, Messaging Matrix, Stakeholder Briefing, Media List Builder, Stakeholder Map, Background Memo
+Media Clips, Media Clip Cleaner, Influence Tracker, Hearing Memo, Legislative Tracker, Messaging Matrix, Stakeholder Briefing, Media List Builder, Stakeholder Map, Background Memo
 
 ### Adding a new tool
 1. Copy `templates/tool/` to `tools/<new_tool_id>/`
@@ -66,9 +65,8 @@ Media Clips, Media Clip Cleaner, Influence Disclosure Tracker, Hearing Memo, Leg
 ## File reading priority
 1. This file (CLAUDE.md)
 2. `tool-registry.yaml` — canonical tool index
-3. `STYLE_GUIDE.md` — house output standards
-4. `RISK_POLICY.md` — risk levels and review requirements
-5. The specific tool's `spec.md` and `skill.md` before modifying it
+3. The specific tool's `spec.md` and `skill.md` before modifying it
+4. `toolkit/qa/test_cases/<tool>.md` — acceptance criteria for the tool
 
 ## QA Bug Shortcuts
 - If the user says `Fix BUG-XXXX`, treat `toolkit/qa/bugs/BUG-XXXX.md` as the canonical fix brief.
@@ -85,8 +83,15 @@ Media Clips, Media Clip Cleaner, Influence Disclosure Tracker, Hearing Memo, Leg
 
 ## Claude Code Skills
 Workspace skills (`.claude/skills/`, Claude Code-invocable):
-- `background-memo` — generate a background memo DOCX via the toolkit pipeline
+- `add-tool` — scaffold a new tool package from template
+- `clip-cleaner` — run the media clip cleaner pipeline
+- `disclosure-tracker` — run the influence disclosure tracker
+- `eval-tool` — run evaluation harness for a tool
 - `handoff` — generate a session handoff prompt and update CLAUDE.md Project State
+- `hearing-memo` — run the hearing memo pipeline
+- `legislative-tracker` — run the legislative tracker
+- `media-clips` — run the media clips pipeline
+- `messaging-matrix` — run the messaging matrix pipeline
 
 Per-tool skills (canonical spec for each tool, not workspace-invocable):
 - `toolkit/tools/<tool_id>/skill.md` — one per tool, used by Claude as tool context
@@ -96,26 +101,15 @@ Per-tool skills (canonical spec for each tool, not workspace-invocable):
 - Tag milestones: `v0.1.0-prototype`, `v1.0.0-final`
 
 ## Project State
-**Last updated:** 2026-04-06
+**Last updated:** 2026-04-23
 
-**Status:** All 10 tools wired into Vite frontend + FastAPI backend. Streamlit retired.
+**Status:** All 10 tools deployed. Live at ai-app-pa.vercel.app (Vercel frontend + Railway backend).
 
-**What was done (2026-04-06):**
-- Migrated to Vite + FastAPI as sole interface; Streamlit retired
-- Fixed `gpt-5-mini` → `gpt-4o-mini` → `gpt-4.1-mini` / `gpt-4.1` across all tools
-- Model policy: 4.1-mini for extraction/variants, 4.1 for final synthesis only
-- Hearing memo: two-pass architecture (mini draft → 4.1 polish)
-- Legislative tracker: relevance-sorted results + max-results dropdown (Best match / Top 5 / 10 / 25 / All)
-- Influence tracker: fixed YearDropdown double-toggle bug; DataTable download button always visible in header
-- Media Clips: standalone Clip Cleaner section always visible; email draft section clearly separated
-- Repo root moved from `toolkit/` to `capstone_project/` — web-app and fastapi-backend now tracked
+**Deployment:**
+- Frontend: Vercel (auto-deploys from `main` on push)
+- Backend: Railway (Dockerfile build, env vars set in Railway dashboard)
+- Backend URL set via `VITE_API_URL` env var in Vercel
 
 **Known issues:**
-- Stakeholder Map: Network Analysis untested end-to-end
 - IRS 990: empty for current year by design (1–3 year filing lag)
-- Hearing Memo: degrades gracefully (local extraction) if OpenAI key unavailable
-
-**Next priorities (20 days to Apr 26):**
-1. End-to-end test all 10 tools with real inputs
-2. Polish UI/UX — error messages, loading states, edge cases
-3. Final submission prep
+- GNews intermittent on cloud IPs — tools have graceful fallbacks

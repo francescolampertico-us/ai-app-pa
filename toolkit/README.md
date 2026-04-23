@@ -1,40 +1,51 @@
-# Public Affairs AI Tools (Repo)
+# Public Affairs AI Toolkit
 
-This repository is the source of truth for my public affairs AI toolkit: **tool definitions**, **reusable skills**, **workflows**, **style and risk governance**, and **evaluation fixtures**.
+Python execution layer for the Strategitect capstone project. Contains all 10 tool packages, the QA system, scaffolding templates, and the canonical tool registry.
 
-It is designed so tools are:
-- consistent in output quality and format
-- safer for high-stakes PA contexts (review gates, non-negotiables)
-- portable across platforms (Antigravity today, app/runtime later)
+## Structure
 
-## Repository Structure
+```
+toolkit/
+├── tools/              # One package per tool (contract + spec + execution + examples + eval)
+├── qa/                 # QA infrastructure: test cases, bug tracker, regression suite, run logs
+├── templates/          # Scaffolding for adding new tools (tool.yaml, spec.md, skill.md)
+├── tool-registry.yaml  # Canonical index of all tools (app-readable)
+└── .claude/skills/     # Claude Code-invocable skills (add-tool, handoff, etc.)
+```
 
-- `tools/` — one folder per tool (contract + spec + skill + examples + eval)
-- `skills/` — reusable instruction blocks shared across tools
-- `workflows/` — multi-tool playbooks (how tools combine in real PA work)
-- `templates/` — templates for creating new tools consistently
-- `research/` — capstone notes, interview learnings, literature, etc.
-- `STYLE_GUIDE.md` — house style for outputs
-- `RISK_POLICY.md` — green/yellow/red risk levels and review requirements
-- `tool-registry.yaml` — index of tools (app-readable later)
+## Tool Catalog
 
-## How to Add a New Tool (standard workflow)
+| ID | Tool | Version | Risk |
+|----|------|---------|------|
+| `media_clips` | Media Clips | 0.1.0 | yellow |
+| `media_clip_cleaner` | Media Clip Cleaner | 0.3.0 | green |
+| `influence_disclosure_tracker` | Influence Tracker | 0.2.0 | yellow |
+| `hearing_memo_generator` | Congressional Hearing Memo | 1.0.0 | yellow |
+| `legislative_tracker` | Legislative Tracker | 0.1.0 | yellow |
+| `messaging_matrix` | Messaging Matrix | 0.1.0 | yellow |
+| `stakeholder_briefing` | Stakeholder Briefing | 0.1.0 | yellow |
+| `media_list_builder` | Media List Builder | 0.1.0 | yellow |
+| `stakeholder_map` | Stakeholder Map | 0.1.0 | yellow |
+| `background_memo_generator` | Background Memo | 0.1.0 | yellow |
 
-1. Copy the template:
-   - `templates/tool/` → `tools/<tool_id>/`
-2. Fill in:
-   - `tool.yaml` (inputs/outputs + risk)
-   - `spec.md` (when to use, failure modes, review checklist)
-   - `skill.md` (instruction core + format rules)
-3. Add:
-   - `examples/` (2–3 good runs)
-   - `eval/` (at least 5 cases with acceptance criteria)
-4. Register tool in `tool-registry.yaml`
-5. Commit with message: `Add <tool_id> tool package`
+## Adding a New Tool
 
-## Current Status
+1. Copy `templates/tool/` → `tools/<tool_id>/`
+2. Fill in `tool.yaml`, `spec.md`, `skill.md`
+3. Write execution code in `execution/run.py`
+4. Add handler in `fastapi-backend/api/routers/tools.py`
+5. Add page in `web-app/src/pages/`
+6. Register in `tool-registry.yaml`
 
-- Repo scaffold: ✅
-- Governance docs: ✅ (initial drafts)
-- First “gold standard” tool package: ⏳ next step
+## Running a Tool Locally
 
+```bash
+python3 tools/<tool_id>/execution/run.py --help
+```
+
+Requires `toolkit/.env` with:
+```
+CHANGE_AGENT_API_KEY=...
+BRAVE_SEARCH_API_KEY=...
+LEGISCAN_API_KEY=...
+```
