@@ -240,13 +240,10 @@ export default function MediaListBuilder() {
         )}
       </AnimatePresence>
 
-      <motion.div data-testid="tool-page-media-list" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-10 max-w-6xl mx-auto relative z-10">
+      <motion.div data-testid="tool-page-media-list" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="app-page-shell app-page-shell-wide">
         <header className="page-header relative">
           <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
             style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-          <div className="app-kicker">
-            Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
-          </div>
           <h1 data-testid="page-title-media-list" className="app-page-title">Media List</h1>
           <p className="app-page-intro" style={{ maxWidth: '68ch' }}>
             Generates a targeted media list based on a policy issue, geographic scope, and media type filter, then returns Excel, markdown, and JSON outputs.
@@ -255,7 +252,8 @@ export default function MediaListBuilder() {
         </header>
 
         <ResearchPrototypeNote
-          category="Stakeholder Mapping & Network Analysis"
+          category="Stakeholder Mapping and Network Analysis"
+          refs={['karakulle2025', 'bitonti2023', 'digiacomo2025']}
           message="This module turns issue research into a media outreach starting point. It demonstrates how AI can support list-building and angle generation, but journalist identities, beats, and contact details remain review-required before any outreach is sent."
         />
 
@@ -348,7 +346,7 @@ export default function MediaListBuilder() {
 
           <div className="glass-card p-8 flex flex-col gap-5">
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-amber-200 text-sm">
-              Review required. Journalist names, roles, and story links may be inaccurate or outdated. Verify all contacts before pitching.
+              Additional verification needed. Journalist names, roles, and story links may be inaccurate or outdated. Verify all contacts before pitching.
             </div>
 
             {job ? (
@@ -381,13 +379,7 @@ export default function MediaListBuilder() {
 
             {job?.status === 'completed' && contacts.length > 0 && (
               <>
-                <div className="flex items-center gap-3 mb-2">
-                  <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
-                    Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
-                  </div>
-                  <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-                  <span className="font-serif text-lg text-slate-200">Media List</span>
-                </div>
+                <div className="app-output-header !mb-2">Media List</div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="rounded-xl bg-black/20 border border-white/10 px-4 py-3">
                     <div className="text-slate-500 text-xs uppercase tracking-wider">Requested / Returned</div>

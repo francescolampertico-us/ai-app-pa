@@ -59,6 +59,10 @@ const REFERENCES = [
     url: 'https://doi.org/10.2139/ssrn.5560401',
   },
   {
+    text: 'Karakulle, İ. (2025). From data to message: Public relations practices transformed by artificial intelligence. Alınteri Sosyal Bilimler Dergisi, 9(2), 308–328.',
+    url: 'https://doi.org/10.30913/alinterisosbil.1815718',
+  },
+  {
     text: 'Khalifa, M., & Albadawy, M. (2024). Using artificial intelligence in academic writing and research: An essential productivity tool. Computer Methods and Programs in Biomedicine Update, 5, 100145.',
     url: 'https://doi.org/10.1016/j.cmpbup.2024.100145',
   },
@@ -77,6 +81,10 @@ const REFERENCES = [
   {
     text: 'Mollick, E. (2024). Co-intelligence: Living and working with AI. Portfolio/Penguin.',
     url: '',
+  },
+  {
+    text: 'Nay, J. J. (2023). Large language models as corporate lobbyists. Stanford University – CodeX. Preprint.',
+    url: 'https://doi.org/10.48550/arXiv.2301.01181',
   },
   {
     text: 'Noy, S., & Zhang, W. (2023). Experimental evidence on the productivity effects of generative artificial intelligence. Science, 381(6654), 187–192.',
@@ -109,6 +117,10 @@ const REFERENCES = [
   {
     text: 'VoterVoice. (2025). The 2025 state of advocacy.',
     url: 'https://info.votervoice.net/resources/2025-state-of-advocacy-report',
+  },
+  {
+    text: 'Varone, F., Ingold, K., & Jourdain, C. (2017). Studying policy advocacy through social network analysis. European Political Science, 16(3), 322–334.',
+    url: 'https://doi.org/10.1057/eps.2016.16',
   },
   {
     text: 'Yue, C. A., Men, L. R., Davis, D. Z., Mitson, R., Zhou, A., & Al Rawi, A. (2024). Public relations meets artificial intelligence: Assessing utilization and outcomes. Journal of Public Relations Research, 36(6), 513–534.',

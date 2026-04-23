@@ -49,10 +49,10 @@ export default function SceneHero({ appPath = '/app' }) {
 
   useEffect(() => {
     const t1 = setTimeout(() => setTitleState(1), 500);
-    const t2 = setTimeout(() => setTitleState(2), 1600);
-    const t3 = setTimeout(() => setTitleState(3), 2400);
-    const t4 = setTimeout(() => setTitleState(4), 4200);
-    const t5 = setTimeout(() => setTitleState(5), 5800);
+    const t2 = setTimeout(() => setTitleState(2), 1500);
+    const t3 = setTimeout(() => setTitleState(3), 2150);
+    const t4 = setTimeout(() => setTitleState(4), 3950);
+    const t5 = setTimeout(() => setTitleState(5), 5050);
 
     return () => {
       clearTimeout(t1);
@@ -100,23 +100,23 @@ export default function SceneHero({ appPath = '/app' }) {
         }}
         initial={{ top: '45%', left: 'calc(50% + var(--nav-width) / 2)', x: '-50%', y: '-50%' }}
         animate={{
-          top: titleState >= 4 ? '1.6rem' : '45%',
-          left: titleState >= 4 ? '1rem' : 'calc(50% + var(--nav-width) / 2)',
+          top: titleState >= 4 ? '2.3rem' : '45%',
+          left: titleState >= 4 ? '2.45rem' : 'calc(50% + var(--nav-width) / 2)',
           x: titleState >= 4 ? 0 : '-50%',
           y: titleState >= 4 ? 0 : '-50%',
-          scale: titleState >= 4 ? 0.28 : 1,
+          scale: titleState >= 4 ? 0.352 : 1,
         }}
         transition={{ duration: 1.6, ease: [0.645, 0.045, 0.355, 1] }}
       >
         <AnimatePresence>
           {titleState < 5 && (
             <motion.div
-            key="morph"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.9 }}
-            style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', color: '#d8d5ff' }}
-          >
+              key="morph"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.82, ease: [0.22, 1, 0.36, 1] }}
+              style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', color: '#d8d5ff' }}
+            >
               <motion.span
                 animate={{
                   width: titleState >= 1 ? 0 : 'auto',
@@ -124,7 +124,7 @@ export default function SceneHero({ appPath = '/app' }) {
                   paddingRight: titleState >= 1 ? 0 : '0.4em',
                 }}
                 style={{ overflow: 'hidden', display: 'inline-flex', whiteSpace: 'nowrap' }}
-                transition={{ duration: 0.6, ease: 'easeInOut' }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               >
                 The
               </motion.span>
@@ -132,12 +132,12 @@ export default function SceneHero({ appPath = '/app' }) {
               <motion.div
                 style={{ display: 'flex', position: 'relative' }}
                 animate={{ x: titleState >= 2 ? '3.08em' : 0, paddingRight: titleState >= 3 ? 0 : '0.4em' }}
-                transition={{ duration: 2.2, ease: [0.23, 1, 0.32, 1] }}
+                transition={{ duration: 2.2, ease: [0.22, 1, 0.36, 1] }}
               >
                 <motion.span
                   animate={{ width: titleState >= 3 ? 0 : 'auto', opacity: titleState >= 3 ? 0 : 1 }}
                   style={{ display: 'inline-flex', overflow: 'hidden', whiteSpace: 'nowrap' }}
-                  transition={{ duration: 1.4, ease: 'easeInOut' }}
+                  transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
                 >
                   Arch
                 </motion.span>
@@ -145,7 +145,7 @@ export default function SceneHero({ appPath = '/app' }) {
                 <motion.span
                   animate={{ width: titleState >= 3 ? 0 : 'auto', opacity: titleState >= 3 ? 0 : 1 }}
                   style={{ display: 'inline-flex', overflow: 'hidden', whiteSpace: 'nowrap' }}
-                  transition={{ duration: 1.4, ease: 'easeInOut' }}
+                  transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
                 >
                   ure
                 </motion.span>
@@ -158,7 +158,7 @@ export default function SceneHero({ appPath = '/app' }) {
                   paddingRight: titleState >= 1 ? 0 : '0.4em',
                 }}
                 style={{ overflow: 'hidden', display: 'inline-flex', whiteSpace: 'nowrap' }}
-                transition={{ duration: 0.6, ease: 'easeInOut' }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               >
                 of
               </motion.span>
@@ -166,13 +166,13 @@ export default function SceneHero({ appPath = '/app' }) {
               <motion.div
                 style={{ display: 'flex', position: 'relative' }}
                 animate={{ x: titleState >= 2 ? '-1.85em' : 0 }}
-                transition={{ duration: 1.4, ease: [0.23, 1, 0.32, 1] }}
+                transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
               >
                 <span>Strateg</span>
                 <motion.span
                   animate={{ width: titleState >= 3 ? 0 : 'auto', opacity: titleState >= 3 ? 0 : 1 }}
                   style={{ display: 'inline-flex', overflow: 'hidden', whiteSpace: 'nowrap' }}
-                  transition={{ duration: 1.4, ease: 'easeInOut' }}
+                  transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
                 >
                   y
                 </motion.span>
@@ -196,19 +196,19 @@ export default function SceneHero({ appPath = '/app' }) {
                   <span style={{ color: 'var(--text-accent)', fontStyle: 'italic', fontSize: '1.05em' }}>α</span>
                   <span style={{ color: '#fff' }}>tegitect</span>
                 </div>
-                <div style={{ height: '4px', background: 'var(--text-accent)', borderRadius: '2px', marginTop: '0.25em', marginBottom: '0.4em' }} />
+                <div style={{ height: '6px', width: '2.2em', background: 'var(--text-accent)', borderRadius: '2px', marginTop: '0.25em', marginBottom: '0.42em' }} />
               </div>
               <div
                 style={{
-                  fontSize: '0.3em',
-                  letterSpacing: '0.12em',
+                  fontSize: '0.35em',
+                  letterSpacing: '0.11em',
                   textTransform: 'uppercase',
-                  color: 'var(--text-accent)',
+                  color: 'rgba(167,139,250,0.55)',
                   fontWeight: 500,
                   fontFamily: 'var(--font-sans)',
                 }}
               >
-                Architecture for Public Affairs Strategy
+                Architecture for PA Strategy
               </div>
             </motion.div>
           )}
@@ -303,80 +303,80 @@ export default function SceneHero({ appPath = '/app' }) {
 
       {definition && definitionStyle && typeof document !== 'undefined'
         ? createPortal(
-            <AnimatePresence>
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 15 }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="glass-card"
+          <AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 15 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="glass-card"
+              style={{
+                position: 'fixed',
+                top: definitionStyle.top,
+                left: definitionStyle.left,
+                width: definitionStyle.width,
+                padding: '1.65rem 1.75rem 1.75rem',
+                textAlign: 'left',
+                zIndex: 1200,
+                background: 'linear-gradient(180deg, rgba(19, 24, 43, 0.985), rgba(17, 22, 40, 0.99))',
+                border: '1px solid rgba(167, 139, 250, 0.22)',
+                boxShadow: '0 26px 60px rgba(0,0,0,0.48)',
+                borderRadius: '22px',
+              }}
+            >
+              <button
+                onClick={() => setActiveDef(null)}
                 style={{
-                  position: 'fixed',
-                  top: definitionStyle.top,
-                  left: definitionStyle.left,
-                  width: definitionStyle.width,
-                  padding: '1.65rem 1.75rem 1.75rem',
-                  textAlign: 'left',
-                  zIndex: 1200,
-                  background: 'linear-gradient(180deg, rgba(19, 24, 43, 0.985), rgba(17, 22, 40, 0.99))',
-                  border: '1px solid rgba(167, 139, 250, 0.22)',
-                  boxShadow: '0 26px 60px rgba(0,0,0,0.48)',
-                  borderRadius: '22px',
+                  position: 'absolute',
+                  top: '1.2rem',
+                  right: '1.2rem',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
+                  zIndex: 2,
+                  opacity: 0.9,
                 }}
               >
-                <button
-                  onClick={() => setActiveDef(null)}
+                <X size={18} />
+              </button>
+              <div style={{ width: '100%', paddingLeft: '1rem', position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.8rem' }}>
+                  <h3
+                    style={{
+                      fontFamily: 'var(--font-serif)',
+                      fontSize: '1.34rem',
+                      color: '#a78bfa',
+                      lineHeight: 1.1,
+                      margin: 0,
+                    }}
+                  >
+                    {definition.term}
+                  </h3>
+                  <CitationButton refs={definition.refs} />
+                </div>
+                <p
                   style={{
-                    position: 'absolute',
-                    top: '1.2rem',
-                    right: '1.2rem',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#e5e7eb',
-                    cursor: 'pointer',
-                    zIndex: 2,
-                    opacity: 0.9,
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '0.88rem',
+                    lineHeight: '1.46',
+                    color: '#f8fafc',
+                    marginBottom: '0.9rem',
+                    fontWeight: 400,
+                    marginTop: 0,
                   }}
                 >
-                  <X size={18} />
-                </button>
-                <div style={{ width: '100%', paddingLeft: '1rem', position: 'relative', zIndex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.8rem' }}>
-                    <h3
-                      style={{
-                        fontFamily: 'var(--font-serif)',
-                        fontSize: '1.34rem',
-                        color: '#a78bfa',
-                        lineHeight: 1.1,
-                        margin: 0,
-                      }}
-                    >
-                      {definition.term}
-                    </h3>
-                    <CitationButton refs={definition.refs} />
-                  </div>
-                  <p
-                    style={{
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: '0.88rem',
-                      lineHeight: '1.46',
-                      color: '#f8fafc',
-                      marginBottom: '0.9rem',
-                      fontWeight: 400,
-                      marginTop: 0,
-                    }}
-                  >
-                    {definition.short}
-                  </p>
-                  <div
-                    style={{
-                      width: 'calc(100% - 0.5rem)',
-                      marginLeft: '-0.2rem',
-                      padding: '0.95rem 1rem',
-                      background: 'rgba(255,255,255,0.04)',
-                      borderRadius: '12px',
-                    }}
-                  >
+                  {definition.short}
+                </p>
+                <div
+                  style={{
+                    width: 'calc(100% - 0.5rem)',
+                    marginLeft: '-0.2rem',
+                    padding: '0.95rem 1rem',
+                    background: 'rgba(255,255,255,0.04)',
+                    borderRadius: '12px',
+                  }}
+                >
                   <strong
                     style={{
                       color: '#f8fafc',
@@ -402,14 +402,14 @@ export default function SceneHero({ appPath = '/app' }) {
                     {definition.context}
                   </span>
                 </div>
-                </div>
-              </motion.div>
-            </AnimatePresence>,
-            document.body,
-          )
+              </div>
+            </motion.div>
+          </AnimatePresence>,
+          document.body,
+        )
         : null}
 
-      <div style={{ position: 'absolute', bottom: '0.85rem', left: 0, right: 0, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', opacity: 0.6, zIndex: 5 }}>
+      <div style={{ position: 'absolute', bottom: '0.1rem', left: 0, right: 0, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', opacity: 0.6, zIndex: 5 }}>
         <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#94a3b8' }}>
           Scroll to Begin Review
         </span>

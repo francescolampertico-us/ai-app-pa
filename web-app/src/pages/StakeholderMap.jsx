@@ -374,13 +374,10 @@ export default function StakeholderMap() {
   const tabs = ['Network Analysis', 'Strategic Analysis', 'Proponents', 'Opponents', 'All Actors'];
 
   return (
-    <motion.div data-testid="tool-page-stakeholder-map" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-10 max-w-6xl mx-auto relative z-10">
+    <motion.div data-testid="tool-page-stakeholder-map" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="app-page-shell app-page-shell-wide">
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div className="app-kicker">
-          Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
-        </div>
         <h1 data-testid="page-title-stakeholder-map" className="app-page-title">Stakeholder Map</h1>
         <p className="app-page-intro">
           Discovers and classifies policy actors from lobbying filings, bill sponsorships, and supplemental web evidence, then returns an interactive graph and directional network analysis.
@@ -389,7 +386,8 @@ export default function StakeholderMap() {
       </header>
 
       <ResearchPrototypeNote
-        category="Stakeholder Mapping & Network Analysis"
+        category="Stakeholder Mapping and Network Analysis"
+        refs={['varone2017', 'digiacomo2025', 'bitonti2023']}
         message="This tool demonstrates how AI can support actor discovery, classification, and strategic interpretation around a policy issue. Network structure and stance inference help organize the landscape, but they do not replace human judgment about salience, coalition dynamics, or political context."
       />
 
@@ -434,6 +432,10 @@ export default function StakeholderMap() {
             </div>
           )}
 
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-amber-200 text-sm">
+            Additional verification needed. Check stakeholder positions, network relationships, and engagement priorities against source evidence before use.
+          </div>
+
           {job?.status === 'completed' && rd && (
             <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
               <SummaryMetric label="Total Actors" value={actors.length} />
@@ -458,13 +460,7 @@ export default function StakeholderMap() {
           </div>
 
           <div className="glass-card p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
-                Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
-              </div>
-              <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-              <span className="font-serif text-lg text-slate-200">Stakeholder Map</span>
-            </div>
+            <div className="app-output-header">Stakeholder Map</div>
             {activeTab === 'Network Analysis' && (
               <div className="space-y-8 text-slate-300">
                 {analytics ? (

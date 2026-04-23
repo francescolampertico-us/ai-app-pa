@@ -35,6 +35,7 @@
   .display { font-family: 'DM Serif Display', serif; line-height: 1.1; letter-spacing: -0.02em; }
   .text-gradient { background: linear-gradient(135deg, #fff 0%, #a78bfa 50%, #e879f9 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .app-kicker {
+    display: none;
     font-family: 'Inter', sans-serif;
     font-size: 10px;
     font-weight: 600;
@@ -45,19 +46,19 @@
   }
   .app-page-title {
     font-family: 'DM Serif Display', serif;
-    font-size: 42px;
+    font-size: 38px;
     line-height: 1.05;
     letter-spacing: -0.02em;
     color: #fff;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   .app-page-intro {
     font-family: 'Inter', sans-serif;
-    font-size: 14px;
-    line-height: 1.65;
+    font-size: 13px;
+    line-height: 1.7;
     font-weight: 300;
-    color: #71717A;
-    max-width: 72ch;
+    color: #84848d;
+    max-width: 68ch;
   }
   .app-meta-label {
     font-family: 'Inter', sans-serif;
@@ -70,8 +71,8 @@
   }
   .app-copy {
     font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    line-height: 1.7;
+    font-size: 12.5px;
+    line-height: 1.68;
     font-weight: 300;
     color: #a1a1aa;
   }
@@ -113,28 +114,58 @@
     line-height: 1.2;
     color: #fff;
   }
+  .app-page-shell {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  .app-page-shell-wide { max-width: 72rem; }
+  .app-page-shell-medium { max-width: 68rem; }
+  .app-page-shell-narrow { max-width: 64rem; }
+  .app-output-header {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: #f4f4f5;
+    margin-bottom: 1.25rem;
+  }
+  .app-empty-state {
+    border-radius: 0.9rem;
+    border: 1px dashed rgba(255,255,255,0.12);
+    padding: 1.5rem 1.25rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+    font-weight: 300;
+    color: #71717a;
+  }
 
   /* Glass card — obsidian style */
   .glass {
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px;
-    backdrop-filter: blur(16px);
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
   }
-  .glass-card { @apply glass; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.5); }
+  .glass-card { @apply glass; box-shadow: 0 18px 34px -14px rgba(0,0,0,0.48); }
 
   /* Form inputs */
   .field {
-    @apply w-full bg-white/5 border border-white/10 p-3.5 rounded-xl text-white outline-none transition-all font-light placeholder:text-zinc-600;
+    @apply w-full bg-white/5 border border-white/10 p-3 rounded-xl text-white outline-none transition-all font-light placeholder:text-zinc-600;
     font-family: 'Inter', sans-serif;
+    font-size: 13px;
   }
   .field:focus { border-color: rgba(109,40,217,0.5); box-shadow: 0 0 0 3px rgba(109,40,217,0.1); }
 
   /* Primary button */
   .btn-primary {
-    @apply w-full py-4 rounded-xl font-semibold tracking-wide flex items-center justify-center gap-2 transition-all;
+    @apply w-full py-3.5 rounded-xl font-semibold tracking-wide flex items-center justify-center gap-2 transition-all;
     background: #fff;
     color: #09090B;
+    font-size: 14px;
   }
   .btn-primary:hover { background: #F5F3FF; }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -161,8 +192,16 @@
   .badge-failed     { @apply px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-widest; background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
 
   /* Page header */
-  .page-header { @apply mb-12 pb-8 border-b border-white/10; }
+  .page-header { @apply mb-10 pb-6 border-b border-white/10; }
 
   /* Section rule */
   .section-rule { height: 1.5px; background: var(--accent); }
+}
+
+@media (min-width: 768px) {
+  @layer components {
+    .app-page-shell {
+      padding: 2.25rem 2.5rem;
+    }
+  }
 }

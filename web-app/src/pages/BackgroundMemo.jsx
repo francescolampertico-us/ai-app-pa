@@ -77,13 +77,10 @@ export default function BackgroundMemo() {
   };
 
   return (
-    <motion.div data-testid="tool-page-background-memo" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-10 max-w-6xl mx-auto relative z-10">
+    <motion.div data-testid="tool-page-background-memo" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="app-page-shell app-page-shell-wide">
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div className="app-kicker">
-          Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
-        </div>
         <h1 data-testid="page-title-background-memo" className="app-page-title">Background Memo</h1>
         <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Generates a structured first-draft background memo on a client, organization, policy issue, or individual, with optional file grounding and automatic disclosure research.
@@ -92,7 +89,8 @@ export default function BackgroundMemo() {
       </header>
 
       <ResearchPrototypeNote
-        category="Policy Monitoring & Legislative Tracking"
+        category="Policy Monitoring and Legislative Tracking"
+        refs={['bitonti2023', 'digiacomo2025']}
         message="This research prototype turns organizations, issues, and individuals into structured briefing material. It supports intelligence synthesis and first-pass drafting, but the memo remains a decision-support artifact that should be checked against primary sources before use."
       />
 
@@ -180,17 +178,11 @@ export default function BackgroundMemo() {
           {job.status === 'completed' && rd && (
             <>
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-amber-200 text-sm">
-                Review required. All memo text is model-generated and should be checked against primary sources before distribution.
+                Additional verification needed. All memo text is model-generated and should be checked against primary sources before distribution.
               </div>
 
               <div className="glass-card p-8 space-y-8">
-                <div className="flex items-center gap-3 mb-2">
-                  <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
-                    Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
-                  </div>
-                  <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-                  <span className="font-serif text-lg text-slate-200">Background Memo</span>
-                </div>
+                <div className="app-output-header">Background Memo</div>
 
                 <section>
                   <h2 className="app-section-title">Overview</h2>

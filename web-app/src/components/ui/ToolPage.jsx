@@ -60,17 +60,14 @@ export default function ToolPage({ title, description, toolId, inputs = [] }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="p-10 max-w-5xl mx-auto relative z-10"
+      className="app-page-shell app-page-shell-narrow"
     >
       {/* Header */}
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
              style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 10 }}>
-          Str<span style={{ color: '#A78BFA' }}>α</span>tegitect &nbsp;·&nbsp; TOOL
-        </div>
-        <h1 className="display" style={{ fontSize: 42, color: '#fff', marginBottom: 10 }}>{title}</h1>
-        <p style={{ fontFamily: 'Inter', fontSize: 14, color: '#71717A', lineHeight: 1.65, maxWidth: '60ch', fontWeight: 300 }}>{description}</p>
+        <h1 className="app-page-title">{title}</h1>
+        <p className="app-page-intro" style={{ maxWidth: '60ch' }}>{description}</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -128,11 +125,11 @@ export default function ToolPage({ title, description, toolId, inputs = [] }) {
 
         {/* Output panel */}
         <div className="glass-card lg:col-span-2 flex flex-col gap-5 p-7 relative overflow-hidden">
-          <h2 className="display" style={{ fontSize: 20, color: '#fff' }}>Output</h2>
+          <h2 className="app-output-header !mb-0">Output</h2>
 
           {!job ? (
             <div className="flex-1 flex items-center justify-center rounded-xl border border-dashed border-white/8 p-8 bg-black/20">
-              <p style={{ fontFamily: 'Inter', fontSize: 13, color: '#52525B', textAlign: 'center', lineHeight: 1.6 }}>
+              <p className="app-copy" style={{ textAlign: 'center', color: '#71717A' }}>
                 Submit parameters to start the pipeline.
               </p>
             </div>

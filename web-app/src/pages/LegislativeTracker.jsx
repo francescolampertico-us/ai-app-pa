@@ -197,13 +197,10 @@ export default function LegislativeTracker() {
   };
 
   return (
-    <motion.div data-testid="tool-page-legislative-tracker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-10 max-w-6xl mx-auto relative z-10">
+    <motion.div data-testid="tool-page-legislative-tracker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="app-page-shell app-page-shell-wide">
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div className="app-kicker">
-          Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
-        </div>
         <h1 data-testid="page-title-legislative-tracker" className="app-page-title">Legislative Tracker</h1>
         <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Search, track, and summarize legislation across federal and state jurisdictions, then maintain a live watchlist.
@@ -212,7 +209,8 @@ export default function LegislativeTracker() {
       </header>
 
       <ResearchPrototypeNote
-        category="Policy Monitoring & Legislative Tracking"
+        category="Policy Monitoring and Legislative Tracking"
+        refs={['nay2023', 'digiacomo2025', 'bitonti2023']}
         message="This tool supports recurring monitoring and legislative synthesis, which the research identifies as a strong fit for AI augmentation. Search results and summaries may still be incomplete or source-constrained, so they should be treated as review-required inputs to strategy rather than final analysis."
       />
 
@@ -425,13 +423,7 @@ export default function LegislativeTracker() {
 
               {(summaryStatus || billSummary || billCaveats.length > 0) && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
-                      Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
-                    </div>
-                    <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-                    <span className="font-serif text-lg text-slate-200">Bill Summary</span>
-                  </div>
+                  <div className="app-output-header !mb-0">Bill Summary</div>
                   {summaryStatus === 'preview_ready' && (
                     <div className="rounded-xl border border-sky-500/40 bg-sky-500/10 px-5 py-3 text-sky-200 text-sm">
                       Quick preview generated from bill metadata. Use Detailed Summary to scan the full text.

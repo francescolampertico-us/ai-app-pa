@@ -39,6 +39,11 @@ export const REFERENCES = {
     apa: 'Noy, S., & Zhang, W. (2023). Experimental evidence on the productivity effects of generative artificial intelligence. Science, 381(6654), 187-192.',
     url: 'https://doi.org/10.1126/science.adh2586',
   },
+  nay2023: {
+    label: 'Nay (2023)',
+    apa: 'Nay, J. J. (2023). Large language models as corporate lobbyists. Stanford University – CodeX. Preprint.',
+    url: 'https://doi.org/10.48550/arXiv.2301.01181',
+  },
   mertens2026: {
     label: 'Mertens et al. (2026)',
     apa: 'Mertens, M., Kuzee, A., Harris, B. S., Lyu, H., Li, W., Rosenfeld, J., Anto, M., Fleming, M., & Thompson, N. (2026). Crashing waves vs. rising tides: Preliminary findings on AI automation from thousands of worker evaluations of labor market tasks. MIT FutureTech.',
@@ -78,6 +83,16 @@ export const REFERENCES = {
     label: 'Lebenbauer (2024)',
     apa: 'Lebenbauer, K. (2024). Artificial intelligence in public affairs. MAP Education and Humanities, 5.',
     url: 'https://doi.org/10.53880/2744-2373.2024.5.61',
+  },
+  varone2017: {
+    label: 'Varone et al. (2017)',
+    apa: 'Varone, F., Ingold, K., & Jourdain, C. (2017). Studying policy advocacy through social network analysis. European Political Science, 16(3), 322–334.',
+    url: 'https://doi.org/10.1057/eps.2016.16',
+  },
+  karakulle2025: {
+    label: 'Karakulle (2025)',
+    apa: 'Karakulle, İ. (2025). From data to message: Public relations practices transformed by artificial intelligence. Alınteri Sosyal Bilimler Dergisi, 9(2), 308–328.',
+    url: 'https://doi.org/10.30913/alinterisosbil.1815718',
   },
   primaryData2026: {
     label: 'Primary qualitative data (2026)',

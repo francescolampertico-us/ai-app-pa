@@ -15,68 +15,78 @@ import MediaListBuilder from './pages/MediaListBuilder';
 import Remy from './pages/Remy';
 import ResearchLanding from './research/ResearchLanding';
 import AppendixDocumentPage from './research/landing/AppendixDocumentPage';
+import CitationButton from './research/landing/CitationButton';
 
 const TOOL_UI = {
   media_clips: {
     label: 'Media Clips',
     desc: 'Daily Google News monitoring with boolean queries.',
-    category: 'Policy Monitoring & Legislative Tracking',
+    category: 'Policy Monitoring and Legislative Tracking',
+    refs: ['bitonti2023', 'digiacomo2025'],
     path: '/app/media-clips',
     section: 'intelligence',
   },
   legislative_tracker: {
     label: 'Legislative Tracker',
     desc: 'Real-time federal and state bill tracking via LegiScan.',
-    category: 'Policy Monitoring & Legislative Tracking',
+    category: 'Policy Monitoring and Legislative Tracking',
+    refs: ['nay2023', 'bitonti2023', 'digiacomo2025'],
     path: '/app/legislative',
     section: 'intelligence',
   },
   influence_disclosure_tracker: {
     label: 'Influence Tracker',
     desc: 'LDA, FARA, and IRS 990 disclosure records normalized.',
-    category: 'Policy Monitoring & Legislative Tracking',
+    category: 'Policy Monitoring and Legislative Tracking',
+    refs: ['bitonti2023', 'digiacomo2025'],
     path: '/app/influence',
     section: 'intelligence',
   },
   background_memo_generator: {
     label: 'Background Memo',
     desc: 'Generates a first-draft background briefing on an issue, organization, or individual.',
-    category: 'Policy Monitoring & Legislative Tracking',
+    category: 'Policy Monitoring and Legislative Tracking',
+    refs: ['bitonti2023', 'digiacomo2025'],
     path: '/app/background-memo',
     section: 'intelligence',
   },
   hearing_memo_generator: {
     label: 'Hearing Memo',
     desc: 'Generates a first-draft hearing preparation memo from transcripts and source material.',
-    category: 'Policy Monitoring & Legislative Tracking',
+    category: 'Policy Monitoring and Legislative Tracking',
+    refs: ['bitonti2023', 'digiacomo2025'],
     path: '/app/memos',
     section: 'intelligence',
   },
   stakeholder_map: {
     label: 'Stakeholder Map',
     desc: 'Policy actor discovery and network graph across LDA + press.',
-    category: 'Stakeholder Mapping & Network Analysis',
+    category: 'Stakeholder Mapping and Network Analysis',
+    refs: ['varone2017', 'bitonti2023', 'digiacomo2025'],
     path: '/app/stakeholders',
     section: 'stakeholder',
   },
   stakeholder_briefing: {
     label: 'Stakeholder Briefing',
     desc: 'Targeted briefing ahead of a meeting or hearing appearance.',
-    category: 'Stakeholder Mapping & Network Analysis',
+    category: 'Stakeholder Mapping and Network Analysis',
+    refs: ['bitonti2023', 'digiacomo2025'],
     path: '/app/stakeholder-briefing',
     section: 'stakeholder',
   },
   media_list_builder: {
     label: 'Media List',
     desc: 'Journalist discovery by beat, region, and outlet type.',
-    category: 'Stakeholder Mapping & Network Analysis',
+    category: 'Stakeholder Mapping and Network Analysis',
+    refs: ['karakulle2025', 'bitonti2023', 'digiacomo2025'],
     path: '/app/media-list',
     section: 'stakeholder',
   },
   messaging_matrix: {
     label: 'Messaging Deliverables',
     desc: 'Builds reusable advocacy message outputs and draft-ready deliverables from a core position.',
-    category: 'Content Generation & Drafting Support',
+    category: 'Content Generation and Drafting Support',
+    refs: ['bitonti2023', 'digiacomo2025', 'lebenbauer2024'],
     path: '/app/messaging',
     section: 'output',
   },
@@ -121,7 +131,7 @@ function Wordmark() {
       </span>
       <div style={{ height: 1.5, width: 52, background: '#A78BFA', margin: '6px 0 5px' }} />
       <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 8, fontWeight: 500, letterSpacing: '0.9px', textTransform: 'uppercase', color: 'rgba(167,139,250,0.55)' }}>
-        Architecture for Public Affairs Strategy
+        Architecture for PA Strategy
       </span>
     </div>
   );
@@ -132,26 +142,29 @@ function ToolCard({ ui, index }) {
     <Link
       key={ui.path}
       to={ui.path}
-      className="glass group flex flex-col gap-3 p-6 transition-all hover:border-violet-500/30"
+      className="glass group flex flex-col gap-3 p-5 transition-all hover:border-violet-500/30"
       style={{ textDecoration: 'none' }}
     >
-      <div className="flex flex-wrap gap-2">
-        <span style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#c4b5fd', padding: '5px 8px', borderRadius: 999, background: 'rgba(109,40,217,0.16)', border: '1px solid rgba(109,40,217,0.26)' }}>
-          {ui.category}
-        </span>
-        <span style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#e4e4e7', padding: '5px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          Review Required
-        </span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          <span style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#c4b5fd', padding: '5px 8px', borderRadius: 999, background: 'rgba(109,40,217,0.16)', border: '1px solid rgba(109,40,217,0.26)' }}>
+            {ui.category}
+          </span>
+          <span style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#e4e4e7', padding: '5px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            Review Required
+          </span>
+        </div>
+        {ui.refs?.length ? <CitationButton refs={ui.refs} /> : null}
       </div>
       <div className="flex items-start justify-between">
-        <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, color: '#fff', lineHeight: 1.2 }}>
+        <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#fff', lineHeight: 1.2 }}>
           {ui.label}
         </span>
         <span style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 700, letterSpacing: '1.5px', color: 'rgba(167,139,250,0.4)', textTransform: 'uppercase', marginTop: 3 }}>
           {String(index + 1).padStart(2, '0')}
         </span>
       </div>
-      <p style={{ fontFamily: 'Inter', fontSize: 12.5, color: '#71717A', lineHeight: 1.6, fontWeight: 300 }}>
+      <p style={{ fontFamily: 'Inter', fontSize: 12, color: '#71717A', lineHeight: 1.62, fontWeight: 300 }}>
         {ui.desc}
       </p>
       <div className="section-rule mt-auto opacity-0 group-hover:opacity-100 transition-opacity" style={{ width: 32 }} />
@@ -179,14 +192,14 @@ function Dashboard() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="p-12 max-w-7xl mx-auto relative z-10"
+      className="app-page-shell app-page-shell-wide"
     >
       <div
         className="absolute top-0 right-1/4 w-[600px] h-[400px] rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.12) 0%, transparent 70%)' }}
       />
 
-      <div className="mb-16 mt-8">
+      <div className="mb-12 mt-4">
         <div className="mb-6">
           <Wordmark />
         </div>
@@ -261,13 +274,16 @@ function Dashboard() {
               className="glass group flex flex-col gap-3 p-6 transition-all hover:border-violet-500/30"
               style={{ textDecoration: 'none' }}
             >
-              <div className="flex flex-wrap gap-2">
-                <span style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#c4b5fd', padding: '5px 8px', borderRadius: 999, background: 'rgba(109,40,217,0.16)', border: '1px solid rgba(109,40,217,0.26)' }}>
-                  Strategic Planning & Decision Support
-                </span>
-                <span style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#e4e4e7', padding: '5px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  Secondary Orchestration Layer
-                </span>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-wrap gap-2">
+                  <span style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#c4b5fd', padding: '5px 8px', borderRadius: 999, background: 'rgba(109,40,217,0.16)', border: '1px solid rgba(109,40,217,0.26)' }}>
+                    Strategic Planning & Decision Support
+                  </span>
+                  <span style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '1.4px', textTransform: 'uppercase', color: '#e4e4e7', padding: '5px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    Secondary Orchestration Layer
+                  </span>
+                </div>
+                <CitationButton refs={['bitonti2023', 'digiacomo2025', 'buhmann2025']} />
               </div>
               <div className="flex items-start justify-between">
                 <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, color: '#fff', lineHeight: 1.2 }}>
@@ -291,7 +307,7 @@ function Dashboard() {
           Str<span style={{ color: 'rgba(167,139,250,0.4)' }}>α</span>tegitect
         </span>
         <span style={{ fontFamily: 'Inter', fontSize: 9, color: 'rgba(255,255,255,0.12)', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 500 }}>
-          Architecture for Public Affairs Strategy
+          Architecture for PA Strategy
         </span>
       </div>
     </motion.div>

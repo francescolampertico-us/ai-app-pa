@@ -82,13 +82,10 @@ export default function StakeholderBriefing() {
   };
 
   return (
-    <motion.div data-testid="tool-page-stakeholder-briefing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-10 max-w-6xl mx-auto relative z-10">
+    <motion.div data-testid="tool-page-stakeholder-briefing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="app-page-shell app-page-shell-wide">
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div className="app-kicker">
-          Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
-        </div>
         <h1 data-testid="page-title-stakeholder-briefing" className="app-page-title">Stakeholder Briefing</h1>
         <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Generates a pre-meeting briefing with bio, policy positions, suggested talking points, optional disclosure records, and optional recent news.
@@ -97,7 +94,8 @@ export default function StakeholderBriefing() {
       </header>
 
       <ResearchPrototypeNote
-        category="Stakeholder Mapping & Network Analysis"
+        category="Stakeholder Mapping and Network Analysis"
+        refs={['bitonti2023', 'digiacomo2025']}
         message="This prototype module converts stakeholder research into a structured meeting brief. It supports preparation and synthesis, but positions, biographies, and disclosure references remain provisional until checked against primary material."
       />
 
@@ -179,7 +177,7 @@ export default function StakeholderBriefing() {
           )}
 
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-amber-200 text-sm">
-            Review required. Confirm all biographical details, positions, and disclosure references before use.
+            Additional verification needed. Confirm all biographical details, positions, and disclosure references before use.
           </div>
         </div>
       </form>
@@ -196,13 +194,7 @@ export default function StakeholderBriefing() {
           </div>
 
           <div className="glass-card p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
-                Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
-              </div>
-              <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-              <span className="font-serif text-lg text-slate-200">Stakeholder Briefing</span>
-            </div>
+            <div className="app-output-header">Stakeholder Briefing</div>
             {activeTab === 'Profile' && (
               <div className="space-y-5">
                 <div>

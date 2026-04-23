@@ -377,13 +377,7 @@ function Report({ text }) {
   return (
     <div className="glass-card p-8">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
-            Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
-          </div>
-          <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-          <h2 className="app-surface-title">Summary Report</h2>
-        </div>
+        <div className="app-output-header !mb-0">Summary Report</div>
         <button onClick={() => downloadText(text, 'disclosure_report.md')}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-violet-300 transition-colors"
           style={{ background: 'rgba(109,40,217,0.15)', border: '1px solid rgba(109,40,217,0.25)', fontFamily: 'Inter', fontSize: 12 }}>
@@ -533,15 +527,12 @@ export default function InfluenceTracker() {
 
   return (
     <motion.div data-testid="tool-page-influence-tracker" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="p-10 max-w-5xl mx-auto relative z-10">
+      className="app-page-shell app-page-shell-wide">
 
       {/* Header */}
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
              style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div className="app-kicker">
-          Str<span style={{ color: '#A78BFA' }}>α</span>tegitect &nbsp;·&nbsp; TOOL
-        </div>
         <h1 data-testid="page-title-influence-tracker" className="app-page-title">Influence Disclosure Tracker</h1>
         <p className="app-page-intro" style={{ maxWidth: '60ch' }}>
           Retrieves and normalizes LDA lobbying, FARA foreign agent, and IRS 990 disclosure records — producing filterable tables and a markdown summary report.
@@ -552,7 +543,8 @@ export default function InfluenceTracker() {
       </header>
 
       <ResearchPrototypeNote
-        category="Policy Monitoring & Legislative Tracking"
+        category="Policy Monitoring and Legislative Tracking"
+        refs={['bitonti2023', 'digiacomo2025']}
         message="This tool supports disclosure research by collecting structured records and match confidence signals. It strengthens the intelligence-gathering layer of the prototype, but filing matches, document coverage, and narrative interpretation should still be reviewed before strategic use."
       />
 

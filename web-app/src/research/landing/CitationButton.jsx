@@ -12,7 +12,8 @@ export default function CitationButton({ refs = [] }) {
   const entries = refs
     .map((ref) => ({ key: ref, ...(REFERENCES[ref] || { label: ref, apa: ref, url: '' }) }))
     .filter((entry) => !/^Primary Qualitative Data/i.test(entry.apa))
-    .filter((entry, index, array) => array.findIndex((candidate) => candidate.key === entry.key) === index);
+    .filter((entry, index, array) => array.findIndex((candidate) => candidate.key === entry.key) === index)
+    .sort((a, b) => a.apa.localeCompare(b.apa));
 
   useEffect(() => {
     if (!open || !rootRef.current || typeof window === 'undefined') return;

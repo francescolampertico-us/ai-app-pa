@@ -127,7 +127,7 @@
   flex-direction: column;
   width: 100%;
   min-height: 100%;
-  padding: 2rem 1.1rem 2rem 1.5rem;
+  padding: 2rem 1rem 2rem 1.5rem;
 }
 
 .research-shell .toc-main {
@@ -143,19 +143,21 @@
 }
 
 .research-shell .toc-kicker {
-  font-family: var(--font-sans);
-  font-size: 0.72rem;
-  letter-spacing: 0.17em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.42);
-  max-width: 11ch;
-  line-height: 1.45;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.72);
+  max-width: none;
+  line-height: 1.15;
+  text-align: center;
+  align-self: center;
 }
 
 .research-shell .toc-list {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 1rem;
 }
 
 .research-shell .toc-section {
@@ -174,7 +176,7 @@
 
 .research-shell .toc-index {
   font-family: var(--font-sans);
-  font-size: 0.66rem;
+  font-size: 0.7rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.3);
@@ -183,7 +185,7 @@
 .research-shell .toc-heading-link {
   position: relative;
   font-family: var(--font-sans);
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   font-weight: 500;
   line-height: 1.35;
   color: rgba(255, 255, 255, 0.74);

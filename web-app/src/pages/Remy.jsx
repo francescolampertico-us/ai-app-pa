@@ -132,26 +132,11 @@ export default function Remy() {
 
       {/* Header */}
       <div className="shrink-0 px-8 pt-8 pb-4 border-b border-white/5">
-        <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)', marginBottom: 6 }}>
-          Str<span style={{ color: '#A78BFA' }}>α</span>tegitect &nbsp;·&nbsp; ASSISTANT
-        </div>
-        <h1 data-testid="page-title-remy" className="display" style={{ fontSize: 36, color: '#fff' }}>Remy</h1>
-        <div className="flex items-center gap-3 mt-3">
-          <p style={{ fontFamily: 'Inter', fontSize: 13, color: '#71717A', fontWeight: 300 }}>
-            Tool-aware PA assistant — routes work, collects inputs, and executes toolkit tools.
+        <h1 data-testid="page-title-remy" className="app-page-title">Remy</h1>
+        <div className="flex items-center gap-3 mt-2">
+          <p className="app-page-intro">
+            Tool-aware PA assistant that routes work, collects inputs, and executes toolkit tools.
           </p>
-          <select
-            data-testid="select-remy-model"
-            value={model}
-            onChange={e => setModel(e.target.value)}
-            style={{
-              marginLeft: 'auto', fontFamily: 'Inter', fontSize: 12,
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8, color: '#A78BFA', padding: '4px 10px', cursor: 'pointer',
-            }}
-          >
-            <option value="ChangeAgent">ChangeAgent</option>
-          </select>
         </div>
       </div>
 
@@ -159,6 +144,7 @@ export default function Remy() {
         <ResearchPrototypeNote
           category="Strategic Planning & Decision Support"
           secondaryLabel="Secondary Orchestration Layer"
+          refs={['bitonti2023', 'digiacomo2025', 'buhmann2025']}
           message="Remy routes work across the toolkit and helps users move through the prototype, but it is not the core research claim of the project. The primary contribution remains the module-based system and the workflow logic beneath it."
         />
       </div>

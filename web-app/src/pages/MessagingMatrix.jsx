@@ -77,13 +77,10 @@ export default function MessagingMatrix() {
   const activeVariantKey = Object.keys(rd?.variants || {}).find((key) => (VARIANT_LABELS[key] || key) === activeTab);
 
   return (
-    <motion.div data-testid="tool-page-messaging-matrix" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-10 max-w-6xl mx-auto relative z-10">
+    <motion.div data-testid="tool-page-messaging-matrix" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="app-page-shell app-page-shell-wide">
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div className="app-kicker">
-          Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
-        </div>
         <h1 data-testid="page-title-messaging-matrix" className="app-page-title">Messaging Deliverables</h1>
         <p className="app-page-intro">
           Builds reusable advocacy message outputs and platform-specific deliverables from a core policy position, optional proof points, supporting documents, and audience guidance.
@@ -92,7 +89,8 @@ export default function MessagingMatrix() {
       </header>
 
       <ResearchPrototypeNote
-        category="Content Generation & Drafting Support"
+        category="Content Generation and Drafting Support"
+        refs={['bitonti2023', 'digiacomo2025', 'lebenbauer2024']}
         message="This module translates policy positioning into bounded drafting outputs. It is informed by the project’s house style and reference materials, but its deliverables remain drafts that support message development rather than substitute for final strategic judgment."
       />
 
@@ -194,13 +192,7 @@ export default function MessagingMatrix() {
           </div>
 
           <div className="glass-card p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
-                Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
-              </div>
-              <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-              <span className="font-serif text-lg text-slate-200">Messaging Deliverables</span>
-            </div>
+            <div className="app-output-header">Messaging Deliverables</div>
             {activeTab === 'Message Map' && (
               <div className="space-y-6">
                 {house.target_audiences?.length > 0 && <p className="text-slate-300"><strong className="text-white">Target Audiences:</strong> {house.target_audiences.join(', ')}</p>}

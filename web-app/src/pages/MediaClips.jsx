@@ -271,13 +271,10 @@ export default function MediaClips() {
   const missingCount = clipsData.filter((clip) => !clip.has_full_text).length;
 
   return (
-    <motion.div data-testid="tool-page-media-clips" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-10 max-w-6xl mx-auto relative z-10">
+    <motion.div data-testid="tool-page-media-clips" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="app-page-shell app-page-shell-wide">
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <div className="app-kicker">
-          Str<span style={{ color: '#A78BFA' }}>α</span>tegitect · TOOL
-        </div>
         <h1 data-testid="page-title-media-clips" className="app-page-title">Media Clips</h1>
         <p className="app-page-intro">
           Search Google News with keyword or Boolean queries, review and clean extracted article text, then rebuild the final report and email draft files.
@@ -286,7 +283,8 @@ export default function MediaClips() {
       </header>
 
       <ResearchPrototypeNote
-        category="Policy Monitoring & Legislative Tracking"
+        category="Policy Monitoring and Legislative Tracking"
+        refs={['bitonti2023', 'digiacomo2025']}
         message="This prototype module supports recurring media monitoring and clip production. It is designed to accelerate collection and synthesis, but article extraction, outlet selection, and downstream summaries still require manual verification before external circulation."
       />
 
@@ -545,13 +543,7 @@ export default function MediaClips() {
 
       {clipsData.length > 0 && (
         <div className="mt-10 space-y-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '2px', color: 'rgba(167,139,250,0.5)' }}>
-              Str<span style={{ color: '#A78BFA' }}>α</span>tegitect
-            </div>
-            <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-            <span className="font-serif text-lg text-slate-200">Media Clips</span>
-          </div>
+          <div className="app-output-header !mb-2">Media Clips</div>
           <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-5 py-4 text-violet-100 text-sm">
             Found {clipsData.length} articles. {missingCount} article(s) still need article text review or paste-in.
           </div>

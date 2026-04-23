@@ -85,7 +85,7 @@ export default function Sidebar() {
       <Link
         key={item.path}
         to={item.path}
-        className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
+        className={`relative flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group ${
           isActive
             ? 'text-white'
             : item.accent
@@ -106,7 +106,7 @@ export default function Sidebar() {
           weight={isActive || item.accent ? 'fill' : 'regular'}
           className={`relative z-10 shrink-0 ${isActive || item.accent ? 'text-violet-400' : ''}`}
         />
-        <span className="hidden md:block relative z-10 text-sm font-medium tracking-wide">
+        <span className="hidden md:block relative z-10 text-[13px] font-medium tracking-wide">
           {item.label}
         </span>
       </Link>
@@ -114,8 +114,8 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-16 md:w-72 h-[100dvh] border-r border-white/5 flex flex-col py-8 px-3 z-50 shrink-0 backdrop-blur-xl bg-[#09090B]/90 overflow-hidden">
-      <div className="flex flex-col gap-6 min-h-0 flex-1 overflow-y-auto pr-1">
+    <aside className="w-16 md:w-64 h-[100dvh] border-r border-white/5 flex flex-col py-5 px-2.5 z-50 shrink-0 backdrop-blur-xl bg-[#09090B]/90 overflow-hidden">
+      <div className="flex flex-col gap-4 min-h-0 flex-1 pr-1">
         {/* Wordmark */}
         <div className="px-1 hidden md:block">
           <Wordmark collapsed={false} />
@@ -126,22 +126,22 @@ export default function Sidebar() {
 
         <Link
           to="/"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-white/8 text-zinc-300 hover:text-white hover:border-violet-500/25 hover:bg-violet-500/8 transition-all"
+          className="flex items-center gap-3 px-3 py-2 rounded-xl border border-white/8 text-zinc-300 hover:text-white hover:border-violet-500/25 hover:bg-violet-500/8 transition-all"
           style={{ textDecoration: 'none' }}
         >
           <ArrowLeft size={18} className="shrink-0 text-violet-400" />
-          <span className="hidden md:block text-sm font-medium tracking-wide">Back to Research</span>
+          <span className="hidden md:block text-[13px] font-medium tracking-wide">Back to Research</span>
         </Link>
 
-        <nav className="flex flex-col gap-5">
+        <nav className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             {renderNavItem(DASHBOARD_ITEM)}
           </div>
 
           {NAV_SECTIONS.map((section) => (
-            <div key={section.title} className="flex flex-col gap-1.5">
-              <div className="hidden md:block px-3 pt-1 pb-1">
-                <div style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 600, letterSpacing: '1.8px', textTransform: 'uppercase', color: 'rgba(161,161,170,0.55)' }}>
+            <div key={section.title} className="flex flex-col gap-1">
+              <div className="hidden md:block px-3 pt-0.5 pb-0.5">
+                <div style={{ fontFamily: 'Inter', fontSize: 9, fontWeight: 600, letterSpacing: '1.6px', textTransform: 'uppercase', color: 'rgba(161,161,170,0.55)' }}>
                   {section.title}
                 </div>
               </div>

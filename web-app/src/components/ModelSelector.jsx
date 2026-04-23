@@ -3,6 +3,8 @@ const MODELS = [
 ];
 
 export default function ModelSelector({ value, onChange }) {
+  if (MODELS.length <= 1) return null;
+
   return (
     <select
       data-testid="model-selector"

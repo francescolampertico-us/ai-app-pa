@@ -16,12 +16,12 @@ const FINDINGS = [
       {
         text:
           '“For decades, personal knowledge has been your commodity… there’s already this sort of pushback when it comes to integrating AI, when your value proposition is the relationships that you have.”',
-        attribution: 'Manager, Clyde',
+        attribution: 'Managing Director, Clyde',
         refs: ['managerClyde2026'],
       },
       {
         text:
-          '“Several clients in the last 24 months have added a rider to their contracts that expressly bans our use of AI products... they want to know that the premium price they’re paying for human lobbyists... are actually the ones servicing their account.”',
+          '“Several clients in the last 24 months have added a rider to their contracts that expressly bans our use of AI products… they want to know that the premium price they’re paying for human lobbyists… are actually the ones servicing their account.”',
         attribution: 'Partner, Tiber Creek Group',
         refs: ['partnerTiber2026'],
       },
@@ -38,15 +38,15 @@ const FINDINGS = [
     quotes: [
       {
         text:
-          '“I always need a starter dough. I don’t care if it’s for a press release… or a speech or something… I’m a good editor and if you give me a paragraph, I can then build it out into like 20. But I need that… almost like a prompt.”',
+          '“I always need a starter dough. I don’t care if it’s for a press release or a speech. I’m a good editor, and if you give me a paragraph, I can build it out into twenty. But I need that first piece, almost like a prompt.”',
         attribution: 'Partner, Tiber Creek Group',
         refs: ['partnerTiber2026'],
       },
       {
         text:
-          '“We have created custom research tools that can do—we have estimated—40 to 60 hours of work in one hour to sit down and basically produce the amount of work that a couple of people would do.”',
-        attribution: 'Manager, Clyde',
-        refs: ['managerClyde2026'],
+          '“I’ll use it as the draft to get started. Having it synthesize an article or summarize the related research that we’ve done is really helpful… it gives me a place to start. Then I’ll go back in and dig into the journals.”',
+        attribution: 'Vice President of Policy and Government Relations, Woodwell Climate Research Center',
+        refs: [],
       },
     ],
     refs: ['primaryData2026'],
@@ -61,13 +61,13 @@ const FINDINGS = [
     quotes: [
       {
         text:
-          '“One thing was wrong. Like, I’m, this is not a, you know, bat 300 and get to the Hall of Fame type of job. Like you have to be right. They’re paying you to be right.”',
+          '“One thing was wrong. This is not a ‘bat .300 and get to the Hall of Fame’ type of job. You have to be right. They’re paying you to be right.”',
         attribution: 'Partner, Tiber Creek Group',
         refs: ['partnerTiber2026'],
       },
       {
         text:
-          '“I think AI never gets us anything that’s like, ready to launch or ready to like, show the client as a final deliverable… So they’re like rough drafts.”',
+          '“I think AI never gets us anything that’s ready to launch or ready to show the client as a final deliverable… They’re rough drafts.”',
         attribution: 'Partner, Beekeeper Group',
         refs: ['partnerBeekeeper2026'],
       },
@@ -84,15 +84,15 @@ const FINDINGS = [
     quotes: [
       {
         text:
-          '“They’ve created political duplicates of public figures… if you want to know what Mark Rubio’s opinion is on something, they’ve got a digital duplicate who’s, like, 81% accurate… that speeds up the process… to get you to the next level faster.”',
-        attribution: 'Manager, Clyde',
+          '“They’ve created political duplicates of public figures. If you want to know what Mark Rubio’s opinion is on something, they’ve got a digital duplicate that’s about 81% accurate… that speeds up the process and gets you to the next level faster.”',
+        attribution: 'Managing Director, Clyde',
         refs: ['managerClyde2026'],
       },
       {
         text:
-          '“You filter each of those issues through those emotions into a matrix of like a hundred different ads and then you see which one sticks.”',
-        attribution: 'Founder and Co-CEO, Change Agent',
-        refs: ['founderChangeAgent2026'],
+          '“You filter each of those issues through those emotions into a matrix of a hundred different ads, and then you see which one sticks.”',
+        attribution: 'Founder and Managing Partner, Unfiltered Media; Founder and Co-CEO, Change Agent',
+        refs: [],
       },
     ],
     refs: ['primaryData2026'],

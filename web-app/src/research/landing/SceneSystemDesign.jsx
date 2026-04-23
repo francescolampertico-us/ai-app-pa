@@ -784,7 +784,7 @@ export default function SceneSystemDesign({ appPath = '/app' }) {
                         Str<span style={{ color: '#a78bfa' }}>α</span>tegitect
                       </div>
                       <div style={{ fontSize: '0.7rem', letterSpacing: '0.2em', color: '#a78bfa', textTransform: 'uppercase', marginBottom: '2.5rem' }}>
-                        Architecture for Public Affairs Strategy
+                        Architecture for PA Strategy
                       </div>
 
                       <p style={{ color: '#94a3b8', lineHeight: 1.6, fontSize: '0.95rem', maxWidth: '600px', marginBottom: '3rem' }}>
