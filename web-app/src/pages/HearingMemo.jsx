@@ -63,7 +63,7 @@ export default function HearingMemo() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <h1 data-testid="page-title-hearing-memo" className="app-page-title">Hearing Memo</h1>
+        <h1 data-testid="page-title-hearing-memo" data-tour="hearing-memo-title-heading" className="app-page-title">Hearing Memo</h1>
         <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Generates a structured first-draft hearing memo from congressional transcripts with extraction, house-style composition, and automated verification.
         </p>
@@ -109,7 +109,7 @@ export default function HearingMemo() {
                 <hr className="flex-1 border-white/10" />
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div data-tour="hearing-memo-youtube" className="flex flex-col gap-2">
               <label className="field-label">Or paste a YouTube URL</label>
               <div className="relative">
                 <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -127,7 +127,7 @@ export default function HearingMemo() {
           </div>
 
           {/* Right Column (1x width) */}
-          <div className="lg:col-span-1 glass-card p-8 flex flex-col gap-6">
+          <div data-tour="hearing-memo-header" className="lg:col-span-1 glass-card p-8 flex flex-col gap-6">
              <div className="flex flex-col gap-2">
                <label className="field-label">FROM Field</label>
                <input data-testid="input-hearing-memo-from" type="text" name="memo_from" placeholder="e.g., Your Organization" onChange={handleInputChange} className="field" />
