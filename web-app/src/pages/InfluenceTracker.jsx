@@ -5,6 +5,9 @@ import { SpinnerGapIcon as SpinnerGap, ArrowRightIcon as ArrowRight, DownloadSim
 import ModelSelector from '../components/ModelSelector';
 import StyledMarkdown from '../components/StyledMarkdown';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
+import ToolTourButton from '../components/tour/ToolTourButton';
+import ToolOutputPreview from '../components/tour/ToolOutputPreview';
+import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 import { API } from '../hooks/useFastApiJob';
 const CUR_YEAR = new Date().getFullYear();
@@ -537,8 +540,9 @@ export default function InfluenceTracker() {
         <p className="app-page-intro" style={{ maxWidth: '60ch' }}>
           Retrieves and normalizes LDA lobbying, FARA foreign agent, and IRS 990 disclosure records — producing filterable tables and a markdown summary report.
         </p>
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <ModelSelector value={llmModel} onChange={setLlmModel} />
+          <div data-tour="tour-button-influence-tracker"><ToolTourButton tourId={TOOL_TOUR_IDS.influenceTracker} /></div>
         </div>
       </header>
 
@@ -556,7 +560,7 @@ export default function InfluenceTracker() {
         {/* Entities */}
         <div>
           <label className="field-label">Entities to search</label>
-          <input data-testid="input-influence-entities" type="text" value={entities} onChange={e => setEntities(e.target.value)}
+          <input data-testid="input-influence-entities" data-tour="influence-tracker-entities" type="text" value={entities} onChange={e => setEntities(e.target.value)}
             placeholder="e.g. Microsoft, OpenAI" required className="field" />
         </div>
 
@@ -623,7 +627,7 @@ export default function InfluenceTracker() {
         </div>
 
         {/* Advanced */}
-        <details className="rounded-xl border border-white/8 overflow-hidden">
+        <details data-tour="influence-tracker-options" className="rounded-xl border border-white/8 overflow-hidden">
           <summary className="px-4 py-3 cursor-pointer bg-white/3 hover:bg-white/5 transition-colors"
             style={{ fontFamily: 'Inter', fontSize: 13, color: '#71717A' }}>
             Advanced options
@@ -649,16 +653,31 @@ export default function InfluenceTracker() {
           </div>
         </details>
 
-        <button data-testid="submit-influence-tracker" type="submit" disabled={loading || !entities.trim()} className="btn-primary mt-2">
+        <button data-testid="submit-influence-tracker" data-tour="influence-tracker-submit" type="submit" disabled={loading || !entities.trim()} className="btn-primary mt-2">
           {loading
             ? <><SpinnerGap size={18} className="animate-spin" /> Querying disclosure databases…</>
             : <>Search Disclosures <ArrowRight size={18} /></>}
         </button>
       </form>
 
+      {!job && (
+        <section data-tour="influence-tracker-output" className="mb-8">
+          <ToolOutputPreview
+            title="Output Preview"
+            summary="This area becomes the disclosure results surface once the search runs."
+            items={[
+              { title: 'Status', copy: 'You see job progress while records are being retrieved and normalized.' },
+              { title: 'Structured tables', copy: 'LDA, FARA, and IRS 990 records render as filterable tables.' },
+              { title: 'Exports', copy: 'Markdown and CSV-style exports remain available for downstream work.' },
+            ]}
+            downloads={['Markdown report', 'CSV tables']}
+          />
+        </section>
+      )}
+
       {/* Progress */}
       {job && ['pending','processing'].includes(job.status) && (
-        <div data-testid="status-influence-tracker" className="glass-card p-6 mb-8 flex flex-col gap-3">
+        <div data-tour="influence-tracker-output" data-testid="status-influence-tracker" className="glass-card p-6 mb-8 flex flex-col gap-3">
           <div className="flex justify-between">
             <span style={{ fontFamily: 'Inter', fontSize: 13, color: '#D4D4D8' }}>
               {job.message}
@@ -695,7 +714,7 @@ export default function InfluenceTracker() {
       {/* Results */}
       <AnimatePresence>
         {hasCompletedRun && (
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6">
+          <motion.div data-tour="influence-tracker-output" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6">
 
             {(matchedNames.clients.length > 0 || matchedNames.registrants.length > 0) && (
               <div className="glass-card p-8">

@@ -7,6 +7,9 @@ import { useFastApiJob } from '../hooks/useFastApiJob';
 import ModelSelector from '../components/ModelSelector';
 import StyledMarkdown from '../components/StyledMarkdown';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
+import ToolTourButton from '../components/tour/ToolTourButton';
+import ToolOutputPreview from '../components/tour/ToolOutputPreview';
+import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const STATES = ['US (Federal)', 'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'];
 const CUR_YEAR = new Date().getFullYear();
@@ -205,7 +208,10 @@ export default function LegislativeTracker() {
         <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Search, track, and summarize legislation across federal and state jurisdictions, then maintain a live watchlist.
         </p>
-        <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <ModelSelector value={llmModel} onChange={setLlmModel} />
+          <div data-tour="tour-button-legislative-tracker"><ToolTourButton tourId={TOOL_TOUR_IDS.legislativeTracker} /></div>
+        </div>
       </header>
 
       <ResearchPrototypeNote
@@ -241,6 +247,7 @@ export default function LegislativeTracker() {
                 <label className="field-label">{searchMode === 'exact' ? 'Exact Bill Title' : 'Keywords / Topic'}</label>
                 <input
                   data-testid="input-legislative-query"
+                  data-tour="legislative-tracker-query"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   className="field"
@@ -271,14 +278,14 @@ export default function LegislativeTracker() {
                   <option value="">All</option>
                 </select>
               </div>
-              <button data-testid="submit-legislative-search" type="submit" disabled={loading || !query.trim()} className="btn-primary lg:col-span-4 mt-1">
+              <button data-testid="submit-legislative-search" data-tour="legislative-tracker-submit" type="submit" disabled={loading || !query.trim()} className="btn-primary lg:col-span-4 mt-1">
                 {loading ? <><SpinnerGap size={18} className="animate-spin" /> Searching…</> : <>Search Bills <ArrowRight size={18} /></>}
               </button>
             </div>
           </form>
 
           {searchResults.length > 0 && (
-            <div className="space-y-4">
+            <div data-tour="legislative-tracker-results" className="space-y-4">
               <div className="glass-card p-6 overflow-x-auto">
                 <table className="w-full text-sm text-left text-slate-300">
                   <thead className="text-slate-500 uppercase tracking-wider text-xs border-b border-white/10">
@@ -358,7 +365,20 @@ export default function LegislativeTracker() {
             </div>
           )}
 
-          <div data-testid="status-legislative-tracker"><StatusPanel job={job} /></div>
+          <div data-tour="legislative-tracker-output" data-testid="status-legislative-tracker">
+            {job ? <StatusPanel job={job} /> : (
+              <ToolOutputPreview
+                title="Output Preview"
+                summary="Start with a bill search. Search results, bill summaries, watchlist actions, and downloads appear in this area."
+                items={[
+                  { title: 'Search results', copy: 'Matching bills list title, jurisdiction, date, and next-step actions.' },
+                  { title: 'Bill analysis', copy: 'Preview and detailed summaries render after you choose a specific bill.' },
+                  { title: 'Downloads', copy: 'Summaries, bill detail JSON, and watchlist materials can be exported.' },
+                ]}
+                downloads={['Summary Markdown', 'Bill detail JSON']}
+              />
+            )}
+          </div>
           {showDetailedWaitNotice && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-3 text-amber-200 text-sm">
               Detailed summaries for longer bills can take a few minutes.
@@ -366,7 +386,7 @@ export default function LegislativeTracker() {
           )}
 
           {selectedBill && (
-            <div ref={selectedBillRef} className="glass-card p-8 space-y-5">
+            <div data-tour="legislative-tracker-output" ref={selectedBillRef} className="glass-card p-8 space-y-5">
               <div>
                 <h2 className="display" style={{ fontSize: 24, color: '#fff' }}>{selectedBill.number} — {selectedBill.title}</h2>
                 <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-300">

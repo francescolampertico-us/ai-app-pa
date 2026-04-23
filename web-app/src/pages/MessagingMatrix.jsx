@@ -6,6 +6,9 @@ import { useFastApiJob } from '../hooks/useFastApiJob';
 import ModelSelector from '../components/ModelSelector';
 import StyledMarkdown from '../components/StyledMarkdown';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
+import ToolTourButton from '../components/tour/ToolTourButton';
+import ToolOutputPreview from '../components/tour/ToolOutputPreview';
+import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const VARIANT_LABELS = {
   talking_points: 'Hill Talking Points',
@@ -85,7 +88,10 @@ export default function MessagingMatrix() {
         <p className="app-page-intro">
           Builds reusable advocacy message outputs and platform-specific deliverables from a core policy position, optional proof points, supporting documents, and audience guidance.
         </p>
-        <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <ModelSelector value={llmModel} onChange={setLlmModel} />
+          <div data-tour="tour-button-messaging-matrix"><ToolTourButton tourId={TOOL_TOUR_IDS.messagingMatrix} /></div>
+        </div>
       </header>
 
       <ResearchPrototypeNote
@@ -98,12 +104,12 @@ export default function MessagingMatrix() {
         <div className="glass-card p-8 flex flex-col gap-5">
           <div>
             <label className="field-label">Core Policy Position</label>
-            <textarea data-testid="input-messaging-position" value={position} onChange={(event) => setPosition(event.target.value)}
+            <textarea data-testid="input-messaging-position" data-tour="messaging-matrix-position" value={position} onChange={(event) => setPosition(event.target.value)}
               className="field resize-none" rows={4}
               placeholder="e.g. Support the AI Safety Act — mandatory pre-deployment testing protects consumers without stifling innovation." required />
           </div>
 
-          <details className="rounded-xl border border-white/10 bg-black/20 p-5">
+          <details data-tour="messaging-matrix-options" className="rounded-xl border border-white/10 bg-black/20 p-5">
             <summary className="cursor-pointer text-white font-semibold">Optional: Core Messages & Supporting Facts</summary>
             <div className="mt-5 flex flex-col gap-5">
               <div>
@@ -157,8 +163,9 @@ export default function MessagingMatrix() {
             </div>
           </div>
 
-          {job ? (
-            <div data-testid="status-messaging-matrix" className="rounded-xl border border-white/10 bg-black/20 p-5">
+          <div data-tour="messaging-matrix-output">
+            {job ? (
+              <div data-testid="status-messaging-matrix" className="rounded-xl border border-white/10 bg-black/20 p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="font-mono text-xs text-purple-300">{job.id.slice(0, 8).toUpperCase()}</span>
                 <span className={job.status === 'completed' ? 'badge-complete' : job.status === 'failed' ? 'badge-failed' : 'badge-processing'}>{job.status}</span>
@@ -167,21 +174,29 @@ export default function MessagingMatrix() {
               <div className="progress-track">
                 <div className="progress-fill" style={{ width: `${job.progress || 0}%` }} />
               </div>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-white/10 px-5 py-8 text-sm text-slate-500">
-              Run the tool to generate the message map and selected deliverables.
-            </div>
-          )}
+              </div>
+            ) : (
+              <ToolOutputPreview
+                title="Output Preview"
+                summary="When the tool runs, this side becomes the status area and then the message-map and deliverables surface."
+                items={[
+                  { title: 'Message map', copy: 'The core message, pillars, target audiences, and proof points appear first.' },
+                  { title: 'Draft variants', copy: 'Each selected deliverable gets its own tab once generation completes.' },
+                  { title: 'Downloads', copy: 'The finished run exposes export buttons for common handoff formats.' },
+                ]}
+                downloads={['Markdown', 'DOCX', 'JSON']}
+              />
+            )}
+          </div>
 
-          <button data-testid="submit-messaging-matrix" type="submit" disabled={loading || !position.trim() || selectedVariants.length === 0} className="btn-primary mt-auto">
+          <button data-testid="submit-messaging-matrix" data-tour="messaging-matrix-submit" type="submit" disabled={loading || !position.trim() || selectedVariants.length === 0} className="btn-primary mt-auto">
             {loading ? <><SpinnerGap size={18} className="animate-spin" /> Generating…</> : <>Generate Deliverables <ArrowRight size={18} /></>}
           </button>
         </div>
       </form>
 
       {job?.status === 'completed' && rd && (
-        <div className="mt-10 space-y-6">
+        <div data-tour="messaging-matrix-output" className="mt-10 space-y-6">
           <div className="flex flex-wrap gap-3">
             {tabs.map((tab) => (
               <button data-testid={`tab-messaging-${tab.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} key={tab} onClick={() => setActiveTab(tab)}

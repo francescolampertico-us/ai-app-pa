@@ -5,6 +5,9 @@ import { ArrowRightIcon as ArrowRight, DownloadSimpleIcon as DownloadSimple, Spi
 import { useFastApiJob } from '../hooks/useFastApiJob';
 import ModelSelector from '../components/ModelSelector';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
+import ToolTourButton from '../components/tour/ToolTourButton';
+import ToolOutputPreview from '../components/tour/ToolOutputPreview';
+import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 function DisclosureTable({ columns, rows }) {
   if (!rows?.length) return null;
@@ -90,7 +93,10 @@ export default function StakeholderBriefing() {
         <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Generates a pre-meeting briefing with bio, policy positions, suggested talking points, optional disclosure records, and optional recent news.
         </p>
-        <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <ModelSelector value={llmModel} onChange={setLlmModel} />
+          <div data-tour="tour-button-stakeholder-briefing"><ToolTourButton tourId={TOOL_TOUR_IDS.stakeholderBriefing} /></div>
+        </div>
       </header>
 
       <ResearchPrototypeNote
@@ -104,7 +110,7 @@ export default function StakeholderBriefing() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="field-label">Stakeholder Name</label>
-              <input data-testid="input-stakeholder-name" value={stakeholderName} onChange={(event) => setStakeholderName(event.target.value)}
+              <input data-testid="input-stakeholder-name" data-tour="stakeholder-briefing-name" value={stakeholderName} onChange={(event) => setStakeholderName(event.target.value)}
                 className="field" placeholder="e.g. Sen. Maria Cantwell" required />
             </div>
             <div>
@@ -121,7 +127,7 @@ export default function StakeholderBriefing() {
               placeholder="e.g. Discuss support for the AI Safety Act and potential co-sponsorship" required />
           </div>
 
-          <details className="rounded-xl border border-white/10 bg-black/20 p-5">
+          <details data-tour="stakeholder-briefing-options" className="rounded-xl border border-white/10 bg-black/20 p-5">
             <summary className="cursor-pointer text-white font-semibold">Additional Options</summary>
             <div className="mt-5 flex flex-col gap-5">
               <div>
@@ -153,12 +159,12 @@ export default function StakeholderBriefing() {
             </div>
           </details>
 
-          <button data-testid="submit-stakeholder-briefing" type="submit" disabled={loading || !stakeholderName.trim() || !meetingPurpose.trim()} className="btn-primary mt-auto">
+          <button data-testid="submit-stakeholder-briefing" data-tour="stakeholder-briefing-submit" type="submit" disabled={loading || !stakeholderName.trim() || !meetingPurpose.trim()} className="btn-primary mt-auto">
             {loading ? <><SpinnerGap size={18} className="animate-spin" /> Generating…</> : <>Generate Briefing <ArrowRight size={18} /></>}
           </button>
         </div>
 
-        <div className="glass-card p-8 flex flex-col gap-5">
+        <div data-tour="stakeholder-briefing-output" className="glass-card p-8 flex flex-col gap-5">
           {job ? (
             <div data-testid="status-stakeholder-briefing" className="rounded-xl border border-white/10 bg-black/20 p-5">
               <div className="flex items-center justify-between mb-3">
@@ -171,9 +177,16 @@ export default function StakeholderBriefing() {
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-white/10 px-5 py-8 text-sm text-slate-500">
-              Fill in the meeting objective and run the tool to generate the briefing.
-            </div>
+            <ToolOutputPreview
+              title="Output Preview"
+              summary="The briefing view appears here after a run, starting with status and then the generated tabs."
+              items={[
+                { title: 'Profile', copy: 'You get a summary, role, key areas, and verification notes.' },
+                { title: 'Meeting prep', copy: 'Policy positions, talking points, and key questions are organized into tabs.' },
+                { title: 'Research context', copy: 'Disclosure and news tabs appear when those optional searches are enabled.' },
+              ]}
+              downloads={['DOCX', 'Markdown', 'JSON']}
+            />
           )}
 
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-amber-200 text-sm">
@@ -183,7 +196,7 @@ export default function StakeholderBriefing() {
       </form>
 
       {job?.status === 'completed' && rd && (
-        <div className="mt-10 space-y-6">
+        <div data-tour="stakeholder-briefing-output" className="mt-10 space-y-6">
           <div className="flex flex-wrap gap-3">
             {tabs.map((tab) => (
               <button data-testid={`tab-stakeholder-${tab.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} key={tab} onClick={() => setActiveTab(tab)}

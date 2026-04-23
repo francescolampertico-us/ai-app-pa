@@ -6,6 +6,9 @@ import { ArrowRightIcon as ArrowRight, DownloadSimpleIcon as DownloadSimple, Spi
 import { useFastApiJob } from '../hooks/useFastApiJob';
 import ModelSelector from '../components/ModelSelector';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
+import ToolTourButton from '../components/tour/ToolTourButton';
+import ToolOutputPreview from '../components/tour/ToolOutputPreview';
+import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const SAVED_SEARCHES_KEY = 'mediaClips_savedSearches';
 
@@ -279,7 +282,10 @@ export default function MediaClips() {
         <p className="app-page-intro">
           Search Google News with keyword or Boolean queries, review and clean extracted article text, then rebuild the final report and email draft files.
         </p>
-        <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <ModelSelector value={llmModel} onChange={setLlmModel} />
+          <div data-tour="tour-button-media-clips"><ToolTourButton tourId={TOOL_TOUR_IDS.mediaClips} /></div>
+        </div>
       </header>
 
       <ResearchPrototypeNote
@@ -336,7 +342,7 @@ export default function MediaClips() {
         <div className="glass-card p-8 flex flex-col gap-5">
           <div>
             <label className="field-label">Report Topic / Title</label>
-            <input data-testid="input-media-clips-topic" value={topic} onChange={(event) => setTopic(event.target.value)} className="field" placeholder="e.g. India Media Clips" required />
+            <input data-testid="input-media-clips-topic" data-tour="media-clips-topic" value={topic} onChange={(event) => setTopic(event.target.value)} className="field" placeholder="e.g. India Media Clips" required />
           </div>
 
           <div>
@@ -429,36 +435,49 @@ export default function MediaClips() {
             </div>
           </div>
 
-          <button data-testid="submit-media-clips" type="submit" disabled={clipsJob.loading || !topic.trim() || !(queryMode === 'Simple (keywords)' ? generatedQuery : queries.trim())} className="btn-primary mt-auto">
+          <button data-testid="submit-media-clips" data-tour="media-clips-submit" type="submit" disabled={clipsJob.loading || !topic.trim() || !(queryMode === 'Simple (keywords)' ? generatedQuery : queries.trim())} className="btn-primary mt-auto">
             {clipsJob.loading ? <><SpinnerGap size={18} className="animate-spin" /> Generating…</> : <>Generate Clips Report <ArrowRight size={18} /></>}
           </button>
         </div>
       </form>
 
-      {(clipsJob.job || cleanerJob.job) && (
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {clipsJob.job && (
-            <div data-testid="status-media-clips" className="glass-card p-6">
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-mono text-xs text-purple-300">{clipsJob.job.id.slice(0, 8).toUpperCase()}</span>
-                <span className={clipsJob.job.status === 'completed' ? 'badge-complete' : clipsJob.job.status === 'failed' ? 'badge-failed' : 'badge-processing'}>{clipsJob.job.status}</span>
+      <div data-tour="media-clips-output" className="mt-8">
+        {(clipsJob.job || cleanerJob.job) ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {clipsJob.job && (
+              <div data-testid="status-media-clips" className="glass-card p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-mono text-xs text-purple-300">{clipsJob.job.id.slice(0, 8).toUpperCase()}</span>
+                  <span className={clipsJob.job.status === 'completed' ? 'badge-complete' : clipsJob.job.status === 'failed' ? 'badge-failed' : 'badge-processing'}>{clipsJob.job.status}</span>
+                </div>
+                <p className="text-slate-300 text-sm mb-4">{clipsJob.job.message}</p>
+                <div className="progress-track"><div className="progress-fill" style={{ width: `${clipsJob.job.progress || 0}%` }} /></div>
               </div>
-              <p className="text-slate-300 text-sm mb-4">{clipsJob.job.message}</p>
-              <div className="progress-track"><div className="progress-fill" style={{ width: `${clipsJob.job.progress || 0}%` }} /></div>
-            </div>
-          )}
-          {cleanerJob.job && (
-            <div className="glass-card p-6">
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-mono text-xs text-purple-300">{cleanerJob.job.id.slice(0, 8).toUpperCase()}</span>
-                <span className={cleanerJob.job.status === 'completed' ? 'badge-complete' : cleanerJob.job.status === 'failed' ? 'badge-failed' : 'badge-processing'}>{cleanerJob.job.status}</span>
+            )}
+            {cleanerJob.job && (
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-mono text-xs text-purple-300">{cleanerJob.job.id.slice(0, 8).toUpperCase()}</span>
+                  <span className={cleanerJob.job.status === 'completed' ? 'badge-complete' : cleanerJob.job.status === 'failed' ? 'badge-failed' : 'badge-processing'}>{cleanerJob.job.status}</span>
+                </div>
+                <p className="text-slate-300 text-sm mb-4">{cleanerJob.job.message}</p>
+                <div className="progress-track"><div className="progress-fill" style={{ width: `${cleanerJob.job.progress || 0}%` }} /></div>
               </div>
-              <p className="text-slate-300 text-sm mb-4">{cleanerJob.job.message}</p>
-              <div className="progress-track"><div className="progress-fill" style={{ width: `${cleanerJob.job.progress || 0}%` }} /></div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        ) : (
+          <ToolOutputPreview
+            title="Output Preview"
+            summary="A completed run gives you clip status, reviewable article text, cleaner tools, and rebuilt report exports."
+            items={[
+              { title: 'Job status', copy: 'The search and cleaner pipelines show progress independently when running.' },
+              { title: 'Article review', copy: 'You can inspect, edit, clean, or remove individual clips before rebuilding the report.' },
+              { title: 'Final report', copy: 'After review, the output includes report files and an email draft for circulation.' },
+            ]}
+            downloads={['Clips report', 'Email draft', 'Cleaner output']}
+          />
+        )}
+      </div>
 
       {clipsJob.job?.result_data?.stdout && (
         <details className="glass-card p-6 mt-8">
@@ -474,7 +493,7 @@ export default function MediaClips() {
         </details>
       )}
 
-      <section data-testid="media-clip-cleaner-panel" className="glass-card p-8 space-y-5 mt-8">
+      <section data-tour="media-clips-clip-cleaner" data-testid="media-clip-cleaner-panel" className="glass-card p-8 space-y-5 mt-8">
         <h2 data-testid="standalone-clip-cleaner-title" className="app-panel-title">Clip Cleaner</h2>
         <p className="text-slate-400 text-sm">
           Paste raw article text to strip ads, navigation, and boilerplate. Use standalone or as part of the clips workflow below.

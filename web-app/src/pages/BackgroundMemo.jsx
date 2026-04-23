@@ -6,6 +6,9 @@ import { useFastApiJob } from '../hooks/useFastApiJob';
 import ModelSelector from '../components/ModelSelector';
 import StyledMarkdown from '../components/StyledMarkdown';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
+import ToolTourButton from '../components/tour/ToolTourButton';
+import ToolOutputPreview from '../components/tour/ToolOutputPreview';
+import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const DISCLOSURE_SOURCES = ['lda', 'fara', 'irs990'];
 
@@ -85,7 +88,10 @@ export default function BackgroundMemo() {
         <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Generates a structured first-draft background memo on a client, organization, policy issue, or individual, with optional file grounding and automatic disclosure research.
         </p>
-        <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <ModelSelector value={llmModel} onChange={setLlmModel} />
+          <div data-tour="tour-button-background-memo"><ToolTourButton tourId={TOOL_TOUR_IDS.backgroundMemo} /></div>
+        </div>
       </header>
 
       <ResearchPrototypeNote
@@ -164,9 +170,16 @@ export default function BackgroundMemo() {
 
       <section data-tour="background-memo-output" className="mt-12 space-y-8">
         {!job && (
-          <div className="app-empty-state">
-            Generated status, memo sections, and downloadable artifacts appear here after you run the tool.
-          </div>
+          <ToolOutputPreview
+            title="Output Preview"
+            summary="After you run the memo, this space shows job status first and then the generated briefing with supporting materials."
+            items={[
+              { title: 'Status', copy: 'Queued, processing, and completion states appear here while the backend runs.' },
+              { title: 'Memo body', copy: 'Overview, fast facts, sectioned briefing text, and source links render inline.' },
+              { title: 'Review materials', copy: 'Disclosure context and research sources can be expanded for verification.' },
+            ]}
+            downloads={['DOCX', 'Markdown', 'JSON']}
+          />
         )}
 
         {job && (

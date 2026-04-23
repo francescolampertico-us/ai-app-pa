@@ -5,6 +5,9 @@ import { ArrowRightIcon as ArrowRight, DownloadSimpleIcon as DownloadSimple, Spi
 import { API, useFastApiJob } from '../hooks/useFastApiJob';
 import ModelSelector from '../components/ModelSelector';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
+import ToolTourButton from '../components/tour/ToolTourButton';
+import ToolOutputPreview from '../components/tour/ToolOutputPreview';
+import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const ACTOR_TYPES = ['Legislators', 'Lobbyists', 'Corporations', 'Nonprofits'];
 const METRIC_HELP = {
@@ -382,7 +385,10 @@ export default function StakeholderMap() {
         <p className="app-page-intro">
           Discovers and classifies policy actors from lobbying filings, bill sponsorships, and supplemental web evidence, then returns an interactive graph and directional network analysis.
         </p>
-        <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <ModelSelector value={llmModel} onChange={setLlmModel} />
+          <div data-tour="tour-button-stakeholder-map"><ToolTourButton tourId={TOOL_TOUR_IDS.stakeholderMap} /></div>
+        </div>
       </header>
 
       <ResearchPrototypeNote
@@ -395,10 +401,10 @@ export default function StakeholderMap() {
         <div className="glass-card p-8 flex flex-col gap-5">
           <div>
             <label className="field-label">Policy Issue</label>
-            <input data-testid="input-stakeholder-map-policy-issue" value={policyIssue} onChange={(event) => setPolicyIssue(event.target.value)}
+            <input data-testid="input-stakeholder-map-policy-issue" data-tour="stakeholder-map-issue" value={policyIssue} onChange={(event) => setPolicyIssue(event.target.value)}
               className="field" placeholder="e.g. artificial intelligence regulation" required />
           </div>
-          <div>
+          <div data-tour="stakeholder-map-types">
             <label className="field-label">Actor Types To Include</label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
               {ACTOR_TYPES.map((type) => (
@@ -409,12 +415,12 @@ export default function StakeholderMap() {
               ))}
             </div>
           </div>
-          <button data-testid="submit-stakeholder-map" type="submit" disabled={loading || !policyIssue.trim()} className="btn-primary mt-auto">
+          <button data-testid="submit-stakeholder-map" data-tour="stakeholder-map-submit" type="submit" disabled={loading || !policyIssue.trim()} className="btn-primary mt-auto">
             {loading ? <><SpinnerGap size={18} className="animate-spin" /> Building…</> : <>Build Stakeholder Map <ArrowRight size={18} /></>}
           </button>
         </div>
 
-        <div className="glass-card p-8 flex flex-col gap-5">
+        <div data-tour="stakeholder-map-output" className="glass-card p-8 flex flex-col gap-5">
           {job ? (
             <div data-testid="status-stakeholder-map" className="rounded-xl border border-white/10 bg-black/20 p-5">
               <div className="flex items-center justify-between mb-3">
@@ -427,9 +433,16 @@ export default function StakeholderMap() {
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-white/10 px-5 py-8 text-sm text-slate-500">
-              Run the tool to generate the graph, actor tables, and downloads.
-            </div>
+            <ToolOutputPreview
+              title="Output Preview"
+              summary="This panel becomes the status and summary area for the map, then the full network analysis renders below."
+              items={[
+                { title: 'Status', copy: 'Build progress appears first so you know the network job is active.' },
+                { title: 'Map summary', copy: 'Totals for actors, opponents, proponents, and relationships appear after completion.' },
+                { title: 'Analysis views', copy: 'Tabs expose the network, strategic analysis, actor tables, and downloads.' },
+              ]}
+              downloads={['Graph artifact', 'JSON', 'Report files']}
+            />
           )}
 
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-amber-200 text-sm">
@@ -449,7 +462,7 @@ export default function StakeholderMap() {
       </form>
 
       {job?.status === 'completed' && rd && (
-        <div className="mt-10 space-y-6">
+        <div data-tour="stakeholder-map-output" className="mt-10 space-y-6">
           <div className="flex flex-wrap gap-3">
             {tabs.map((tab) => (
               <button data-testid={`tab-stakeholder-map-${tab.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} key={tab} onClick={() => setActiveTab(tab)}

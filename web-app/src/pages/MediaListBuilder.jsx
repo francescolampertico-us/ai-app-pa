@@ -6,6 +6,9 @@ import { useFastApiJob } from '../hooks/useFastApiJob';
 import ModelSelector from '../components/ModelSelector';
 import { API } from '../hooks/useFastApiJob';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
+import ToolTourButton from '../components/tour/ToolTourButton';
+import ToolOutputPreview from '../components/tour/ToolOutputPreview';
+import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const MEDIA_TYPES = [
   ['mainstream', 'Mainstream'],
@@ -248,7 +251,10 @@ export default function MediaListBuilder() {
           <p className="app-page-intro" style={{ maxWidth: '68ch' }}>
             Generates a targeted media list based on a policy issue, geographic scope, and media type filter, then returns Excel, markdown, and JSON outputs.
           </p>
-          <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <ModelSelector value={llmModel} onChange={setLlmModel} />
+            <div data-tour="tour-button-media-list"><ToolTourButton tourId={TOOL_TOUR_IDS.mediaList} /></div>
+          </div>
         </header>
 
         <ResearchPrototypeNote
@@ -261,7 +267,7 @@ export default function MediaListBuilder() {
           <div className="glass-card p-8 flex flex-col gap-5">
             <div>
               <label className="field-label">Policy Issue To Pitch</label>
-              <textarea data-testid="input-media-list-issue" value={issue} onChange={(event) => setIssue(event.target.value)}
+              <textarea data-testid="input-media-list-issue" data-tour="media-list-issue" value={issue} onChange={(event) => setIssue(event.target.value)}
                 className="field resize-none" rows={4}
                 placeholder="e.g. hospital price transparency or AI safety regulation and mandatory pre-deployment testing requirements" />
             </div>
@@ -291,7 +297,7 @@ export default function MediaListBuilder() {
               Use `Policy Issue` for a precise topic. Add `Broad Topic` or `Coverage Desk` if you want the tool to expand into a wider beat like Health or Energy without switching modes.
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div data-tour="media-list-options" className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="field-label">Geographic Scope</label>
                 <select data-testid="input-media-list-location-type" value={locationType} onChange={(event) => { setLocationType(event.target.value); setLocation(''); }} className="field">
@@ -338,13 +344,13 @@ export default function MediaListBuilder() {
               </div>
             </div>
 
-            <button data-testid="submit-media-list" type="submit" disabled={loading || !canSubmit}
+            <button data-testid="submit-media-list" data-tour="media-list-submit" type="submit" disabled={loading || !canSubmit}
               className="btn-primary mt-auto">
               {loading ? <><SpinnerGap size={18} className="animate-spin" /> Building…</> : <>Build Media List <ArrowRight size={18} /></>}
             </button>
           </div>
 
-          <div className="glass-card p-8 flex flex-col gap-5">
+          <div data-tour="media-list-output" className="glass-card p-8 flex flex-col gap-5">
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-amber-200 text-sm">
               Additional verification needed. Journalist names, roles, and story links may be inaccurate or outdated. Verify all contacts before pitching.
             </div>
@@ -366,9 +372,16 @@ export default function MediaListBuilder() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-white/10 px-5 py-8 text-sm text-slate-500">
-                Run the tool to generate the contact list and downloads.
-              </div>
+              <ToolOutputPreview
+                title="Output Preview"
+                summary="A run returns a contact list, quality notes, optional pitch support, and downloadable files."
+                items={[
+                  { title: 'Status', copy: 'Progress and quality messages show up here while the list is being built.' },
+                  { title: 'Contacts', copy: 'The finished list organizes journalist names, outlets, roles, and source links.' },
+                  { title: 'Follow-up', copy: 'You can filter the list, open pitch drafting, and export the final contacts.' },
+                ]}
+                downloads={['Excel', 'Markdown', 'JSON']}
+              />
             )}
 
             {job?.status === 'completed' && contacts.length === 0 && (

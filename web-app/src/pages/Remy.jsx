@@ -5,6 +5,9 @@ import { API } from '../hooks/useFastApiJob';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
 import StyledMarkdown from '../components/StyledMarkdown';
 import { Link } from 'react-router-dom';
+import ToolTourButton from '../components/tour/ToolTourButton';
+import ToolOutputPreview from '../components/tour/ToolOutputPreview';
+import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 const MotionDiv = motion.div;
 
@@ -133,10 +136,11 @@ export default function Remy() {
       {/* Header */}
       <div className="shrink-0 px-8 pt-8 pb-4 border-b border-white/5">
         <h1 data-testid="page-title-remy" className="app-page-title">Remy</h1>
-        <div className="flex items-center gap-3 mt-2">
+        <div className="flex items-center gap-3 mt-2 flex-wrap">
           <p className="app-page-intro">
             Tool-aware PA assistant that routes work, collects inputs, and executes toolkit tools.
           </p>
+          <div data-tour="tour-button-remy"><ToolTourButton tourId={TOOL_TOUR_IDS.remy} /></div>
         </div>
       </div>
 
@@ -150,10 +154,21 @@ export default function Remy() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-5">
+      <div data-tour="remy-messages" className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-5">
         <AnimatePresence initial={false}>
           {messages.map((msg, i) => <Message key={i} msg={msg} />)}
         </AnimatePresence>
+        {!loading && messages.length <= 1 && (
+          <ToolOutputPreview
+            title="Conversation Preview"
+            summary="Remy replies here, can route to tools, and surfaces tool events or artifacts inline."
+            items={[
+              { title: 'Prompt', copy: 'Describe the task, subject, and desired output in one message.' },
+              { title: 'Routing', copy: 'Remy can ask clarifying questions or point you to the correct module.' },
+              { title: 'Artifacts', copy: 'When a tool runs, artifact links and status events appear in the conversation.' },
+            ]}
+          />
+        )}
         {loading && (
           <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3 items-center">
             <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center"
@@ -180,6 +195,7 @@ export default function Remy() {
         <div className="flex gap-3 items-end">
           <textarea
             data-testid="input-remy-message"
+            data-tour="remy-input"
             ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -190,7 +206,7 @@ export default function Remy() {
             className="field flex-1 resize-none"
             style={{ fontFamily: 'Inter', fontSize: 14, lineHeight: 1.5 }}
           />
-          <button data-testid="submit-remy" onClick={send} disabled={loading || !input.trim()}
+          <button data-testid="submit-remy" data-tour="remy-submit" onClick={send} disabled={loading || !input.trim()}
             aria-label="Send message"
             className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all disabled:opacity-40"
             style={{ background: '#6D28D9', boxShadow: '0 0 20px rgba(109,40,217,0.4)' }}>

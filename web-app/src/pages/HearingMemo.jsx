@@ -6,9 +6,12 @@ import { useFastApiJob } from '../hooks/useFastApiJob';
 import ModelSelector from '../components/ModelSelector';
 import StyledMarkdown from '../components/StyledMarkdown';
 import ResearchPrototypeNote from '../components/ResearchPrototypeNote';
+import ToolTourButton from '../components/tour/ToolTourButton';
+import ToolOutputPreview from '../components/tour/ToolOutputPreview';
+import { TOOL_TOUR_IDS } from '../components/tour/tourDefinitions';
 
 export default function HearingMemo() {
-  const { job, loading, submitJob, downloadArtifact, downloadJson, downloadText } = useFastApiJob("hearing_memo_generator");
+  const { job, loading, submitJob, downloadArtifact, downloadJson, downloadText, downloadFile } = useFastApiJob("hearing_memo_generator");
   
   const [formData, setFormData] = useState({
     youtube_url: '',
@@ -65,7 +68,10 @@ export default function HearingMemo() {
         <p className="app-page-intro" style={{ maxWidth: '70ch' }}>
           Generates a structured first-draft hearing memo from congressional transcripts with extraction, house-style composition, and automated verification.
         </p>
-        <div className="mt-3"><ModelSelector value={llmModel} onChange={setLlmModel} /></div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <ModelSelector value={llmModel} onChange={setLlmModel} />
+          <div data-tour="tour-button-hearing-memo"><ToolTourButton tourId={TOOL_TOUR_IDS.hearingMemo} /></div>
+        </div>
       </header>
 
       <ResearchPrototypeNote
@@ -81,7 +87,7 @@ export default function HearingMemo() {
           
           {/* Left Column (2x width) */}
           <div className="lg:col-span-2 glass-card p-8 flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
+            <div data-tour="hearing-memo-source" className="flex flex-col gap-2">
               <label className="field-label">Upload hearing transcript (PDF or TXT)</label>
               <div className="relative border border-dashed border-white/20 rounded-xl p-4 hover:border-purple-500/50 transition-colors bg-black/20 focus-within:ring-1 focus-within:ring-purple-400">
                 <input 
@@ -141,7 +147,7 @@ export default function HearingMemo() {
         </div>
 
         {/* Advanced Options Expander */}
-        <div className="glass-card rounded-2xl overflow-hidden border border-white/10">
+        <div data-tour="hearing-memo-options" className="glass-card rounded-2xl overflow-hidden border border-white/10">
           <button 
             data-testid="toggle-hearing-advanced"
             type="button"
@@ -174,6 +180,7 @@ export default function HearingMemo() {
 
         <button 
            data-testid="submit-hearing-memo"
+           data-tour="hearing-memo-submit"
            type="submit" 
            disabled={loading || (!file && !formData.youtube_url)}
            className="btn-primary text-base"
@@ -186,6 +193,19 @@ export default function HearingMemo() {
         </button>
       </form>
 
+      <section data-tour="hearing-memo-output" className="mt-16">
+      {!job && (
+        <ToolOutputPreview
+          title="Output Preview"
+          summary="The hearing run returns pipeline status, memo preview, verification signals, and export buttons."
+          items={[
+            { title: 'Verification', copy: 'Flags and human checks surface before you rely on the draft.' },
+            { title: 'Memo preview', copy: 'The generated hearing memo renders inline for review.' },
+            { title: 'Downloads', copy: 'You can export the memo draft and verification file once the job completes.' },
+          ]}
+          downloads={['DOCX', 'TXT', 'Verification JSON']}
+        />
+      )}
       {/* output block */}
       {job && (
         <AnimatePresence>
@@ -294,6 +314,7 @@ export default function HearingMemo() {
           </motion.div>
         </AnimatePresence>
       )}
+      </section>
     </motion.div>
   );
 }
