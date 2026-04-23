@@ -134,7 +134,7 @@ export default function Remy() {
 
       {/* Header */}
       <div className="shrink-0 px-8 pt-8 pb-4 border-b border-white/5">
-        <h1 data-testid="page-title-remy" className="app-page-title">Remy</h1>
+        <h1 data-testid="page-title-remy" data-tour="remy-title-heading" className="app-page-title">Remy</h1>
         <div className="flex items-center gap-3 mt-2 flex-wrap">
           <p className="app-page-intro">
             Tool-aware PA assistant that routes work, collects inputs, and executes toolkit tools.

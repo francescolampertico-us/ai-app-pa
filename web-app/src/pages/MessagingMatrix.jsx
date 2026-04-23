@@ -83,7 +83,7 @@ export default function MessagingMatrix() {
       <header className="page-header relative">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-        <h1 data-testid="page-title-messaging-matrix" className="app-page-title">Messaging Deliverables</h1>
+        <h1 data-testid="page-title-messaging-matrix" data-tour="messaging-matrix-title-heading" className="app-page-title">Messaging Deliverables</h1>
         <p className="app-page-intro">
           Builds reusable advocacy message outputs and platform-specific deliverables from a core policy position, optional proof points, supporting documents, and audience guidance.
         </p>
@@ -110,7 +110,7 @@ export default function MessagingMatrix() {
 
           <details data-tour="messaging-matrix-options" className="rounded-xl border border-white/10 bg-black/20 p-5">
             <summary className="cursor-pointer text-white font-semibold">Optional: Core Messages & Supporting Facts</summary>
-            <div className="mt-5 flex flex-col gap-5">
+            <div data-tour="messaging-matrix-core-messages" className="mt-5 flex flex-col gap-5">
               <div>
                 <label className="field-label">Core Messages</label>
                 <textarea data-testid="input-messaging-core-messages" value={coreMessages} onChange={(event) => setCoreMessages(event.target.value)}
@@ -126,7 +126,7 @@ export default function MessagingMatrix() {
             </div>
           </details>
 
-          <div>
+          <div data-tour="messaging-matrix-context">
             <label className="field-label">Supporting Context</label>
             <input data-testid="input-messaging-files" type="file" accept=".pdf,.docx,.txt" multiple
               onChange={(event) => setUploadedFiles(Array.from(event.target.files || []))}
@@ -138,19 +138,19 @@ export default function MessagingMatrix() {
 
         <div className="glass-card p-8 flex flex-col gap-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div data-tour="messaging-matrix-organization">
               <label className="field-label">Organization Name</label>
               <input data-testid="input-messaging-organization" value={organization} onChange={(event) => setOrganization(event.target.value)}
                 className="field" placeholder="e.g. TechForward Alliance" />
             </div>
-            <div>
+            <div data-tour="messaging-matrix-audience">
               <label className="field-label">Primary Target Audience</label>
               <input data-testid="input-messaging-target-audience" value={targetAudience} onChange={(event) => setTargetAudience(event.target.value)}
                 className="field" placeholder="e.g. Senate Commerce Committee members" />
             </div>
           </div>
 
-          <div>
+          <div data-tour="messaging-matrix-variants">
             <label className="field-label">Select Deliverables To Generate</label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
               {DELIVERABLES.map(([value, label]) => (

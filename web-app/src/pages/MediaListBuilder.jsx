@@ -246,7 +246,7 @@ export default function MediaListBuilder() {
         <header className="page-header relative">
           <div className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none"
             style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%)' }} />
-          <h1 data-testid="page-title-media-list" className="app-page-title">Media List</h1>
+          <h1 data-testid="page-title-media-list" data-tour="media-list-title-heading" className="app-page-title">Media List</h1>
           <p className="app-page-intro" style={{ maxWidth: '68ch' }}>
             Generates a targeted media list based on a policy issue, geographic scope, and media type filter, then returns Excel, markdown, and JSON outputs.
           </p>
@@ -271,7 +271,7 @@ export default function MediaListBuilder() {
                 placeholder="e.g. hospital price transparency or AI safety regulation and mandatory pre-deployment testing requirements" />
             </div>
 
-            <div>
+            <div data-tour="media-list-broad-topic">
               <label className="field-label">Broad Topic</label>
               <input
                 data-testid="input-media-list-broad-topic"
@@ -282,7 +282,7 @@ export default function MediaListBuilder() {
               />
             </div>
 
-            <div>
+            <div data-tour="media-list-coverage-desk">
               <label className="field-label">Coverage Desk</label>
               <select data-testid="input-media-list-coverage-desk" value={coverageDesk} onChange={(event) => setCoverageDesk(event.target.value)} className="field">
                 <option value="">Optional: select a desk</option>
@@ -297,7 +297,7 @@ export default function MediaListBuilder() {
             </div>
 
             <div data-tour="media-list-options" className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
+              <div data-tour="media-list-geographic-scope">
                 <label className="field-label">Geographic Scope</label>
                 <select data-testid="input-media-list-location-type" value={locationType} onChange={(event) => { setLocationType(event.target.value); setLocation(''); }} className="field">
                   <option>National (US)</option>
@@ -305,7 +305,7 @@ export default function MediaListBuilder() {
                   <option>City / Metro</option>
                 </select>
               </div>
-              <div>
+              <div data-tour="media-list-outlet-scope">
                 {locationType === 'National (US)' ? (
                   <div>
                     <label className="field-label">Outlet Scope</label>
@@ -323,7 +323,7 @@ export default function MediaListBuilder() {
                   </>
                 )}
               </div>
-              <div>
+              <div data-tour="media-list-num-contacts">
                 <label className="field-label">Number Of Contacts</label>
                 <input data-testid="input-media-list-num-contacts" type="range" min="5" max="40" step="5" value={numContacts} onChange={(event) => setNumContacts(Number(event.target.value))}
                   className="w-full accent-violet-500 mt-4" />
@@ -331,7 +331,7 @@ export default function MediaListBuilder() {
               </div>
             </div>
 
-            <div>
+            <div data-tour="media-list-types">
               <label className="field-label">Media Types To Include</label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                 {MEDIA_TYPES.map(([value, label]) => (
