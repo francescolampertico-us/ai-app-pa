@@ -16,6 +16,10 @@ import Remy from './pages/Remy';
 import ResearchLanding from './research/ResearchLanding';
 import AppendixDocumentPage from './research/landing/AppendixDocumentPage';
 import CitationButton from './research/landing/CitationButton';
+import { GuidedTourProvider } from './components/tour/GuidedTourProvider';
+import { useGuidedTour } from './components/tour/useGuidedTour';
+
+const MotionDiv = motion.div;
 
 const TOOL_UI = {
   media_clips: {
@@ -49,6 +53,7 @@ const TOOL_UI = {
     refs: ['bitonti2023', 'digiacomo2025'],
     path: '/app/background-memo',
     section: 'intelligence',
+    tourTarget: 'background-memo-card',
   },
   hearing_memo_generator: {
     label: 'Hearing Memo',
@@ -142,6 +147,7 @@ function ToolCard({ ui, index }) {
     <Link
       key={ui.path}
       to={ui.path}
+      data-tour={ui.tourTarget}
       className="glass group flex flex-col gap-3 p-5 transition-all hover:border-violet-500/30"
       style={{ textDecoration: 'none' }}
     >
@@ -174,6 +180,7 @@ function ToolCard({ ui, index }) {
 
 function Dashboard() {
   const [tools, setTools] = useState(null);
+  const { startTour } = useGuidedTour();
 
   useEffect(() => {
     fetch(`${API}/api/tools`)
@@ -188,7 +195,7 @@ function Dashboard() {
   }
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -199,9 +206,12 @@ function Dashboard() {
         style={{ background: 'radial-gradient(ellipse, rgba(109,40,217,0.12) 0%, transparent 70%)' }}
       />
 
-      <div className="mb-12 mt-4">
-        <div className="mb-6">
+      <div className="mb-12 mt-4" data-tour="dashboard-overview">
+        <div className="mb-6 flex items-start justify-between gap-6 flex-wrap">
           <Wordmark />
+          <button type="button" className="tour-launch-button" onClick={() => startTour()}>
+            Start Guided Tour
+          </button>
         </div>
         <p className="text-zinc-500 text-base font-light leading-relaxed max-w-[60ch]">
           A research-informed system for bounded AI augmentation in Public Affairs.
@@ -310,7 +320,7 @@ function Dashboard() {
           Architecture for PA Strategy
         </span>
       </div>
-    </motion.div>
+    </MotionDiv>
   );
 }
 
@@ -324,16 +334,18 @@ function AppLayout() {
   }, []);
 
   return (
-    <div className="flex h-[100dvh] w-full text-white overflow-hidden" style={{ background: '#09090B' }}>
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto relative flex flex-col">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse at top right, rgba(109,40,217,0.07) 0%, transparent 60%)' }}
-        />
-        <Outlet />
-      </main>
-    </div>
+    <GuidedTourProvider>
+      <div className="flex h-[100dvh] w-full text-white overflow-hidden" style={{ background: '#09090B' }}>
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto relative flex flex-col">
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse at top right, rgba(109,40,217,0.07) 0%, transparent 60%)' }}
+          />
+          <Outlet />
+        </main>
+      </div>
+    </GuidedTourProvider>
   );
 }
 

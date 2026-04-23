@@ -99,7 +99,7 @@ export default function BackgroundMemo() {
           <div className="glass-card p-8 flex flex-col gap-5">
             <div>
               <label className="field-label">Subject</label>
-              <input data-testid="input-background-subject" value={subject} onChange={(event) => setSubject(event.target.value)}
+              <input data-testid="input-background-subject" data-tour="background-memo-subject" value={subject} onChange={(event) => setSubject(event.target.value)}
                 className="field" placeholder="e.g. NATO, Pfizer, American Clean Energy Association" required />
             </div>
             <div>
@@ -108,7 +108,7 @@ export default function BackgroundMemo() {
             </div>
             <div>
               <label className="field-label">Sections</label>
-              <textarea data-testid="input-background-sections" value={sectionsText} onChange={(event) => setSectionsText(event.target.value)}
+              <textarea data-testid="input-background-sections" data-tour="background-memo-sections" value={sectionsText} onChange={(event) => setSectionsText(event.target.value)}
                 className="field resize-none" rows={8} placeholder={'Corporate Overview\nKey Leadership\nU.S. Presence\nPolicy Positions'} required />
             </div>
             <div>
@@ -131,7 +131,7 @@ export default function BackgroundMemo() {
               )}
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-black/20 p-5 flex flex-col gap-4">
+            <div data-tour="background-memo-options" className="rounded-xl border border-white/10 bg-black/20 p-5 flex flex-col gap-4">
               <div>
                 <div className="field-label">Disclosure Search Options</div>
                 <p className="text-sm text-slate-500">The backend searches disclosures across all available years and adds the results into the memo context.</p>
@@ -154,7 +154,7 @@ export default function BackgroundMemo() {
               </div>
             </div>
 
-            <button data-testid="submit-background-memo" type="submit" disabled={loading || !subject.trim() || !sectionsText.trim()}
+            <button data-testid="submit-background-memo" data-tour="background-memo-submit" type="submit" disabled={loading || !subject.trim() || !sectionsText.trim()}
               className="btn-primary mt-auto">
               {loading ? <><SpinnerGap size={18} className="animate-spin" /> Generating…</> : <>Generate Memo <ArrowRight size={18} /></>}
             </button>
@@ -162,21 +162,28 @@ export default function BackgroundMemo() {
         </div>
       </form>
 
-      {job && (
-        <div className="mt-12 space-y-8">
-          <div data-testid="status-background-memo" className="glass-card p-6">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-mono text-xs text-purple-300">{job.id.slice(0, 8).toUpperCase()}</span>
-              <span className={job.status === 'completed' ? 'badge-complete' : job.status === 'failed' ? 'badge-failed' : 'badge-processing'}>{job.status}</span>
-            </div>
-            <p className="text-slate-300 text-sm mb-4">{job.message}</p>
-            <div className="progress-track">
-              <div className="progress-fill" style={{ width: `${job.progress || 0}%` }} />
-            </div>
+      <section data-tour="background-memo-output" className="mt-12 space-y-8">
+        {!job && (
+          <div className="app-empty-state">
+            Generated status, memo sections, and downloadable artifacts appear here after you run the tool.
           </div>
+        )}
 
-          {job.status === 'completed' && rd && (
-            <>
+        {job && (
+          <>
+            <div data-testid="status-background-memo" className="glass-card p-6">
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-mono text-xs text-purple-300">{job.id.slice(0, 8).toUpperCase()}</span>
+                <span className={job.status === 'completed' ? 'badge-complete' : job.status === 'failed' ? 'badge-failed' : 'badge-processing'}>{job.status}</span>
+              </div>
+              <p className="text-slate-300 text-sm mb-4">{job.message}</p>
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: `${job.progress || 0}%` }} />
+              </div>
+            </div>
+
+            {job.status === 'completed' && rd && (
+              <>
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-amber-200 text-sm">
                 Additional verification needed. All memo text is model-generated and should be checked against primary sources before distribution.
               </div>
@@ -259,10 +266,11 @@ export default function BackgroundMemo() {
                   </div>
                 </div>
               )}
-            </>
-          )}
-        </div>
-      )}
+              </>
+            )}
+          </>
+        )}
+      </section>
     </motion.div>
   );
 }
