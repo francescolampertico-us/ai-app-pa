@@ -40,6 +40,8 @@ The meeting is focused on a moderate pro-innovation framing. We want practical g
 - Profile, policy positions, talking points, and key questions render.
 - Disclosure and news tabs appear when data exists.
 - Output stays relevant to the meeting purpose instead of becoming a generic biography.
+- Topic-LDA is omitted unless the meeting objective clearly calls for lobbying/disclosure intelligence.
+- Recent news, policy positions, talking points, and key questions stay tied to the stakeholder's actual issue activity, not generic appearances.
 - Downloads work.
 
 ### Pass / fail rules
@@ -117,4 +119,4 @@ yes
 
 ## Regression placeholder
 
-- Add the first confirmed stakeholder briefing bug here after it is fixed.
+- `REG-0008` Ensure stakeholder briefing keeps disclosure/news content tightly tied to the meeting objective and does not inject unrelated topic-LDA into policymaker briefings.

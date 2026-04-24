@@ -69,6 +69,9 @@ function Wordmark({ collapsed }) {
       <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 7, fontWeight: 500, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'rgba(167,139,250,0.55)' }}>
         Architecture for PA Strategy
       </span>
+      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 6.5, fontWeight: 400, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'rgba(167,139,250,0.35)', marginTop: 3 }}>
+        Francesco Lampertico · AU · 2026
+      </span>
     </div>
   );
 }

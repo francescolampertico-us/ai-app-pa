@@ -134,7 +134,8 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: 7rem;
   gap: 1.5rem;
 }
 

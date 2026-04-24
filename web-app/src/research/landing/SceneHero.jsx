@@ -100,11 +100,11 @@ export default function SceneHero({ appPath = '/app' }) {
         }}
         initial={{ top: '45%', left: 'calc(50% + var(--nav-width) / 2)', x: '-50%', y: '-50%' }}
         animate={{
-          top: titleState >= 4 ? '2.3rem' : '45%',
-          left: titleState >= 4 ? '2.45rem' : 'calc(50% + var(--nav-width) / 2)',
+          top: titleState >= 4 ? '1.7rem' : '45%',
+          left: titleState >= 4 ? '1.9rem' : 'calc(50% + var(--nav-width) / 2)',
           x: titleState >= 4 ? 0 : '-50%',
           y: titleState >= 4 ? 0 : '-50%',
-          scale: titleState >= 4 ? 0.352 : 1,
+          scale: titleState >= 4 ? 0.34 : 1,
         }}
         transition={{ duration: 1.6, ease: [0.645, 0.045, 0.355, 1] }}
       >
@@ -190,36 +190,16 @@ export default function SceneHero({ appPath = '/app' }) {
               transition={{ duration: 1 }}
               style={{ position: 'absolute', top: 0, left: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
             >
-              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', whiteSpace: 'nowrap', letterSpacing: '-1.12px' }}>
-                  <span style={{ color: '#fff' }}>Str</span>
-                  <span style={{ color: 'var(--text-accent)', fontStyle: 'italic', fontSize: '1.05em' }}>α</span>
-                  <span style={{ color: '#fff' }}>tegitect</span>
-                </div>
-                <div style={{ height: '6px', width: '2.2em', background: 'var(--text-accent)', borderRadius: '2px', marginTop: '0.25em', marginBottom: '0.42em' }} />
+              <div style={{ display: 'flex', alignItems: 'baseline', whiteSpace: 'nowrap' }}>
+                <span style={{ color: '#fff' }}>Str</span>
+                <span style={{ color: '#A78BFA', fontStyle: 'normal' }}>α</span>
+                <span style={{ color: '#fff' }}>tegitect</span>
               </div>
-              <div
-                style={{
-                  fontSize: '0.35em',
-                  letterSpacing: '0.11em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(167,139,250,0.55)',
-                  fontWeight: 500,
-                  fontFamily: 'var(--font-sans)',
-                }}
-              >
+              <div style={{ height: '1.5px', width: '2.75em', background: '#C4B5FD', margin: '0.3em 0 0.2em' }} />
+              <div style={{ fontSize: '0.35em', letterSpacing: '0.11em', textTransform: 'uppercase', color: 'rgba(167,139,250,0.55)', fontWeight: 500, fontFamily: 'var(--font-sans)' }}>
                 Architecture for PA Strategy
               </div>
-              <div
-                style={{
-                  fontSize: '0.28em',
-                  letterSpacing: '0.08em',
-                  color: 'rgba(167,139,250,0.38)',
-                  fontWeight: 400,
-                  fontFamily: 'var(--font-sans)',
-                  marginTop: '0.5em',
-                }}
-              >
+              <div style={{ fontSize: '0.32em', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(167,139,250,0.35)', fontWeight: 400, fontFamily: 'var(--font-sans)', marginTop: '0.35em' }}>
                 Francesco Lampertico · AU · 2026
               </div>
             </motion.div>
