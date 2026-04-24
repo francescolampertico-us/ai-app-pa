@@ -192,7 +192,7 @@ export default function SceneHero({ appPath = '/app' }) {
             >
               <div style={{ display: 'flex', alignItems: 'baseline', whiteSpace: 'nowrap' }}>
                 <span style={{ color: '#fff' }}>Str</span>
-                <span style={{ color: '#A78BFA', fontStyle: 'normal' }}>α</span>
+                <span style={{ color: '#A78BFA', fontStyle: 'italic' }}>α</span>
                 <span style={{ color: '#fff' }}>tegitect</span>
               </div>
               <div style={{ height: '1.5px', width: '2.75em', background: '#C4B5FD', margin: '0.3em 0 0.2em' }} />

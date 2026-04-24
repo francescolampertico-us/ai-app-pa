@@ -197,12 +197,12 @@
 .research-shell .toc-subsections {
   display: grid;
   gap: 0.3rem;
-  margin-top: 0;
-  max-height: 0;
-  opacity: 0;
+  margin-top: 0.35rem;
+  max-height: 9rem;
+  opacity: 0.3;
   overflow: hidden;
   padding-left: 2.45rem;
-  transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease;
+  transition: opacity 0.25s ease;
 }
 
 .research-shell .toc-subsection-link {
@@ -232,8 +232,6 @@
 }
 
 .research-shell .toc-section.is-active .toc-subsections {
-  margin-top: 0.45rem;
-  max-height: 9rem;
   opacity: 1;
 }
 
