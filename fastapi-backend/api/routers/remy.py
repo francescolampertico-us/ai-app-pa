@@ -9,7 +9,7 @@ from pydantic import BaseModel
 router = APIRouter()
 
 ROOT = Path(__file__).resolve().parents[3]
-TOOLKIT_APP = ROOT / "toolkit" / "app"
+TOOLKIT_APP = ROOT / "toolkit"
 
 
 class RemyChatRequest(BaseModel):

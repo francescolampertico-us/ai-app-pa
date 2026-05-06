@@ -20,7 +20,7 @@ from typing import Any
 import requests
 import yaml
 
-TOOLKIT_ROOT = Path(__file__).resolve().parent.parent
+TOOLKIT_ROOT = Path(__file__).resolve().parent
 REGISTRY_PATH = TOOLKIT_ROOT / "tool-registry.yaml"
 OUTPUT_ROOT = TOOLKIT_ROOT / "output" / "remy"
 STYLE_GUIDES_ROOT = TOOLKIT_ROOT / "tools" / "messaging_matrix" / "style_samples" / "style_guides"
